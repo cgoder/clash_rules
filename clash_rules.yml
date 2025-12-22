@@ -1,0 +1,157 @@
+# =========================
+# 策略组配置 (融合版)
+# =========================
+prepend-proxy-groups:
+  # 1. 🇺🇸 AI 专用：强制只选美国节点，每 5 分钟自动测速选最快的
+  - name: 💬 AI 服务
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    filter: "(?i)(美国|US|States|United)"
+
+  # 2. 🌏 亚洲优选：只选港日新，用于日常浏览
+  - name: 🌏 亚洲优选
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    filter: "(?i)(港|HK|Hong|JP|Japan|日|SG|Singapore|狮|TW|台湾)"
+
+  # 3. 📺 油管：允许手动切换（美/亚），方便看 4K 或锁区内容
+  - name: 📹 油管视频
+    type: select
+    url: http://www.gstatic.com/generate_204
+    filter: "(?i)(美国|US|States|港|HK|Hong|JP|Japan|日|SG|Singapore|TW|台湾)"
+    
+  # 4. 🛑 广告拦截
+  - name: 🛑 广告拦截
+    type: select
+    proxies: [REJECT, DIRECT]
+
+  # 5. 👇 下面是细分漏斗，为了简洁，建议大多数走默认的亚洲组，特殊需求手动选
+  - name: Ⓜ️ 微软服务
+    type: select
+    proxies: [🌏 亚洲优选, DIRECT, 💬 AI 服务]
+    
+  - name: 🍏 苹果服务
+    type: select
+    proxies: [DIRECT, 🌏 亚洲优选, 💬 AI 服务]
+
+  - name: 📲 电报消息
+    type: select
+    proxies: [🌏 亚洲优选, 💬 AI 服务]
+
+  - name: 🎬 流媒体 (Netflix/Disney+)
+    type: select
+    # 允许手动选所有节点，方便解锁特定国家剧集
+    filter: "(?i)(港|HK|JP|SG|US|TW)"
+
+  - name: 🐟 漏网之鱼
+    type: select
+    proxies: [🌏 亚洲优选, DIRECT, 💬 AI 服务]
+
+# =========================
+# 规则集 (高性能 MRS 格式)
+# =========================
+rule-providers:
+  ads:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ads-all.mrs"
+    path: ./ruleset/ads.mrs
+    interval: 86400
+  
+  ai:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs"
+    path: ./ruleset/ai.mrs
+    interval: 86400
+
+  youtube:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/youtube.mrs"
+    path: ./ruleset/youtube.mrs
+    interval: 86400
+
+  google:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/google.mrs"
+    path: ./ruleset/google.mrs
+    interval: 86400
+
+  telegram:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/telegram.mrs"
+    path: ./ruleset/telegram.mrs
+    interval: 86400
+
+  microsoft:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/microsoft.mrs"
+    path: ./ruleset/microsoft.mrs
+    interval: 86400
+    
+  apple:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/apple.mrs"
+    path: ./ruleset/apple.mrs
+    interval: 86400
+
+  netflix:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/netflix.mrs"
+    path: ./ruleset/netflix.mrs
+    interval: 86400
+
+  cn:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/cn.mrs"
+    path: ./ruleset/cn.mrs
+    interval: 86400
+
+  cn_ip:
+    type: http
+    format: mrs
+    behavior: ipcidr
+    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/cn.mrs"
+    path: ./ruleset/cn_ip.mrs
+    interval: 86400
+
+# =========================
+# 规则应用
+# =========================
+prepend-rules:
+  - RULE-SET,ads,🛑 广告拦截
+  - RULE-SET,ai,💬 AI 服务
+  - RULE-SET,youtube,📹 油管视频
+  - RULE-SET,google,🌏 亚洲优选  # 谷歌搜索走亚洲（除了AI，AI已被上面的规则截获）
+  - RULE-SET,telegram,📲 电报消息
+  - RULE-SET,netflix,🎬 流媒体
+  - RULE-SET,microsoft,Ⓜ️ 微软服务
+  - RULE-SET,apple,🍏 苹果服务
+  
+  # 国内直连
+  - RULE-SET,cn,DIRECT
+  - RULE-SET,cn_ip,DIRECT
+  - GEOIP,CN,DIRECT
+  
+  # 兜底
+  - MATCH,🐟 漏网之鱼
