@@ -1,157 +1,141 @@
-# =========================
-# 策略组配置 (融合版)
-# =========================
+# =======================================================
+# Clash Verge Rev - Merge Profile (Strategy A: Balanced)
+# 说明：AI 强制走美国，其余流媒体/网页走亚洲优选
+# =======================================================
+
+# -------------------------------------------------------
+# 1. 策略组定义 (Proxy Groups)
+# -------------------------------------------------------
 prepend-proxy-groups:
-  # 1. 🇺🇸 AI 专用：强制只选美国节点，每 5 分钟自动测速选最快的
+  # [Group 1] 🇺🇸 AI 专用
+  # 逻辑：自动选择延迟最低的美国节点
+  # 作用：OpenAI, Claude, Gemini, Copilot 专用
   - name: 💬 AI 服务
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-    filter: "(?i)(美国|US|States|United)"
+    # 筛选：美国/US/States/America
+    filter: "(?i)(美国|US|States|United|America)"
 
-  # 2. 🌏 亚洲优选：只选港日新，用于日常浏览
+  # [Group 2] 🌏 亚洲优选
+  # 逻辑：自动选择延迟最低的 HK/JP/SG/TW 节点
+  # 作用：Google搜索, 普通网页浏览
   - name: 🌏 亚洲优选
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-    filter: "(?i)(港|HK|Hong|JP|Japan|日|SG|Singapore|狮|TW|台湾)"
+    # 筛选：港/日/新/台
+    filter: "(?i)(港|HK|Hong|JP|Japan|日|SG|Singapore|坡|TW|Taiwan|湾)"
 
-  # 3. 📺 油管：允许手动切换（美/亚），方便看 4K 或锁区内容
+  # [Group 3] 📺 YouTube
+  # 逻辑：手动选择 (默认包含 美/港/日/新/台)
+  # 作用：方便看 4K 或 切换不同区的 YouTube Premium 内容
   - name: 📹 油管视频
     type: select
     url: http://www.gstatic.com/generate_204
-    filter: "(?i)(美国|US|States|港|HK|Hong|JP|Japan|日|SG|Singapore|TW|台湾)"
-    
-  # 4. 🛑 广告拦截
-  - name: 🛑 广告拦截
-    type: select
-    proxies: [REJECT, DIRECT]
+    filter: "(?i)(美国|US|States|港|HK|Hong|JP|Japan|日|SG|Singapore|坡|TW|湾)"
 
-  # 5. 👇 下面是细分漏斗，为了简洁，建议大多数走默认的亚洲组，特殊需求手动选
-  - name: Ⓜ️ 微软服务
+  # [Group 4] 🎵 Spotify
+  # 逻辑：手动选择
+  # 作用：Spotify 对 IP 变动敏感，建议长期固定选一个节点
+  - name: 🎵 Spotify
     type: select
-    proxies: [🌏 亚洲优选, DIRECT, 💬 AI 服务]
-    
-  - name: 🍏 苹果服务
-    type: select
-    proxies: [DIRECT, 🌏 亚洲优选, 💬 AI 服务]
+    url: http://www.gstatic.com/generate_204
+    filter: "(?i)(美国|US|States|港|HK|Hong|JP|Japan|日|SG|Singapore|坡|TW|湾)"
 
+  # [Group 5] 🎬 Netflix/Disney+
+  # 逻辑：手动选择
+  - name: 🎬 流媒体
+    type: select
+    filter: "(?i)(港|HK|JP|SG|US|TW)"
+
+  # [Group 6] 📲 Telegram
+  # 逻辑：默认走亚洲，快
   - name: 📲 电报消息
     type: select
     proxies: [🌏 亚洲优选, 💬 AI 服务]
 
-  - name: 🎬 流媒体 (Netflix/Disney+)
-    type: select
-    # 允许手动选所有节点，方便解锁特定国家剧集
-    filter: "(?i)(港|HK|JP|SG|US|TW)"
-
+  # [Group 7] 漏网之鱼
+  # 逻辑：剩余所有国外流量的默认出口
   - name: 🐟 漏网之鱼
     type: select
     proxies: [🌏 亚洲优选, DIRECT, 💬 AI 服务]
 
-# =========================
-# 规则集 (高性能 MRS 格式)
-# =========================
+# -------------------------------------------------------
+# 2. 规则集来源 (Rule Providers)
+# 使用 meta-rules-dat 的高性能 MRS 格式
+# -------------------------------------------------------
 rule-providers:
+  # 广告拦截
   ads:
     type: http
     format: mrs
     behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ads-all.mrs"
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ads-all.mrs"
     path: ./ruleset/ads.mrs
     interval: 86400
-  
-  ai:
+
+  # AI 总集 (关键！包含 Gemini, ChatGPT, Claude 等)
+  ai_chat:
     type: http
     format: mrs
     behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs"
-    path: ./ruleset/ai.mrs
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs"
+    path: ./ruleset/ai_chat.mrs
     interval: 86400
 
+  # YouTube
   youtube:
     type: http
     format: mrs
     behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/youtube.mrs"
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/youtube.mrs"
     path: ./ruleset/youtube.mrs
     interval: 86400
 
-  google:
+  # Spotify
+  spotify:
     type: http
     format: mrs
     behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/google.mrs"
-    path: ./ruleset/google.mrs
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/spotify.mrs"
+    path: ./ruleset/spotify.mrs
     interval: 86400
 
-  telegram:
-    type: http
-    format: mrs
-    behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/telegram.mrs"
-    path: ./ruleset/telegram.mrs
-    interval: 86400
-
-  microsoft:
-    type: http
-    format: mrs
-    behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/microsoft.mrs"
-    path: ./ruleset/microsoft.mrs
-    interval: 86400
-    
-  apple:
-    type: http
-    format: mrs
-    behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/apple.mrs"
-    path: ./ruleset/apple.mrs
-    interval: 86400
-
+  # Netflix
   netflix:
     type: http
     format: mrs
     behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/netflix.mrs"
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/netflix.mrs"
     path: ./ruleset/netflix.mrs
     interval: 86400
 
-  cn:
+  # Google (包含 Search, Drive, Maps 等)
+  google:
     type: http
     format: mrs
     behavior: domain
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/cn.mrs"
-    path: ./ruleset/cn.mrs
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/google.mrs"
+    path: ./ruleset/google.mrs
     interval: 86400
 
-  cn_ip:
+  # Telegram
+  telegram:
     type: http
     format: mrs
-    behavior: ipcidr
-    url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/cn.mrs"
-    path: ./ruleset/cn_ip.mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/telegram.mrs"
+    path: ./ruleset/telegram.mrs
     interval: 86400
 
-# =========================
-# 规则应用
-# =========================
-prepend-rules:
-  - RULE-SET,ads,🛑 广告拦截
-  - RULE-SET,ai,💬 AI 服务
-  - RULE-SET,youtube,📹 油管视频
-  - RULE-SET,google,🌏 亚洲优选  # 谷歌搜索走亚洲（除了AI，AI已被上面的规则截获）
-  - RULE-SET,telegram,📲 电报消息
-  - RULE-SET,netflix,🎬 流媒体
-  - RULE-SET,microsoft,Ⓜ️ 微软服务
-  - RULE-SET,apple,🍏 苹果服务
-  
-  # 国内直连
-  - RULE-SET,cn,DIRECT
-  - RULE-SET,cn_ip,DIRECT
-  - GEOIP,CN,DIRECT
-  
-  # 兜底
-  - MATCH,🐟 漏网之鱼
+  # Microsoft
+  microsoft:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/microsoft.mrs"
+    path: ./ruleset/microsoft.mrs
+    interval:
