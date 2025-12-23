@@ -733,10 +733,10 @@ rules:
   # --- 第三梯队：具体国外服务 (先匹配具体，防误杀) ---
   - RULE-SET,spotify,🎵 Spotify
   - RULE-SET,telegram,📲 电报消息
-  - RULE-SET,microsoft,Ⓜ️ 微软服务
-  - RULE-SET,apple,🍏 苹果服务
   - RULE-SET,github,🐱 Github
   - RULE-SET,gitlab,🐱 Github
+  - RULE-SET,microsoft,Ⓜ️ 微软服务
+  - RULE-SET,apple,🍏 苹果服务
   
   # 社交
   - RULE-SET,facebook,🌐 社交媒体
