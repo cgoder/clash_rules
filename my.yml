@@ -40,7 +40,7 @@ proxy-groups:
     type: select
     proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选]
     include-all-proxies: true
-    use: [订阅1, 订阅2, 订阅3, 订阅4, 订阅5]
+    use: [订阅1]
   - name: 💬 AI 服务
     type: select
     proxies: [DIRECT, REJECT, 北美优选, 欧洲优选]
@@ -103,7 +103,7 @@ proxy-groups:
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-    use: [订阅1, 订阅2, 订阅3, 订阅4, 订阅5]
+    use: [订阅1]
     filter: "(?i)(港|HK|Hong)"
 
   - name: 亚洲优选
@@ -111,7 +111,7 @@ proxy-groups:
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-    use: [订阅1, 订阅2, 订阅3, 订阅4, 订阅5]
+    use: [订阅1]
     filter: "(?i)(JP|Japan|日|SG|Singapore|狮|坡|TW|Taiwan|台|Korea|韩|印)"
 
   - name: 北美优选
@@ -119,7 +119,7 @@ proxy-groups:
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-    use: [订阅1, 订阅2, 订阅3, 订阅4, 订阅5]
+    use: [订阅1]
     filter: "(?i)(美国|US|States|United|America|加拿大|Canada)"
 
   - name: 欧洲优选
@@ -127,7 +127,7 @@ proxy-groups:
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-    use: [订阅1, 订阅2, 订阅3, 订阅4, 订阅5]
+    use: [订阅1]
     filter: "(?i)(UK|英|意|FR|法|ES|西班牙|IT|意大利|RU|俄|DE|德|土耳其|荷兰)"
 
 # =========================
