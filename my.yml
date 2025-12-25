@@ -43,7 +43,7 @@ proxy-groups:
     use: [订阅1]
   - name: 💬 AI 服务
     type: select
-    proxies: [DIRECT, REJECT, 北美优选, 欧洲优选]
+    proxies: [DIRECT, REJECT, 北美优选, 欧洲优选, 🚀 节点选择]
   - name: 📹 油管视频
     type: select
     proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
@@ -373,13 +373,13 @@ rule-providers:
       path: ./ruleset/geolocation-cn.mrs,
       interval: 86400
     }
-  cn:
+  cn_ip:
     {
       type: http,
       format: mrs,
       behavior: ipcidr,
       url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/cn.mrs',
-      path: ./ruleset/cn.mrs,
+      path: ./ruleset/cn_ip.mrs,
       interval: 86400
     }
   telegram:
@@ -715,6 +715,42 @@ rule-providers:
       path: ./ruleset/geolocation-!cn.mrs,
       interval: 86400
     }
+  telegram_ip:
+    {
+      type: http,
+      format: mrs,
+      behavior: ipcidr,
+      url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/telegram.mrs',
+      path: ./ruleset/telegram_ip.mrs,
+      interval: 86400
+    }
+  twitter_ip:
+    {
+      type: http,
+      format: mrs,
+      behavior: ipcidr,
+      url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/twitter.mrs',
+      path: ./ruleset/twitter_ip.mrs,
+      interval: 86400
+    }
+  netflix_ip:
+    {
+      type: http,
+      format: mrs,
+      behavior: ipcidr,
+      url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/netflix.mrs',
+      path: ./ruleset/netflix_ip.mrs,
+      interval: 86400
+    }
+  google_ip:
+    {
+      type: http,
+      format: mrs,
+      behavior: ipcidr,
+      url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/google.mrs',
+      path: ./ruleset/google_ip.mrs,
+      interval: 86400
+    }
 
 # =========================
 # 分流规则
@@ -777,12 +813,20 @@ rules:
   - RULE-SET,khanacademy,📚 教育资源
   - RULE-SET,category-scholar-!cn,📚 教育资源
 
-  # --- 第四梯队：国内流量 (直连) ---
+  #  国外域名兜底分流
+  - RULE-SET,geolocation-!cn,🌐 非中国
+
+  # --- 第四梯队：常见国外应用IP ---
+  - RULE-SET,telegram_ip,📲 电报消息,no-resolve
+  - RULE-SET,twitter_ip,🌐 社交媒体,no-resolve
+  - RULE-SET,netflix_ip,🎬 流媒体,no-resolve
+  - RULE-SET,google_ip,🔍 谷歌服务,no-resolve
+
+  # --- 第五梯队：国内流量 (直连) ---
   # 凡是上面没命中的，如果符合国内特征，就直连
   - RULE-SET,geolocation-cn,🔒 国内服务
-  - RULE-SET,cn,🔒 国内服务,no-resolve
-  
-  # --- 第五梯队：兜底 (剩余国外流量) ---
+  - RULE-SET,cn_ip,🔒 国内服务,no-resolve
+
+  # --- 第六梯队：兜底 (剩余国外流量) ---
   # 既不是指定APP，也不是国内域名的，统统算作“其他国外流量”
-  - RULE-SET,geolocation-!cn,🌐 非中国
   - MATCH,🐟 漏网之鱼
