@@ -3,7 +3,7 @@
 # =========================
 # 把 url 替换成你的 Clash 订阅链接，不用的订阅保持不变即可
 proxy-providers:
-  订阅1:
+  sub1:
     {
       type: http,
       url: 'CLASH_URL',
@@ -18,289 +18,263 @@ proxy-providers:
         }
     }
 
-# =========================
-# 代理组配置
-# =========================
-# - include-all-proxies: true  包含手动节点
-# - use: [订阅1, 订阅2, 订阅3, 订阅4, 订阅5] 包含订阅节点
-# - domain-strategy: ipv4-only 强制仅使用 IPv4
-# =========================
-proxy-groups:
-  - name: 🚀 节点选择
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选]
-    include-all-proxies: true
-    use: [订阅1]
-  - name: 💬 AI 服务
-    type: select
-    proxies: [DIRECT, REJECT, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 📹 油管视频
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🔍 谷歌服务
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🏠 私有网络
-    type: select
-    proxies: [DIRECT, REJECT]
-  - name: 🔒 国内服务
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选]
-  - name: 📲 电报消息
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🎵 Spotify
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🐱 Github
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: Ⓜ️ 微软服务
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🍏 苹果服务
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🌐 社交媒体
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🎬 流媒体
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🎮 游戏平台
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 📚 教育资源
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: ☁️ 云服务
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 💰 金融服务
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🌐 非中国
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🐟 漏网之鱼
-    type: select
-    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
-  - name: 🛑 广告拦截
-    type: select
-    proxies: [DIRECT, REJECT]
-  - name: 香港优选
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-    use: [订阅1]
-    filter: "(?i)(港|HK|Hong)"
+# 0. 企业内网
+hosts:
 
-  - name: 亚洲优选
-    type: select
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-    use: [订阅1]
-    filter: "(?i)(JP|Japan|日|SG|Singapore|狮|坡|TW|Taiwan|台|Korea|韩|印)"
-
-  - name: 北美优选
-    type: select
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-    use: [订阅1]
-    filter: "(?i)(美国|US|States|United|America|加拿大|Canada)"
-
-  - name: 欧洲优选
-    type: select
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-    use: [订阅1]
-    filter: "(?i)(UK|英|意|FR|法|ES|西班牙|IT|意大利|RU|俄|DE|德|土耳其|荷兰)"
-
-# =========================
-# 端口监听配置（可选）
-# =========================
-# listeners:
-#   - {name: mixed0, type: mixed, port: 42000, proxy: 日本谷歌云}
-#   - {name: mixed1, type: mixed, port: 42001, proxy: 美国家宽}
-
-# =========================
-# 基础配置
-# =========================
-mixed-port: 7897
-allow-lan: true
-mode: rule
-log-level: info
-unified-delay: true
-tcp-concurrent: true
-find-process-mode: strict
-global-client-fingerprint: chrome
-
-# =========================
-# DNS配置
-# =========================
+# 1. DNS 配置
 dns:
   enable: true
   listen: '127.0.0.1:5335'
-  use-system-hosts: false
+  ipv6: false
+  use-system-hosts: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  default-nameserver: [180.76.76.76, 182.254.118.118, 8.8.8.8, 180.184.2.2]
+  
+  # 默认 DNS (用于启动引导)
+  default-nameserver: 
+    - 223.5.5.5
+    - 119.29.29.29
+    
+  # 国内/常规 DNS
   nameserver:
-    [
-      180.76.76.76,
-      119.29.29.29,
-      180.184.1.1,
-      223.5.5.5,
-      8.8.8.8,
-      'https://223.6.6.6/dns-query#h3=true',
-      'https://dns.alidns.com/dns-query',
-      'https://cloudflare-dns.com/dns-query',
-      'https://doh.pub/dns-query'
-    ]
+    - 'https://dns.alidns.com/dns-query'
+    - 'https://doh.pub/dns-query'
+    - 'https://doh.360.cn/dns-query'
+
+  # 【修复】使用标准缩进格式，避免语法错误
+  nameserver-policy:
+    'geosite:private': system
+    '+.local': system
+    '+.lan': system
+    '+.home': system
+
+  # 国外/抗污染 DNS
   fallback:
-    [
-      'https://000000.dns.nextdns.io/dns-query#h3=true',
-      'https://dns.alidns.com/dns-query',
-      'https://doh.pub/dns-query',
-      'https://public.dns.iij.jp/dns-query',
-      'https://101.101.101.101/dns-query',
-      'https://208.67.220.220/dns-query',
-      'tls://8.8.4.4',
-      'tls://1.0.0.1:853',
-      'https://cloudflare-dns.com/dns-query',
-      'https://dns.google/dns-query'
-    ]
+    - 'https://1.1.1.1/dns-query'
+    - 'https://8.8.8.8/dns-query'
+    - 'https://cloudflare-dns.com/dns-query'
+    - 'https://dns.google/dns-query'
+
   fallback-filter:
-    {
-      geoip: true,
-      ipcidr: [240.0.0.0/4, 0.0.0.0/32, 127.0.0.1/32],
-      domain:
-        [
-          +.google.com,
-          +.facebook.com,
-          +.twitter.com,
-          +.youtube.com,
-          +.xn--ngstr-lra8j.com,
-          +.google.cn,
-          +.googleapis.cn,
-          +.googleapis.com,
-          +.gvt1.com
-        ]
-    }
+    geoip: true
+    ipcidr: 
+      - 240.0.0.0/4
+      - 0.0.0.0/32
+      - 127.0.0.1/32
+    domain:
+      - +.google.com
+      - +.facebook.com
+      - +.twitter.com
+      - +.youtube.com
+      - +.google.cn
+
+  # 【修复】将内网域名加入 FakeIP 过滤，确保获取真实 IP
   fake-ip-filter:
-    [
-      '*.lan',
-      'stun.*.*.*',
-      'stun.*.*',
-      time.windows.com,
-      time.nist.gov,
-      time.apple.com,
-      time.asia.apple.com,
-      '*.ntp.org.cn',
-      '*.openwrt.pool.ntp.org',
-      time1.cloud.tencent.com,
-      time.ustc.edu.cn,
-      pool.ntp.org,
-      ntp.ubuntu.com,
-      ntp.aliyun.com,
-      ntp1.aliyun.com,
-      ntp2.aliyun.com,
-      ntp3.aliyun.com,
-      ntp4.aliyun.com,
-      ntp5.aliyun.com,
-      ntp6.aliyun.com,
-      ntp7.aliyun.com,
-      time1.aliyun.com,
-      time2.aliyun.com,
-      time3.aliyun.com,
-      time4.aliyun.com,
-      time5.aliyun.com,
-      time6.aliyun.com,
-      time7.aliyun.com,
-      '*.time.edu.cn',
-      time1.apple.com,
-      time2.apple.com,
-      time3.apple.com,
-      time4.apple.com,
-      time5.apple.com,
-      time6.apple.com,
-      time7.apple.com,
-      time1.google.com,
-      time2.google.com,
-      time3.google.com,
-      time4.google.com,
-      music.163.com,
-      '*.music.163.com',
-      '*.126.net',
-      musicapi.taihe.com,
-      music.taihe.com,
-      songsearch.kugou.com,
-      trackercdn.kugou.com,
-      '*.kuwo.cn',
-      api-jooxtt.sanook.com,
-      api.joox.com,
-      joox.com,
-      y.qq.com,
-      '*.y.qq.com',
-      streamoc.music.tc.qq.com,
-      mobileoc.music.tc.qq.com,
-      isure.stream.qqmusic.qq.com,
-      dl.stream.qqmusic.qq.com,
-      aqqmusic.tc.qq.com,
-      amobile.music.tc.qq.com,
-      '*.xiami.com',
-      '*.music.migu.cn',
-      music.migu.cn,
-      '*.msftconnecttest.com',
-      '*.msftncsi.com',
-      localhost.ptlogin2.qq.com,
-      '*.*.*.srv.nintendo.net',
-      '*.*.stun.playstation.net',
-      'xbox.*.*.microsoft.com',
-      '*.ipv6.microsoft.com',
-      '*.*.xboxlive.com',
-      speedtest.cros.wr.pvp.net
-    ]
+    - '*.lan'
+    - 'stun.*.*.*'
+    - 'stun.*.*'
+    - time.windows.com
+    - time.nist.gov
+    - time.apple.com
+    - time.asia.apple.com
+    - '*.ntp.org.cn'
+    - '*.openwrt.pool.ntp.org'
+    - time1.cloud.tencent.com
+    - time.ustc.edu.cn
+    - pool.ntp.org
+    - ntp.ubuntu.com
+    - ntp.aliyun.com
+    - ntp1.aliyun.com
+    - ntp2.aliyun.com
+    - ntp3.aliyun.com
+    - ntp4.aliyun.com
+    - ntp5.aliyun.com
+    - ntp6.aliyun.com
+    - ntp7.aliyun.com
+    - time1.aliyun.com
+    - time2.aliyun.com
+    - time3.aliyun.com
+    - time4.aliyun.com
+    - time5.aliyun.com
+    - time6.aliyun.com
+    - time7.aliyun.com
+    - '*.time.edu.cn'
+    - time1.apple.com
+    - time2.apple.com
+    - time3.apple.com
+    - time4.apple.com
+    - time5.apple.com
+    - time6.apple.com
+    - time7.apple.com
+    - time1.google.com
+    - time2.google.com
+    - time3.google.com
+    - time4.google.com
+    - music.163.com
+    - '*.music.163.com'
+    - '*.126.net'
+    - musicapi.taihe.com
+    - music.taihe.com
+    - songsearch.kugou.com
+    - trackercdn.kugou.com
+    - '*.kuwo.cn'
+    - api-jooxtt.sanook.com
+    - api.joox.com
+    - joox.com
+    - y.qq.com
+    - '*.y.qq.com'
+    - streamoc.music.tc.qq.com
+    - mobileoc.music.tc.qq.com
+    - isure.stream.qqmusic.qq.com
+    - dl.stream.qqmusic.qq.com
+    - aqqmusic.tc.qq.com
+    - amobile.music.tc.qq.com
+    - '*.xiami.com'
+    - '*.music.migu.cn'
+    - music.migu.cn
+    - '*.msftconnecttest.com'
+    - '*.msftncsi.com'
+    - localhost.ptlogin2.qq.com
+    - '*.*.*.srv.nintendo.net'
+    - '*.*.stun.playstation.net'
+    - 'xbox.*.*.microsoft.com'
+    - '*.ipv6.microsoft.com'
+    - '*.*.xboxlive.com'
+    - speedtest.cros.wr.pvp.net
 
-# =========================
-# 配置文件管理
-# =========================
-profile:
-  store-selected: true
-  store-fake-ip: false
 
-# =========================
-# 域名/流量嗅探
-# =========================
-sniffer:
-  enable: true
-  parse-pure-ip: true
-  sniff:
-    TLS: { ports: [443, 8443] }
-    HTTP: { ports: [80, 8080-8880], override-destination: true }
+# 2. 策略组定义 (Proxy Groups)
+proxy-groups:
+  # --- 核心策略组 ---
+  - name: 🚀 节点选择
+    type: select
+    proxies: [DIRECT, REJECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 自动选择]
+    include-all-proxies: true
 
-# =========================
-# Geo 数据获取
-# =========================
-geodata-mode: true
-geo-auto-update: true
-geodata-loader: standard
-geo-update-interval: 24
-geox-url:
-  geoip: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
-  geosite: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
-  mmdb: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb
-  asn: https://gh-proxy.org/https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb
+  - name: 💬 AI 服务
+    type: select
+    proxies: [北美优选, 欧洲优选, 🚀 节点选择]
 
+  - name: 📹 油管视频
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🔍 谷歌服务
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 📲 电报消息
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🎵 Spotify
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🎬 流媒体
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🎮 游戏平台
+    type: select
+    proxies: [DIRECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  # --- 细分应用组 ---
+  - name: 🐱 Github
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: Ⓜ️ 微软服务
+    type: select
+    proxies: [DIRECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🍏 苹果服务
+    type: select
+    proxies: [DIRECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🌐 社交媒体
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 📚 教育资源
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: ☁️ 云服务
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 💰 金融服务
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🌐 非中国
+    type: select
+    proxies: [香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  - name: 🏠 私有网络
+    type: select
+    proxies: [DIRECT, REJECT]
+
+  - name: 🔒 国内服务
+    type: select
+    proxies: [DIRECT, REJECT]
+
+  - name: 🛑 广告拦截
+    type: select
+    proxies: [REJECT, DIRECT]
+
+  - name: 🐟 漏网之鱼
+    type: select
+    proxies: [DIRECT, 香港优选, 亚洲优选, 北美优选, 欧洲优选, 🚀 节点选择]
+
+  # --- 自动筛选/测速区域组 ---
+  - name: 自动选择
+    type: url-test
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all-proxies: true
+
+  - name: 香港优选
+    type: url-test
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all-proxies: true
+    filter: '(?i)(港|HK|Hong)'
+
+  - name: 亚洲优选
+    type: select
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all-proxies: true
+    filter: '(?i)(JP|Japan|日|SG|Singapore|狮|坡|TW|Taiwan|台|Korea|韩|印)'
+
+  - name: 北美优选
+    type: select
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all-proxies: true
+    filter: '(?i)(美国|US|States|United|America|加拿大|Canada)'
+
+  - name: 欧洲优选
+    type: select
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all-proxies: true
+    filter: '(?i)(UK|英|意|FR|法|ES|西班牙|IT|意大利|RU|俄|DE|德|土耳其|荷兰)'
+
+
+# 3. 规则集来源 (Rule Providers)
 rule-providers:
   category-ads-all: {type: http, format: mrs, behavior: domain, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ads-all.mrs', path: ./ruleset/category-ads-all.mrs, interval: 86400}
   category-ai-chat-!cn: {type: http, format: mrs, behavior: domain, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs', path: ./ruleset/category-ai-chat-!cn.mrs, interval: 86400}
   youtube: {type: http, format: mrs, behavior: domain, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/youtube.mrs', path: ./ruleset/youtube.mrs, interval: 86400}
-  spotify: {type: http, format: mrs, behavior: domain, url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/spotify.mrs", path: ./ruleset/spotify.mrs, interval: 86400}
+  spotify: {type: http, format: mrs, behavior: domain, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/spotify.mrs', path: ./ruleset/spotify.mrs, interval: 86400}
   google: {type: http, format: mrs, behavior: domain, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/google.mrs', path: ./ruleset/google.mrs, interval: 86400}
   private: {type: http, format: mrs, behavior: ipcidr, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/private.mrs', path: ./ruleset/private.mrs, interval: 86400}
   geolocation-cn: {type: http, format: mrs, behavior: domain, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/geolocation-cn.mrs', path: ./ruleset/geolocation-cn.mrs, interval: 86400}
@@ -347,12 +321,11 @@ rule-providers:
   netflix_ip: {type: http, format: mrs, behavior: ipcidr, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/netflix.mrs', path: ./ruleset/netflix_ip.mrs, interval: 86400}
   google_ip: {type: http, format: mrs, behavior: ipcidr, url: 'https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/google.mrs', path: ./ruleset/google_ip.mrs, interval: 86400}
 
-
-# 3. 分流规则 (Rules) - 保持不变
+# 4. 分流规则 (Rules)
 rules:
   # --- 第一梯队：清理与保护 ---
   - RULE-SET,category-ads-all,🛑 广告拦截
-  - RULE-SET,private,🏠 私有网络,no-resolve  
+  - RULE-SET,private,🏠 私有网络,no-resolve
 
   # --- 第二梯队：核心 AI 与 Google 分流 ---
   - RULE-SET,category-ai-chat-!cn,💬 AI 服务
