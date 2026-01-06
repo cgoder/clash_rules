@@ -235,6 +235,7 @@ proxy-groups:
     interval: 300
     tolerance: 50
     include-all-proxies: true
+    use: [sub1]
 
   - name: 香港优选
     type: url-test
@@ -242,6 +243,7 @@ proxy-groups:
     interval: 300
     tolerance: 50
     include-all-proxies: true
+    use: [sub1]
     filter: '(?i)(港|HK|Hong)'
 
   - name: 亚洲优选
@@ -250,6 +252,7 @@ proxy-groups:
     interval: 300
     tolerance: 50
     include-all-proxies: true
+    use: [sub1]
     filter: '(?i)(JP|Japan|日|SG|Singapore|狮|坡|TW|Taiwan|台|Korea|韩|印)'
 
   - name: 北美优选
@@ -258,6 +261,7 @@ proxy-groups:
     interval: 300
     tolerance: 50
     include-all-proxies: true
+    use: [sub1]
     filter: '(?i)(美国|US|States|United|America|加拿大|Canada)'
 
   - name: 欧洲优选
@@ -266,6 +270,7 @@ proxy-groups:
     interval: 300
     tolerance: 50
     include-all-proxies: true
+    use: [sub1]
     filter: '(?i)(UK|英|意|FR|法|ES|西班牙|IT|意大利|RU|俄|DE|德|土耳其|荷兰)'
 
 
