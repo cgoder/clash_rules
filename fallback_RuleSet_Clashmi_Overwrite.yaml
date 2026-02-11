@@ -191,6 +191,8 @@ rules:
   - RULE-SET,disney_domain,Disney
   - RULE-SET,spotify_domain,Spotify
   - RULE-SET,paypal_domain,PayPal
+  - RULE-SET,cn_domain,DIRECT
+  - RULE-SET,cn_ip,DIRECT
   - RULE-SET,geolocation-!cn,一键代理
   - RULE-SET,google_ip,Google,no-resolve
   - RULE-SET,apple_ip,Apple,no-resolve
