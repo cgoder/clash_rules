@@ -17,6 +17,10 @@ Anchor_SG: &Anchor_SG '^(?i)(?=.*(新加坡|🇸🇬|\bSG\b|Singapore|SIN|XSP)).
 Anchor_US: &Anchor_US '^(?i)(?=.*(美国|美國|🇺🇸|\bUS\b|\bUSA\b|SJC|JFK|LAX|ORD|ATL|DFW|SFO|MIA|SEA|IAD)).*$'
 Anchor_EU: &Anchor_EU '^(?i)(?=.*(奥地利|奥地利共和国|比利时|保加利亚|克罗地亚|塞浦路斯|捷克|丹麦|爱沙尼亚|芬兰|法国|德国|希腊|匈牙利|爱尔兰|意大利|拉脱维亚|立陶宛|卢森堡|荷兰|波兰|葡萄牙|罗马尼亚|斯洛伐克|斯洛文尼亚|西班牙|瑞典|英国|🇧🇪|🇨🇿|🇩🇰|🇫🇮|🇫🇷|🇩🇪|🇮🇪|🇮🇹|🇱🇹|🇱🇺|🇳🇱|🇵🇱|🇸🇪|🇬🇧|CDG|FRA|AMS|MAD|BCN|FCO|MUC|BRU)).*$'
 Anchor_OT: &Anchor_OT '^(?!.*(DIRECT|直接连接|香港|台湾|台灣|日本|韩国|韓國|新加坡|美国|美國|奥地利|比利时|保加利亚|克罗地亚|塞浦路斯|捷克|丹麦|爱沙尼亚|芬兰|法国|德国|希腊|匈牙利|爱尔兰|意大利|拉脱维亚|立陶宛|卢森堡|荷兰|波兰|葡萄牙|罗马尼亚|斯洛伐克|斯洛文尼亚|西班牙|瑞典|英国|🇭🇰|🇹🇼|🇸🇬|🇯🇵|🇰🇷|🇺🇸|🇬🇧|HK|TW|SG|JP|KR|US|GB|CDG|FRA|AMS|MAD|BCN|FCO|MUC|BRU|HKG|TPE|TSA|KHH|SIN|XSP|NRT|HND|KIX|CTS|FUK|JFK|LAX|ORD|ATL|DFW|SFO|MIA|SEA|IAD|LHR|LGW)).*$'
+# ⑤ 规则锚点
+Anchor_IP: &Anchor_IP {type: http, interval: 86400, behavior: ipcidr, format: mrs}
+Anchor_DN: &Anchor_DN {type: http, interval: 86400, behavior: domain, format: mrs}
+Anchor_CL: &Anchor_CL {type: http, interval: 86400, behavior: classical, format: text}
 
 
 
@@ -33,16 +37,6 @@ ipv6: true                                                              # 网络
 profile:
   store-selected: true                                                  # 保存选择  记住上次选择的节点和策略组
   store-fake-ip: true                                                   # 保存映射  Fake-IP 映射以加快 DNS 命中
-
-# 地理数据
-geo-auto-update: true                                                   # 自动更新  geodata
-geo-update-interval: 24                                                 # 更新间隔  单位：小时
-geodata-mode: true                                                      # 数据分流  使用数据集进行规则与分流匹配
-geox-url:
-  mmdb: https://testingcf.jsdelivr.net/gh/alecthw/mmdb_china_ip_list@release/Country.mmdb
-  geoip: https://testingcf.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geoip.dat
-  geosite: https://testingcf.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geosite.dat
-  asn: https://testingcf.jsdelivr.net/gh/xishang0128/geoip@release/GeoLite2-ASN.mmdb
 
 # 管理面板
 external-ui-name: zashboard                                             # 面板名称
@@ -100,7 +94,7 @@ dns:
   respect-rules: false                                                 # 遵循规则  不强制遵循规则顺序
   fake-ip-filter:
     - '*.lan'                                                          # 真实解析  常见局域网域名后缀
-    - geosite:cn                                                       # 真实解析  大陆域 GeoSite 数据
+    - "rule-set:cn_domain"                                             # 真实解析  大陆域名数据
   default-nameserver:
     - 114.114.114.114                                                  # 公共 DNS  114 
     - tls://223.5.5.5:853                                              # 公共 DNS  阿里云 DoT
@@ -131,6 +125,8 @@ proxy-groups:
   - {name: PayPal,    <<: *Anchor_OB, icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png}
   - {name: Speedtest, <<: *Anchor_OB, icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Speedtest.png}
   - {name: 漏网之鱼,   <<: *Anchor_OB, icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png}
+  - {name: 广告拦截, type: select, proxies: [REJECT, DIRECT], icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Adblock.png}
+
 
 # 策略组（按区域分组）
   # 香港组
@@ -176,32 +172,66 @@ proxy-groups:
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
    # 服务分流
-  - "GEOSITE,private,DIRECT"                                            # Private
-  - "GEOIP,private,DIRECT,no-resolve"                                   # Private
-  - "GEOSITE,category-speedtest,Speedtest"                              # Speedtest
-  - "GEOSITE,openai,ChatGPT"                                            # ChatGPT
-  - "GEOSITE,github,GitHub"                                             # GitHub
-  - "GEOSITE,youtube,YouTube"                                           # YouTube
-  - "GEOSITE,google,Google"                                             # Google
-  - "GEOSITE,onedrive,OneDrive"                                         # OneDrive
-  - "GEOSITE,microsoft,Microsoft"                                       # 微软服务
-  - "GEOSITE,apple-tvplus,AppleTV"                                      # Apple TV+
-  - "GEOSITE,apple,Apple"                                               # 苹果服务
-  - "GEOSITE,telegram,Telegram"                                         # Telegram
-  - "GEOSITE,tiktok,TikTok"                                             # TikTok
-  - "GEOSITE,twitter,Twitter"                                           # Twitter
-  - "GEOSITE,netflix,Netflix"                                           # Netflix
-  - "GEOSITE,disney,Disney"                                             # Disney+
-  - "GEOSITE,spotify,Spotify"                                           # Spotify
-  - "GEOSITE,paypal,PayPal"                                             # PayPal
-  - "GEOSITE,gfw,一键代理"                                               # GFW
-  - "GEOIP,google,Google,no-resolve"                                    # Google
-  - "GEOIP,telegram,Telegram,no-resolve"                                # Telegram
-  - "GEOIP,twitter,Twitter,no-resolve"                                  # Twitter
-  - "GEOIP,netflix,Netflix,no-resolve"                                  # Netflix
-  - "GEOSITE,cn,DIRECT"                                                 # 中国域名
-  - "GEOIP,cn,DIRECT,no-resolve"                                        # 中国IP
-  - "MATCH,漏网之鱼"                                                     # 兜底规则
+  - RULE-SET,ads_domain,广告拦截
+  - RULE-SET,private_ip,DIRECT,no-resolve
+  - RULE-SET,private_domain,DIRECT
+  - RULE-SET,speedtest_domain,Speedtest
+  - RULE-SET,ai,ChatGPT
+  - RULE-SET,github_domain,GitHub
+  - RULE-SET,youtube_domain,YouTube
+  - RULE-SET,google_domain,Google
+  - RULE-SET,onedrive_domain,OneDrive
+  - RULE-SET,microsoft_domain,Microsoft
+  - RULE-SET,appletv_domain,AppleTV
+  - RULE-SET,apple_domain,Apple·
+  - RULE-SET,tiktok_domain,TikTok
+  - RULE-SET,twitter_domain,Twitter
+  - RULE-SET,telegram_domain,Telegram
+  - RULE-SET,netflix_domain,Netflix
+  - RULE-SET,disney_domain,Disney
+  - RULE-SET,spotify_domain,Spotify
+  - RULE-SET,paypal_domain,PayPal
+  - RULE-SET,geolocation-!cn,一键代理
+  - RULE-SET,google_ip,Google,no-resolve
+  - RULE-SET,apple_ip,Apple,no-resolve
+  - RULE-SET,netflix_ip,Netflix,no-resolve
+  - RULE-SET,telegram_ip,Telegram,no-resolve
+  - RULE-SET,twitter_ip,Twitter,no-resolve
+  - MATCH,漏网之鱼
+
+# 规则来源
+rule-providers: 
+  # 域名规则
+  private_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"}
+  speedtest_domain:  { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs"}
+  ai:                { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.mrs" }
+  github_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs"}
+  youtube_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
+  google_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}
+  onedrive_domain:   { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs"}
+  microsoft_domain:  { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs"}
+  appletv_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-tvplus.mrs"}
+  apple_domain:      { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs"}
+  tiktok_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs"}
+  twitter_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs"}
+  telegram_domain:   { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs"}
+  netflix_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs"}
+  disney_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs"}
+  spotify_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs"}
+  paypal_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/paypal.mrs"}
+  geolocation-!cn:   { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs"}
+  cn_domain:         { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}
+  ads_domain:        { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/privacy-protection-tools/anti-ad.github.io/master/docs/mihomo.mrs"}
+
+
+  # IP规则
+  apple_ip:          { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs"}
+  private_ip:        { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs"}
+  google_ip:         { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"}
+  telegram_ip:       { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs"}
+  twitter_ip:        { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs"}
+  netflix_ip:        { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs"}
+  cn_ip:             { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}
 
 
 
