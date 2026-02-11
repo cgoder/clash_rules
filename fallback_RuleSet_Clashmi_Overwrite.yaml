@@ -88,6 +88,7 @@ dns:
   enable: true
   ipv6: false
   enhanced-mode: fake-ip
+  prefer-h3: true
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
     - '*.lan'
