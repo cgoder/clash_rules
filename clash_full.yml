@@ -1,0 +1,226 @@
+# =======================================================
+# Clash Meta 完整独立配置文件 (Strategy A: Balanced)
+# 功能：集成订阅 + AI 强制美国 + 谷歌/流媒体分流
+# =======================================================
+
+# --- 1. 基础设置 ---
+port: 7890
+socks-port: 7891
+mixed-port: 7897
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+external-controller: 127.0.0.1:9090
+
+# --- 2. 代理订阅来源 (Proxy Providers) ---
+proxy-providers:
+  MyAirport:
+    type: http
+    # ⚠️⚠️⚠️ 请在下方填入你的机场订阅链接 ⚠️⚠️⚠️
+    url: "https://zh-cn.micro361.org/api/v1/client/subscribe?token=Tj9UnrSTGBkXJFhoYu4g0c5z4xWoBsN0"
+    path: ./profiles/myairport.yaml
+    interval: 3600
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 300
+
+# --- 3. DNS 设置 (防止 DNS 污染) ---
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
+
+# --- 4. 策略组定义 (Proxy Groups) ---
+proxy-groups:
+  # [Group 1] 🇺🇸 AI 专用 (OpenAI, Gemini, Claude)
+  # 逻辑：从订阅中提取美国节点 -> 自动选最快的
+  - name: 💬 AI 服务
+    type: url-test
+    use: [MyAirport]
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    filter: "(?i)(美国|US|States|United|America)"
+
+  # [Group 2] 🌏 亚洲优选 (Google, 网页浏览)
+  # 逻辑：从订阅中提取 港/日/新/台 -> 自动选最快的
+  - name: 🌏 亚洲优选
+    type: url-test
+    use: [MyAirport]
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    filter: "(?i)(港|HK|Hong|JP|Japan|日|SG|Singapore|狮|TW|Taiwan|湾)"
+
+  # [Group 3] 📺 YouTube (手动选择)
+  - name: 📹 油管视频
+    type: select
+    use: [MyAirport]
+    filter: "(?i)(美国|US|States|港|HK|Hong|JP|Japan|日|SG|Singapore|TW|湾)"
+
+  # [Group 4] 🎵 Spotify (手动选择)
+  - name: 🎵 Spotify
+    type: select
+    use: [MyAirport]
+    filter: "(?i)(美国|US|States|港|HK|Hong|JP|Japan|日|SG|Singapore|TW|湾)"
+
+  # [Group 5] 🎬 流媒体 (Netflix/Disney+)
+  - name: 🎬 流媒体
+    type: select
+    use: [MyAirport]
+    filter: "(?i)(港|HK|JP|SG|US|TW)"
+
+  # [Group 6] 📲 Telegram
+  - name: 📲 电报消息
+    type: select
+    proxies: [🌏 亚洲优选, 💬 AI 服务]
+
+  # [Group 7] 漏网之鱼 (兜底)
+  - name: 🐟 漏网之鱼
+    type: select
+    proxies: [🌏 亚洲优选, DIRECT, 💬 AI 服务]
+
+# --- 5. 规则集 (Rule Providers) ---
+rule-providers:
+  ads:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ads-all.mrs"
+    path: ./ruleset/ads.mrs
+    interval: 86400
+
+  ai_chat:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs"
+    path: ./ruleset/ai_chat.mrs
+    interval: 86400
+
+  youtube:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/youtube.mrs"
+    path: ./ruleset/youtube.mrs
+    interval: 86400
+
+  spotify:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/spotify.mrs"
+    path: ./ruleset/spotify.mrs
+    interval: 86400
+
+  netflix:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/netflix.mrs"
+    path: ./ruleset/netflix.mrs
+    interval: 86400
+
+  google:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/google.mrs"
+    path: ./ruleset/google.mrs
+    interval: 86400
+
+  telegram:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/telegram.mrs"
+    path: ./ruleset/telegram.mrs
+    interval: 86400
+
+  microsoft:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/microsoft.mrs"
+    path: ./ruleset/microsoft.mrs
+    interval: 86400
+
+  apple:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/apple.mrs"
+    path: ./ruleset/apple.mrs
+    interval: 86400
+
+  cn:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/cn.mrs"
+    path: ./ruleset/cn.mrs
+    interval: 86400
+
+  private:
+    type: http
+    format: mrs
+    behavior: domain
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/private.mrs"
+    path: ./ruleset/private.mrs
+    interval: 86400
+
+  cn_ip:
+    type: http
+    format: mrs
+    behavior: ipcidr
+    url: "https://gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/cn.mrs"
+    path: ./ruleset/cn_ip.mrs
+    interval: 86400
+
+# --- 6. 规则匹配逻辑 (Rules) ---
+rules:
+  # 1. 广告
+  - RULE-SET,ads,REJECT
+
+  # 2. AI (含 Gemini) -> 走美国
+  - RULE-SET,ai_chat,💬 AI 服务
+
+  # 3. 媒体
+  - RULE-SET,youtube,📹 油管视频
+  - RULE-SET,spotify,🎵 Spotify
+  - RULE-SET,netflix,🎬 流媒体
+
+  # 4. Google 其余
+  - RULE-SET,google,🌏 亚洲优选
+
+  # 5. App
+  - RULE-SET,telegram,📲 电报消息
+  - RULE-SET,microsoft,DIRECT
+  - RULE-SET,apple,DIRECT
+
+  # 6. 国内/直连
+  - RULE-SET,private,DIRECT
+  - RULE-SET,cn,DIRECT
+  - RULE-SET,cn_ip,DIRECT
+  - GEOIP,CN,DIRECT
+
+  # 7. 兜底
+  - MATCH,🐟 漏网之鱼
