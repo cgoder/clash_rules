@@ -183,7 +183,7 @@ rules:
   - RULE-SET,onedrive_domain,OneDrive
   - RULE-SET,microsoft_domain,Microsoft
   - RULE-SET,appletv_domain,AppleTV
-  - RULE-SET,apple_domain,Apple·
+  - RULE-SET,apple_domain,Apple
   - RULE-SET,tiktok_domain,TikTok
   - RULE-SET,twitter_domain,Twitter
   - RULE-SET,telegram_domain,Telegram
