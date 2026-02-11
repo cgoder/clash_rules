@@ -33,7 +33,7 @@ bind-address: "*"                                                       # 监听
 tcp-concurrent: true                                                    # 并发连接  提升多任务性能
 unified-delay: true                                                     # 统一延迟  减少节点延迟抖动
 log-level: info                                                         # 日志级别  silent（静默）/ error（错误）/ warning（警告）/ info（信息）/ debug（调试）
-ipv6: true                                                              # 网络协议  是否启用 IPv6 支持
+ipv6: false                                                              # 网络协议  是否启用 IPv6 支持
 profile:
   store-selected: true                                                  # 保存选择  记住上次选择的节点和策略组
   store-fake-ip: true                                                   # 保存映射  Fake-IP 映射以加快 DNS 命中
@@ -121,6 +121,14 @@ dns:
     - https://223.5.5.5/dns-query
     - https://223.6.6.6/dns-query
   respect-rules: true
+  nameserver-policy:
+    "geosite:cn,private":
+      - https://223.5.5.5/dns-query
+      - https://223.6.6.6/dns-query
+    "geosite:geolocation-!cn":
+      - https://1.1.1.1/dns-query
+      - https://8.8.8.8/dns-query
+  direct-nameserver-follow-policy: true
 
 
 # ※※※※※※※※※※※※※※※ 代理策略组 ※※※※※※※※※※※※※※※
