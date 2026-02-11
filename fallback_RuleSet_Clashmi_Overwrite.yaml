@@ -85,7 +85,6 @@ sniffer:
 
 # DNS 设置
 dns:
-dns:
   enable: true
   ipv6: false
   enhanced-mode: fake-ip
