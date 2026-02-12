@@ -100,6 +100,7 @@ dns:
   use-hosts: false
   use-system-hosts: false
   default-nameserver:
+    - 223.6.6.6
     - 223.5.5.5
     - 119.29.29.29
   nameserver:
@@ -107,9 +108,8 @@ dns:
     - https://doh.pub/dns-query
   fallback:
     - https://1.1.1.1/dns-query
+    - https://8.8.4.4/dns-query
     - https://8.8.8.8/dns-query
-    - https://208.67.222.222/dns-query
-    - https://9.9.9.9/dns-query
   fallback-filter:
     geoip: true
     geoip-code: CN
@@ -128,6 +128,7 @@ dns:
       - https://223.6.6.6/dns-query
     "geosite:geolocation-!cn":
       - https://1.1.1.1/dns-query
+      - https://8.8.4.4/dns-query
       - https://8.8.8.8/dns-query
   direct-nameserver-follow-policy: true
 
@@ -200,6 +201,9 @@ proxy-groups:
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
    # 服务分流
+  - IP-CIDR,1.1.1.1/32,一键代理,no-resolve
+  - IP-CIDR,8.8.8.8/32,一键代理,no-resolve
+  - IP-CIDR,8.8.4.4/32,一键代理,no-resolve
   - RULE-SET,ads_domain,广告拦截
   - RULE-SET,private_ip,DIRECT,no-resolve
   - RULE-SET,private_domain,DIRECT
