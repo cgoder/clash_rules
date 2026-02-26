@@ -145,7 +145,7 @@ proxy-groups:
   - {name: PayPal,    <<: *Anchor_OB, icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png}
   - {name: Speedtest, <<: *Anchor_OB, icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Speedtest.png}
   - {name: 漏网之鱼,   <<: *Anchor_OB, icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png}
-  - {name: 广告拦截, type: select, proxies: [REJECT, DIRECT], icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Adblock.png}
+#  - {name: 广告拦截, type: select, proxies: [REJECT, DIRECT], icon: https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Adblock.png}
 
 
 # 策略组（按区域分组）
