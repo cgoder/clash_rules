@@ -208,6 +208,7 @@ rules:
   - RULE-SET,onedrive_domain,OneDrive
   - RULE-SET,microsoft_domain,Microsoft
   - RULE-SET,appletv_domain,AppleTV
+  - DOMAIN,gsa.apple.com,一键代理
   - RULE-SET,apple_domain,Apple
   - RULE-SET,tiktok_domain,TikTok
   - RULE-SET,twitter_domain,Twitter
