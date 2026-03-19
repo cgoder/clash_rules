@@ -202,18 +202,18 @@ rules:
   - RULE-SET,cn_domain,DIRECT
   - RULE-SET,cn_ip,DIRECT,no-resolve
   # 全球高频 (PROXY)
-  - RULE-SET,microsoft_domain,Microsoft
-  - RULE-SET,google_domain,Google
-  - RULE-SET,google_ip,Google,no-resolve
-  - RULE-SET,ai,ChatGPT
-  # 常用工具/特定 App (低频后移)
-  - RULE-SET,github_domain,GitHub
-  - RULE-SET,youtube_domain,YouTube
-  - RULE-SET,spotify_domain,Spotify
-  - RULE-SET,onedrive_domain,OneDrive
   - DOMAIN,gsa.apple.com,一键代理
   - RULE-SET,apple_domain,Apple
   - RULE-SET,apple_ip,Apple,no-resolve
+  - RULE-SET,ai,ChatGPT
+  - RULE-SET,github_domain,GitHub
+  - RULE-SET,youtube_domain,YouTube
+  - RULE-SET,onedrive_domain,OneDrive
+  - RULE-SET,microsoft_domain,Microsoft
+  - RULE-SET,google_domain,Google
+  - RULE-SET,google_ip,Google,no-resolve
+  # 常用工具/特定 App (低频后移)
+  - RULE-SET,spotify_domain,Spotify
   - RULE-SET,twitter_domain,Twitter
   - RULE-SET,twitter_ip,Twitter,no-resolve
   - RULE-SET,telegram_domain,Telegram
