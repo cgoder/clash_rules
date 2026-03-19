@@ -196,35 +196,37 @@ rules:
    # 服务分流
   - IP-CIDR,1.1.1.1/32,一键代理,no-resolve
   - IP-CIDR,8.8.8.8/32,一键代理,no-resolve
-  - IP-CIDR,8.8.4.4/32,一键代理,no-resolve
-#  - RULE-SET,ads_domain,广告拦截
   - RULE-SET,private_ip,DIRECT,no-resolve
   - RULE-SET,private_domain,DIRECT
-  - RULE-SET,speedtest_domain,Speedtest
-  - RULE-SET,ai,ChatGPT
-  - RULE-SET,github_domain,GitHub
-  - RULE-SET,youtube_domain,YouTube
-  - RULE-SET,google_domain,Google
-  - RULE-SET,onedrive_domain,OneDrive
-  - RULE-SET,microsoft_domain,Microsoft
-  - RULE-SET,appletv_domain,AppleTV
-  - DOMAIN,gsa.apple.com,一键代理
-  - RULE-SET,apple_domain,Apple
-  - RULE-SET,tiktok_domain,TikTok
-  - RULE-SET,twitter_domain,Twitter
-  - RULE-SET,telegram_domain,Telegram
-  - RULE-SET,netflix_domain,Netflix
-  - RULE-SET,disney_domain,Disney
-  - RULE-SET,spotify_domain,Spotify
-  - RULE-SET,paypal_domain,PayPal
+  # 国内高频 (DIRECT)
   - RULE-SET,cn_domain,DIRECT
   - RULE-SET,cn_ip,DIRECT,no-resolve
-  - RULE-SET,geolocation-!cn,一键代理
+  # 全球高频 (PROXY)
+  - RULE-SET,microsoft_domain,Microsoft
+  - RULE-SET,google_domain,Google
   - RULE-SET,google_ip,Google,no-resolve
+  - RULE-SET,ai,ChatGPT
+  # 常用工具/特定 App (低频后移)
+  - RULE-SET,github_domain,GitHub
+  - RULE-SET,youtube_domain,YouTube
+  - RULE-SET,spotify_domain,Spotify
+  - RULE-SET,onedrive_domain,OneDrive
+  - DOMAIN,gsa.apple.com,一键代理
+  - RULE-SET,apple_domain,Apple
   - RULE-SET,apple_ip,Apple,no-resolve
-  - RULE-SET,netflix_ip,Netflix,no-resolve
-  - RULE-SET,telegram_ip,Telegram,no-resolve
+  - RULE-SET,twitter_domain,Twitter
   - RULE-SET,twitter_ip,Twitter,no-resolve
+  - RULE-SET,telegram_domain,Telegram
+  - RULE-SET,telegram_ip,Telegram,no-resolve
+  - RULE-SET,tiktok_domain,TikTok
+  - RULE-SET,netflix_domain,Netflix
+  - RULE-SET,netflix_ip,Netflix,no-resolve
+  - RULE-SET,disney_domain,Disney
+  - RULE-SET,appletv_domain,AppleTV
+  - RULE-SET,speedtest_domain,Speedtest
+  - RULE-SET,paypal_domain,PayPal
+  # 兜底分流
+  - RULE-SET,geolocation-!cn,一键代理
   - MATCH,漏网之鱼
 
 # 规则来源
