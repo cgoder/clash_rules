@@ -53,7 +53,7 @@ tun:
   auto-detect-interface: true                                           # 自动出口  自动识别默认出口网络接口 （仅内核模式有效）
   auto-route: true                                                      # 自动路由  自动添加系统路由表      （仅内核模式有效）
   auto-redirect: true                                                   # 自动定向  自动将流量重定向至 TUN  （仅内核模式有效）
-  strict-route: false                                                   # 路由模式  严格路由模式
+  strict-route: true                                                    # 路由模式  严格路由模式
   endpoint-independent-nat: true                                        # 端点无关  NAT（提高 NAT 类型兼容性，适用于 P2P 和游戏）
   loopback-address:                                                     # 环回地址  for sidestore自签
     - 10.7.0.1
@@ -102,27 +102,30 @@ dns:
   use-hosts: false
   use-system-hosts: false
   default-nameserver:
-    - 223.6.6.6
-    - 223.5.5.5
-    - 119.29.29.29
+    - 223.5.5.5#DIRECT
+    - 223.6.6.6#DIRECT
+    - 119.29.29.29#DIRECT
   nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query#DIRECT
+    - https://doh.pub/dns-query#DIRECT
+  fallback:
+    - https://8.8.8.8/dns-query#PROXY
+    - https://1.1.1.1/dns-query#PROXY
   proxy-server-nameserver:
-    - https://223.5.5.5/dns-query
-    - https://223.6.6.6/dns-query
+    - https://dns.alidns.com/dns-query#DIRECT
+    - https://doh.pub/dns-query#DIRECT
   direct-nameserver:
-    - https://223.5.5.5/dns-query
-    - https://223.6.6.6/dns-query
+    - https://223.5.5.5/dns-query#DIRECT
+    - https://223.6.6.6/dns-query#DIRECT
   respect-rules: true
   nameserver-policy:
     "geosite:cn,private":
-      - https://223.5.5.5/dns-query
-      - https://223.6.6.6/dns-query
+      - https://223.5.5.5/dns-query#DIRECT
+      - https://223.6.6.6/dns-query#DIRECT
     "geosite:geolocation-!cn":
-      - https://1.1.1.1/dns-query
-      - https://8.8.4.4/dns-query
-      - https://8.8.8.8/dns-query
+      - https://1.1.1.1/dns-query#PROXY
+      - https://8.8.4.4/dns-query#PROXY
+      - https://8.8.8.8/dns-query#PROXY
   direct-nameserver-follow-policy: true
 
 
