@@ -48,7 +48,7 @@ external-ui-url: https://gh-proxy.org/https://github.com/Zephyruso/zashboard/rel
 # TUN配置
 tun:
   enable: true                                                          # 网卡模式  是否启用 TUN 虚拟网卡模式  
-  stack: system                                                         # 协议类型  网络栈：system（系统栈）/ gvisor（内置用户态栈）/ mixed（混合）
+  stack: mixed                                                         # 协议类型  网络栈：system（系统栈）/ gvisor（内置用户态栈）/ mixed（混合）
   dns-hijack: [0.0.0.0:53]                                              # 劫持请求  劫持所有 UDP/TCP 53 端口的 DNS 请求
   auto-detect-interface: true                                           # 自动出口  自动识别默认出口网络接口 （仅内核模式有效）
   auto-route: true                                                      # 自动路由  自动添加系统路由表      （仅内核模式有效）
@@ -109,8 +109,8 @@ dns:
     - https://dns.alidns.com/dns-query#DIRECT
     - https://doh.pub/dns-query#DIRECT
   fallback:
-    - https://8.8.8.8/dns-query#PROXY
-    - https://1.1.1.1/dns-query#PROXY
+    - 'https://8.8.8.8/dns-query#一键代理'
+    - 'https://1.1.1.1/dns-query#一键代理'
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query#DIRECT
     - https://doh.pub/dns-query#DIRECT
@@ -123,9 +123,9 @@ dns:
       - https://223.5.5.5/dns-query#DIRECT
       - https://223.6.6.6/dns-query#DIRECT
     "geosite:geolocation-!cn":
-      - https://1.1.1.1/dns-query#PROXY
-      - https://8.8.4.4/dns-query#PROXY
-      - https://8.8.8.8/dns-query#PROXY
+      - 'https://1.1.1.1/dns-query#一键代理'
+      - 'https://8.8.4.4/dns-query#一键代理'
+      - 'https://8.8.8.8/dns-query#一键代理'
   direct-nameserver-follow-policy: true
 
 
@@ -201,9 +201,7 @@ rules:
   - IP-CIDR,8.8.8.8/32,一键代理,no-resolve
   - RULE-SET,private_ip,DIRECT,no-resolve
   - RULE-SET,private_domain,DIRECT
-  # 国内高频 (DIRECT)
-  - RULE-SET,cn_domain,DIRECT
-  - RULE-SET,cn_ip,DIRECT,no-resolve
+
   # 全球高频 (PROXY)
   - DOMAIN,gsa.apple.com,一键代理
   - RULE-SET,apple_domain,Apple
@@ -228,6 +226,9 @@ rules:
   - RULE-SET,appletv_domain,AppleTV
   - RULE-SET,speedtest_domain,Speedtest
   - RULE-SET,paypal_domain,PayPal
+  # 国内高频 (DIRECT)
+  - RULE-SET,cn_domain,DIRECT
+  - RULE-SET,cn_ip,DIRECT,no-resolve
   # 兜底分流
   - RULE-SET,geolocation-!cn,一键代理
   - MATCH,漏网之鱼
