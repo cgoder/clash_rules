@@ -126,22 +126,23 @@ dns:
     - 223.6.6.6
     - 119.29.29.29
   nameserver:
-    - https://dns.alidns.com/dns-query#DIRECT
-    - https://doh.pub/dns-query#DIRECT
+    - 'https://dns.alidns.com/dns-query#DIRECT'
+    - 'https://doh.pub/dns-query#DIRECT'
   fallback:
     - 'https://8.8.8.8/dns-query#一键代理'
     - 'https://1.1.1.1/dns-query#一键代理'
   proxy-server-nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
+    - 223.5.5.5
+    - 223.6.6.6
+    - 119.29.29.29
   direct-nameserver:
-    - https://223.5.5.5/dns-query#DIRECT
-    - https://223.6.6.6/dns-query#DIRECT
+    - 'https://223.5.5.5/dns-query#DIRECT'
+    - 'https://223.6.6.6/dns-query#DIRECT'
   respect-rules: true
   nameserver-policy:
     "rule-set:cn_domain,private_domain":
-      - https://223.5.5.5/dns-query#DIRECT
-      - https://223.6.6.6/dns-query#DIRECT
+      - 'https://223.5.5.5/dns-query#DIRECT'
+      - 'https://223.6.6.6/dns-query#DIRECT'
     "rule-set:geolocation-!cn":
       - 'https://1.1.1.1/dns-query#一键代理'
       - 'https://8.8.4.4/dns-query#一键代理'
