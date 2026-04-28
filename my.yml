@@ -115,6 +115,13 @@ dns:
     - '+.msftncsi.com'                # Windows 连通性检测
     - rule-set:private_domain
     - rule-set:ntp_domain
+    - 'stun.services.mozilla.com'       # Firefox/Edge WebRTC STUN
+    - 'stun.l.google.com'              # Google WebRTC STUN
+    - 'stun1.l.google.com'
+    - 'stun2.l.google.com'
+    - 'stun3.l.google.com'
+    - 'stun4.l.google.com'
+    - 'stun.cloudflare.com'            # Cloudflare WebRTC STUN
   use-hosts: false
   use-system-hosts: false
   default-nameserver:
