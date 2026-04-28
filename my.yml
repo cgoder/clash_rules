@@ -100,7 +100,7 @@ sniffer:
 dns:
   enable: true
   ipv6: false
-  cache: {enable: true, size: 4096, expired: 180}
+  cache: {enable: true, size: 4096, expired: 600}
   enhanced-mode: fake-ip
   prefer-h3: false
   fake-ip-range: 198.18.0.1/16
