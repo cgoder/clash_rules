@@ -59,6 +59,11 @@ tun:
   route-exclude-address-set:                                            # OS 层直连排除 (国内/局域网直连，极大降低 CPU 和延迟)
     - rule-set:cn_ip
     - rule-set:private_ip
+  route-exclude-cidr:
+    - 192.168.0.0/16
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - fc00::/7
 
   loopback-address:                                                     # 环回地址  for sidestore自签
     - 10.7.0.1
