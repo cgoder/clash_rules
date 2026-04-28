@@ -115,8 +115,6 @@ dns:
     - '+.msftncsi.com'                # Windows 连通性检测
     - rule-set:private_domain
     - rule-set:ntp_domain
-    - '+.stun.*'                        # STUN 服务（WebRTC NAT 穿透）
-    - 'stun.*'                          # STUN 服务（不带子域名）
   use-hosts: false
   use-system-hosts: false
   default-nameserver:
@@ -217,10 +215,12 @@ proxy-groups:
 
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
+  # --- 底层核心 UDP 端口放行 ---
+  - DST-PORT,3478,DIRECT      # STUN 常规端口
+  - DST-PORT,5349,DIRECT      # STUN TLS 端口
+  - DST-PORT,19302,DIRECT     # Google WebRTC
+
    # 服务分流
-  - DOMAIN-SUFFIX,stun.services.mozilla.com,DIRECT  # STUN WebRTC
-  - DOMAIN-SUFFIX,stun.l.google.com,DIRECT          # STUN WebRTC
-  - DOMAIN-SUFFIX,stun.cloudflare.com,DIRECT        # STUN WebRTC
   - RULE-SET,private_ip,DIRECT,no-resolve
   - RULE-SET,private_domain,DIRECT
 
