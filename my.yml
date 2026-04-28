@@ -6,8 +6,8 @@ Anchor_PR: &Anchor_PR {type: http, interval: 86400, proxy: DIRECT, health-check:
 Anchor_OB: &Anchor_OB {type: select, proxies: [一键代理, 香港故转, 台湾故转, 日本故转, 韩国故转, 新加坡故转, 美国故转, 欧洲故转, 香港自动, 台湾自动, 日本自动, 韩国自动, 新加坡自动, 美国自动, 欧洲自动, 香港手动, 台湾手动, 日本手动, 韩国手动, 新加坡手动, 美国手动, 欧洲手动, 其他手动, DIRECT, REJECT]}
 # ③ 策略锚点
 Anchor_HS: &Anchor_HS {type: select, url: 'https://www.g.cn/generate_204', include-all: true}
-Anchor_FB: &Anchor_FB {type: fallback, url: 'https://www.g.cn/generate_204', interval: 120, lazy: true, timeout: 2000, max-failed-times: 3, hidden: true, include-all: true}
-Anchor_UT: &Anchor_UT {type: url-test, url: 'https://www.g.cn/generate_204', interval: 120, lazy: true, tolerance: 50, timeout: 2000, max-failed-times: 3, hidden: true, include-all: true}
+Anchor_FB: &Anchor_FB {type: fallback, url: 'https://www.g.cn/generate_204', interval: 300, lazy: true, timeout: 3000, max-failed-times: 5, hidden: true, include-all: true}
+Anchor_UT: &Anchor_UT {type: url-test, url: 'https://www.g.cn/generate_204', interval: 300, lazy: true, tolerance: 50, timeout: 3000, max-failed-times: 5, hidden: true, include-all: true}
 # ④ 区域锚点
 Anchor_HK: &Anchor_HK '^(?i)(?=.*(香港|🇭🇰|\bHK\b|Hong(?:\s?Kong)?|HKG)).*$'
 Anchor_TW: &Anchor_TW '^(?i)(?=.*(台湾|台灣|🇹🇼|\bTW\b|\bTPE\b|\bTSA\b|\bKHH\b|taiwan|TPE|TSA|KHH)).*$'
@@ -147,9 +147,8 @@ dns:
       - 'https://223.5.5.5/dns-query#DIRECT'
       - 'https://223.6.6.6/dns-query#DIRECT'
     "rule-set:geolocation-!cn":
-      - 'https://1.1.1.1/dns-query#香港自动'
-      - 'https://8.8.4.4/dns-query#新加坡自动'
-      - 'https://8.8.8.8/dns-query#美国自动'
+      - 'https://1.1.1.1/dns-query#一键代理&h3=false'
+      - 'https://8.8.8.8/dns-query#一键代理&h3=false'
 
 
   direct-nameserver-follow-policy: true
