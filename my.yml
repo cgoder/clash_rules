@@ -127,6 +127,9 @@ dns:
     - 'stun3.l.google.com'
     - 'stun4.l.google.com'
     - 'stun.cloudflare.com'            # Cloudflare WebRTC STUN
+    - 223.5.5.5
+    - 223.6.6.6
+    - 119.29.29.29
   use-hosts: false
   use-system-hosts: false
   default-nameserver:
@@ -136,7 +139,6 @@ dns:
   nameserver:
     - 'https://dns.alidns.com/dns-query#DIRECT'
     - 'https://doh.pub/dns-query#DIRECT'
-
   proxy-server-nameserver:
     - 223.5.5.5
     - 223.6.6.6
@@ -144,6 +146,7 @@ dns:
   direct-nameserver:
     - 223.5.5.5
     - 223.6.6.6
+    - 119.29.29.29
   respect-rules: true
   nameserver-policy:
     "rule-set:cn_domain":
