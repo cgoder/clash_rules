@@ -256,11 +256,6 @@ proxy-groups:
 
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
-  # --- 底层核心 UDP 端口放行 (音视频通话与游戏直连) ---
-  - DST-PORT,3478,DIRECT      # STUN 常规端口
-  - DST-PORT,5349,DIRECT      # STUN TLS 端口
-  - DST-PORT,19302,DIRECT     # Google WebRTC
-
   # 服务内网/私有流量直连
   - RULE-SET,private_ip,国内直连,no-resolve
   - RULE-SET,private_domain,国内直连
