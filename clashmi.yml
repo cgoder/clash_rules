@@ -244,6 +244,7 @@ rules:
 
   # 全球高频 (PROXY)
   - DOMAIN,gsa.apple.com,一键代理
+  - DOMAIN,stun.voip.blackberry.com,一键代理                               # 强制代理黑莓 STUN 避免 WebRTC 泄露
   - RULE-SET,apple_domain,Apple
   - RULE-SET,apple_ip,Apple,no-resolve
   
