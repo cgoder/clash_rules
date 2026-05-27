@@ -342,17 +342,8 @@ rule-providers:
   add_direct_domain: { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs"}
 
   # === 自定义本地规则集 ===
-  my_direct:
-    type: file
-    behavior: classical
-    format: yaml
-    path: ./rules/my_direct.yaml
-
-  my_proxy:
-    type: file
-    behavior: classical
-    format: yaml
-    path: ./rules/my_proxy.yaml
+  my_direct:         { <<: *Anchor_CL, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_direct.list"}
+  my_proxy:          { <<: *Anchor_CL, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_proxy.list"}
 
 
   # === IP规则 ===
