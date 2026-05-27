@@ -1,0 +1,5 @@
+payload:
+  # for sidestore
+  - DOMAIN,gsa.apple.com
+  # STUN 防隐私泄露
+  - DOMAIN,stun.voip.blackberry.com

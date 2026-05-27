@@ -70,7 +70,10 @@ tun:
     - 192.168.0.0/16
     - 10.0.0.0/8
     - 172.16.0.0/12
+    - 100.64.0.0/10
+    - 169.254.0.0/16
     - fc00::/7
+    - fe80::/10
   loopback-address:                                                     # 环回地址  iOS SideStore 自签专属兼容
     - 10.7.0.1
 
@@ -106,7 +109,6 @@ sniffer:
     - "dlg.io.mi.com"
     - "+.oray.com"                                                      # 跳过花生壳
     - "+.sunlogin.net"                                                  # 跳过向日葵
-    - "+.push.apple.com"                                                # 跳过 APNs 推送
 
 # DNS 设置
 dns:
@@ -123,6 +125,12 @@ dns:
     - '+.local'
     - 'localhost'
     - '+.home.arpa'
+    - '+.ntp.org'
+    - '+.pool.ntp.org'
+    - 'time.apple.com'
+    - 'time.windows.com'
+    - 'time.google.com'
+    - 'ntp.aliyun.com'
     - 'routerlogin.net'
     - 'fritz.box'
     - '+.docker.internal'
@@ -149,6 +157,8 @@ dns:
     - 223.5.5.5
     - 223.6.6.6
     - 119.29.29.29
+    - '[2400:3200::1]'
+    - '[2402:4e00::]'
   nameserver:
     - 'https://dns.alidns.com/dns-query#DIRECT'
     - 'https://doh.pub/dns-query#DIRECT'
@@ -243,22 +253,32 @@ proxy-groups:
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
   # 服务内网/私有流量直连
+  - RULE-SET,ntp_domain,国内直连
   - RULE-SET,private_ip,国内直连,no-resolve
   - RULE-SET,private_domain,国内直连
 
-  # 全球高频 (PROXY)
-  # STUN 防隐私泄露
-  - DOMAIN,stun.voip.blackberry.com,一键代理
-  
-  # Apple 专有服务
-  - DOMAIN,gsa.apple.com,一键代理
-  - RULE-SET,apple_domain,Apple
-  - RULE-SET,apple_ip,Apple,no-resolve
-  
+  # 自定义本地分流规则
+  - RULE-SET,my_direct,国内直连
+  - RULE-SET,my_proxy,一键代理
+
+  # 国内直连加速（包含资源下载、特定解析、自定义直连与国内常规网域）
+  - RULE-SET,ResourceSite,国内直连
+  - RULE-SET,PanVod,国内直连
+  - RULE-SET,add_direct_domain,国内直连                                # 自定义直连列表
+  - RULE-SET,cn_domain,国内直连
+  - RULE-SET,cn_ip,国内直连,no-resolve
+
   # AI 业务分流
   - RULE-SET,openai_domain,ChatGPT
   - RULE-SET,anthropic_domain,Claude
   - RULE-SET,google-gemini_domain,Gemini
+
+  # 全球高频 (PROXY)
+  
+  # Apple 专有服务
+  - RULE-SET,appletv_domain,AppleTV
+  - RULE-SET,apple_domain,Apple
+  - RULE-SET,apple_ip,Apple,no-resolve
   
   # 常见开发与视频网域
   - RULE-SET,github_domain,GitHub
@@ -278,16 +298,8 @@ rules:
   - RULE-SET,netflix_domain,Netflix
   - RULE-SET,netflix_ip,Netflix,no-resolve
   - RULE-SET,disney_domain,Disney
-  - RULE-SET,appletv_domain,AppleTV
   - RULE-SET,speedtest_domain,Speedtest
   - RULE-SET,paypal_domain,PayPal
-  
-  # 国内直连加速（包含资源下载、特定解析、自定义直连与国内常规网域）
-  - RULE-SET,ResourceSite,国内直连
-  - RULE-SET,PanVod,国内直连
-  - RULE-SET,add_direct_domain,国内直连                                # 自定义直连列表
-  - RULE-SET,cn_domain,国内直连
-  - RULE-SET,cn_ip,国内直连,no-resolve
   
   # 兜底分流
   - MATCH,漏网之鱼
@@ -328,6 +340,19 @@ rule-providers:
   # 分流兜底与国内规则源
   cn_domain:         { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}
   add_direct_domain: { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs"}
+
+  # === 自定义本地规则集 ===
+  my_direct:
+    type: file
+    behavior: classical
+    format: yaml
+    path: ./rules/my_direct.yaml
+
+  my_proxy:
+    type: file
+    behavior: classical
+    format: yaml
+    path: ./rules/my_proxy.yaml
 
 
   # === IP规则 ===
