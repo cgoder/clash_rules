@@ -54,7 +54,7 @@ external-ui-name: zashboard                                             # 面板
 external-ui: ui                                                         # 面板目录
 external-controller: 127.0.0.1:9090                                       # 面板地址
 secret: ""                                                              # 面板密码
-external-ui-url: https://gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip # gh-proxy 加速下载轻量包
+external-ui-url: https://v4.v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip # gh-proxy 加速下载轻量包
 
 # TUN配置
 tun:
@@ -168,75 +168,75 @@ dns:
 # 策略组（合并优化）
 proxy-groups:
   # 核心总出站与自定义直连
-  - {name: 一键代理,      <<: *Anchor_PG, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Rocket.png'}
-  - {name: 国内直连,      <<: *Anchor_DR, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/China.png'}
+  - {name: 一键代理,      <<: *Anchor_PG, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Rocket.png'}
+  - {name: 国内直连,      <<: *Anchor_DR, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/China.png'}
   
   # AI 精细分组
-  - {name: ChatGPT,       <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/ChatGPT.png'}
-  - {name: Claude,        <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Claude.png'}
-  - {name: Gemini,        <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Gemini.png'}
+  - {name: ChatGPT,       <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/ChatGPT.png'}
+  - {name: Claude,        <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Claude.png'}
+  - {name: Gemini,        <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Gemini.png'}
   
   # 常用服务（代理优先）
-  - {name: YouTube,       <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/YouTube.png'}
-  - {name: Google,        <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Google.png'}
-  - {name: GitHub,        <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/GitHub.png'}
-  - {name: TikTok,        <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TikTok.png'}
-  - {name: Twitter,       <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Twitter.png'}
-  - {name: Telegram,      <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Telegram.png'}
-  - {name: Netflix,       <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Netflix.png'}
-  - {name: Disney,        <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Disney.png'}
-  - {name: Spotify,       <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Spotify.png'} 
-  - {name: PayPal,        <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png'}
-  - {name: Speedtest,     <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Speedtest.png'}
-  - {name: AppleTV,       <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AppleTV.png'}
+  - {name: YouTube,       <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/YouTube.png'}
+  - {name: Google,        <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Google.png'}
+  - {name: GitHub,        <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/GitHub.png'}
+  - {name: TikTok,        <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TikTok.png'}
+  - {name: Twitter,       <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Twitter.png'}
+  - {name: Telegram,      <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Telegram.png'}
+  - {name: Netflix,       <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Netflix.png'}
+  - {name: Disney,        <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Disney.png'}
+  - {name: Spotify,       <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Spotify.png'} 
+  - {name: PayPal,        <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png'}
+  - {name: Speedtest,     <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Speedtest.png'}
+  - {name: AppleTV,       <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AppleTV.png'}
   
   # 混合/直连优先服务（默认首选国内直连，可按需切换代理，提升日常使用流畅度）
-  - {name: Microsoft,     <<: *Anchor_LD, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Microsoft.png'}
-  - {name: OneDrive,      <<: *Anchor_LD, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OneDrive.png'}
-  - {name: Apple,         <<: *Anchor_LD, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Apple.png'}
+  - {name: Microsoft,     <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Microsoft.png'}
+  - {name: OneDrive,      <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OneDrive.png'}
+  - {name: Apple,         <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Apple.png'}
   
   # 兜底匹配
-  - {name: 漏网之鱼,       <<: *Anchor_OP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png'}
+  - {name: 漏网之鱼,       <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png'}
 
 
 # 策略组（按区域分组）
   # 香港组
-  - {name: 香港故转,   <<: *Anchor_FB, proxies: [香港手动, 香港自动], icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/HK.png'}
-  - {name: 香港手动,   <<: *Anchor_HS, filter: *Anchor_HK, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/HK.png'}
-  - {name: 香港自动,   <<: *Anchor_UT, filter: *Anchor_HK, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/HK.png'}
+  - {name: 香港故转,   <<: *Anchor_FB, proxies: [香港手动, 香港自动], icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/HK.png'}
+  - {name: 香港手动,   <<: *Anchor_HS, filter: *Anchor_HK, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/HK.png'}
+  - {name: 香港自动,   <<: *Anchor_UT, filter: *Anchor_HK, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/HK.png'}
 
   # 台湾组
-  - {name: 台湾故转,   <<: *Anchor_FB, proxies: [台湾手动, 台湾自动], icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TW.png'}
-  - {name: 台湾手动,   <<: *Anchor_HS, filter: *Anchor_TW, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TW.png'}
-  - {name: 台湾自动,   <<: *Anchor_UT, filter: *Anchor_TW, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TW.png'}
+  - {name: 台湾故转,   <<: *Anchor_FB, proxies: [台湾手动, 台湾自动], icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TW.png'}
+  - {name: 台湾手动,   <<: *Anchor_HS, filter: *Anchor_TW, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TW.png'}
+  - {name: 台湾自动,   <<: *Anchor_UT, filter: *Anchor_TW, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TW.png'}
 
   # 日本组
-  - {name: 日本故转,   <<: *Anchor_FB, proxies: [日本手动, 日本自动], icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'}
-  - {name: 日本手动,   <<: *Anchor_HS, filter: *Anchor_JP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'}
-  - {name: 日本自动,   <<: *Anchor_UT, filter: *Anchor_JP, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'}
+  - {name: 日本故转,   <<: *Anchor_FB, proxies: [日本手动, 日本自动], icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'}
+  - {name: 日本手动,   <<: *Anchor_HS, filter: *Anchor_JP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'}
+  - {name: 日本自动,   <<: *Anchor_UT, filter: *Anchor_JP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'}
 
   # 韩国组
-  - {name: 韩国故转,   <<: *Anchor_FB, proxies: [韩国手动, 韩国自动], icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/KR.png'}
-  - {name: 韩国手动,   <<: *Anchor_HS, filter: *Anchor_KR, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/KR.png'}
-  - {name: 韩国自动,   <<: *Anchor_UT, filter: *Anchor_KR, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/KR.png'}
+  - {name: 韩国故转,   <<: *Anchor_FB, proxies: [韩国手动, 韩国自动], icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/KR.png'}
+  - {name: 韩国手动,   <<: *Anchor_HS, filter: *Anchor_KR, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/KR.png'}
+  - {name: 韩国自动,   <<: *Anchor_UT, filter: *Anchor_KR, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/KR.png'}
 
   # 新加坡组
-  - {name: 新加坡故转, <<: *Anchor_FB, proxies: [新加坡手动, 新加坡自动], icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'}
-  - {name: 新加坡手动, <<: *Anchor_HS, filter: *Anchor_SG, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'}
-  - {name: 新加坡自动, <<: *Anchor_UT, filter: *Anchor_SG, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'}
+  - {name: 新加坡故转, <<: *Anchor_FB, proxies: [新加坡手动, 新加坡自动], icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'}
+  - {name: 新加坡手动, <<: *Anchor_HS, filter: *Anchor_SG, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'}
+  - {name: 新加坡自动, <<: *Anchor_UT, filter: *Anchor_SG, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'}
 
   # 美国组
-  - {name: 美国故转,   <<: *Anchor_FB, proxies: [美国手动, 美国自动], icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'}
-  - {name: 美国手动,   <<: *Anchor_HS, filter: *Anchor_US, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'}
-  - {name: 美国自动,   <<: *Anchor_UT, filter: *Anchor_US, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'}
+  - {name: 美国故转,   <<: *Anchor_FB, proxies: [美国手动, 美国自动], icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'}
+  - {name: 美国手动,   <<: *Anchor_HS, filter: *Anchor_US, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'}
+  - {name: 美国自动,   <<: *Anchor_UT, filter: *Anchor_US, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'}
 
   # 欧洲组
-  - {name: 欧洲故转,   <<: *Anchor_FB, proxies: [欧洲手动, 欧洲自动], icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'}
-  - {name: 欧洲手动,   <<: *Anchor_HS, filter: *Anchor_EU, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'}
-  - {name: 欧洲自动,   <<: *Anchor_UT, filter: *Anchor_EU, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'}
+  - {name: 欧洲故转,   <<: *Anchor_FB, proxies: [欧洲手动, 欧洲自动], icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'}
+  - {name: 欧洲手动,   <<: *Anchor_HS, filter: *Anchor_EU, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'}
+  - {name: 欧洲自动,   <<: *Anchor_UT, filter: *Anchor_EU, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'}
 
   # 其他组
-  - {name: 其他手动,   <<: *Anchor_HS, filter: *Anchor_OT, icon: 'https://gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OT.png'}
+  - {name: 其他手动,   <<: *Anchor_HS, filter: *Anchor_OT, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OT.png'}
 
 
 
@@ -298,45 +298,45 @@ rules:
 # 所有规则提供者加持 gh-proxy 前缀，保证国内下载/更新 100% 成功率
 rule-providers: 
   # === 域名规则 ===
-  ResourceSite:      { <<: *Anchor_CL, url: "https://gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/ResourceSite.list"}
-  PanVod:            { <<: *Anchor_CL, url: "https://gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/PanVod.list"}
-  ntp_domain:        { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ntp.mrs"}
-  private_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"}
-  speedtest_domain:  { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs"}
+  ResourceSite:      { <<: *Anchor_CL, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/ResourceSite.list"}
+  PanVod:            { <<: *Anchor_CL, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/PanVod.list"}
+  ntp_domain:        { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ntp.mrs"}
+  private_domain:    { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"}
+  speedtest_domain:  { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs"}
   
   # AI 独立规则源
-  openai_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs"}
-  anthropic_domain:  { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs"}
-  google-gemini_domain: { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-gemini.mrs"}
+  openai_domain:     { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs"}
+  anthropic_domain:  { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs"}
+  google-gemini_domain: { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-gemini.mrs"}
   
   # 常规海外服务规则源
-  github_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs"}
-  youtube_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
-  google_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}
-  onedrive_domain:   { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs"}
-  microsoft_domain:  { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs"}
-  appletv_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-tvplus.mrs"}
-  apple_domain:      { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs"}
-  tiktok_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs"}
-  twitter_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs"}
-  telegram_domain:   { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs"}
-  netflix_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs"}
-  disney_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs"}
-  spotify_domain:    { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs"}
-  paypal_domain:     { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/paypal.mrs"}
+  github_domain:     { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs"}
+  youtube_domain:    { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
+  google_domain:     { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}
+  onedrive_domain:   { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs"}
+  microsoft_domain:  { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs"}
+  appletv_domain:    { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-tvplus.mrs"}
+  apple_domain:      { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs"}
+  tiktok_domain:     { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs"}
+  twitter_domain:    { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs"}
+  telegram_domain:   { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs"}
+  netflix_domain:    { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs"}
+  disney_domain:     { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs"}
+  spotify_domain:    { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs"}
+  paypal_domain:     { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/paypal.mrs"}
   
   # 分流兜底与国内规则源
-  cn_domain:         { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}
-  add_direct_domain: { <<: *Anchor_DN, url: "https://gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs"}
+  cn_domain:         { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}
+  add_direct_domain: { <<: *Anchor_DN, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs"}
 
 
   # === IP规则 ===
-  apple_ip:          { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs"}
-  private_ip:        { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs"}
-  google_ip:         { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"}
-  telegram_ip:       { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs"}
-  twitter_ip:        { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs"}
-  netflix_ip:        { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs"}
-  cn_ip:             { <<: *Anchor_IP, url: "https://gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}
+  apple_ip:          { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs"}
+  private_ip:        { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs"}
+  google_ip:         { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"}
+  telegram_ip:       { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs"}
+  twitter_ip:        { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs"}
+  netflix_ip:        { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs"}
+  cn_ip:             { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}
 
 # ※※※※※※※※※※※※※※※ 配置结束 ※※※※※※※※※※※※※※※
