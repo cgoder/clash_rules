@@ -44,7 +44,6 @@ tcp-concurrent: true                                                    # 并发
 unified-delay: true                                                     # 统一延迟  减少节点延迟抖动
 log-level: warning                                                      # 日志级别  silent/error/warning/info/debug
 ipv6: true                                                              # 网络协议  启用 IPv6 支持（配合 DNS 策略）
-global-client-fingerprint: chrome                                       # 指纹伪装  模拟 Chrome 浏览器 TLS 指纹，防范风控与阻断
 profile:
   store-selected: true                                                  # 保存选择  记住上次选择的节点和策略组
   store-fake-ip: true                                                   # 保存映射  Fake-IP 映射以加快 DNS 命中
