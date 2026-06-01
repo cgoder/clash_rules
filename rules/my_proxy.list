@@ -4,3 +4,4 @@ DOMAIN,gsa.apple.com
 DOMAIN,stun.voip.blackberry.com
 # proxy
 DOMAIN-SUFFIX,linux.do
+DOMAIN-SUFFIX,ldstatic.com
