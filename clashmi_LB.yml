@@ -17,14 +17,15 @@ Anchor_PR: &Anchor_PR {
 }
 
 # ② Load-Balance 锚点（针对不稳定服务器优化）
+# ⚠️ 保守优化：放宽健康检查参数，减少网络抖动时的误判
 Anchor_LB: &Anchor_LB {
   type: load-balance,
   strategy: consistent-hashing,  # 保持会话一致性
   url: 'https://www.g.cn/generate_204',
-  interval: 120,                 # 2分钟检测（加快故障发现）
+  interval: 300,                 # 5分钟检测（原120秒，减少检测频率）
   lazy: false,                   # 主动检测，不惰性
-  timeout: 1500,                 # 1.5秒超时（快速判断故障）
-  max-failed-times: 2,           # 2次失败即剔除
+  timeout: 3000,                 # 3秒超时（原1500ms，容忍延迟波动）
+  max-failed-times: 5,           # 5次失败才剔除（原2次，降低误判率）
   hidden: true
 }
 
@@ -171,7 +172,8 @@ sniffer:
     - "+.oray.com"
     - "+.sunlogin.net"
 
-# DNS 设置（防污染优化）
+# DNS 设置（保守优化版：防泄漏 + 稳定性降级）
+# 修改说明：详见 DNS_LEAK_FIX_EXPLANATION.md 和 CONFIG_CRITICAL_REVIEW.md
 dns:
   enable: true
   ipv6: false
@@ -201,23 +203,31 @@ dns:
   use-hosts: false
   use-system-hosts: false
 
+  # ⚠️ 修改1：冷启动 DNS 改用国际公共服务器（防止初始查询泄漏）
   default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+    - 1.1.1.1          # Cloudflare
+    - 8.8.8.8          # Google
 
+  # ⚠️ 修改2：代理节点地址解析使用 DoH（防止明文 DNS 查询泄漏）
   proxy-server-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
 
+  # 国内域名专用 DNS（保持国内网站访问速度）
   nameserver-policy:
     "geosite:cn,private":
       - 'https://doh.pub/dns-query'
       - 'https://dns.alidns.com/dns-query'
 
+  # ⚠️ 保守优化：DNS 降级策略（混合路由）
+  # 优先走代理（防泄漏），代理故障时自动降级直连（保证可用性）
   nameserver:
-    - "https://1.1.1.1/dns-query#RULES"
-    - "https://8.8.8.8/dns-query#RULES"
+    - "https://1.1.1.1/dns-query#一键代理"      # 优先：走代理（防泄漏）
+    - "https://8.8.8.8/dns-query#一键代理"
+    - "https://1.1.1.1/dns-query#DIRECT"        # 降级：直连备用（代理挂时保证可用）
+    - "https://8.8.8.8/dns-query#DIRECT"
 
+  # 直连域名专用 DNS（配合 nameserver-policy 使用）
   direct-nameserver:
     - 'https://doh.pub/dns-query'
     - 'https://dns.alidns.com/dns-query'
