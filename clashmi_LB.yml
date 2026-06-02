@@ -221,13 +221,11 @@ dns:
       - 'https://doh.pub/dns-query'
       - 'https://dns.alidns.com/dns-query'
 
-  # ⚠️ 保守优化：DNS 降级策略（混合路由）
-  # 优先走代理（防泄漏），代理故障时自动降级直连（保证可用性）
+  # ⚠️ 最终优化：移除 DIRECT DNS 降级（因用户网络环境封锁 1.1.1.1/8.8.8.8）
+  # 保留降级选项只会产生无意义的超时警告，不会提供实际备用能力
   nameserver:
-    - "https://1.1.1.1/dns-query#一键代理"      # 优先：走代理（防泄漏）
+    - "https://1.1.1.1/dns-query#一键代理"      # 走代理（防泄漏）
     - "https://8.8.8.8/dns-query#一键代理"
-    - "https://1.1.1.1/dns-query#DIRECT"        # 降级：直连备用（代理挂时保证可用）
-    - "https://8.8.8.8/dns-query#DIRECT"
 
   # 直连域名专用 DNS（配合 nameserver-policy 使用）
   direct-nameserver:
