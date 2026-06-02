@@ -208,10 +208,12 @@ dns:
     - 1.1.1.1          # Cloudflare
     - 8.8.8.8          # Google
 
-  # ⚠️ 修改2：代理节点地址解析使用 DoH（防止明文 DNS 查询泄漏）
+  # ⚠️ 致命问题修复：代理节点地址解析改用明文 DNS
+  # DoH 会导致循环依赖死锁（DoH 需要 HTTPS 连接，可能被封锁）
+  # 改用明文 UDP DNS，确保代理节点域名100%可解析
   proxy-server-nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
+    - 223.5.5.5        # 阿里云 DNS
+    - 119.29.29.29     # 腾讯 DNS
 
   # 国内域名专用 DNS（保持国内网站访问速度）
   nameserver-policy:
