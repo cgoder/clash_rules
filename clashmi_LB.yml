@@ -41,10 +41,11 @@ Anchor_UT: &Anchor_UT {
   hidden: true
 }
 
-# ④ 手动选择锚点
+# ④ 手动选择锚点（排除无效节点）
 Anchor_HS: &Anchor_HS {
   type: select,
-  include-all: true
+  include-all: true,
+  filter: "^(?!.*(剩余流量|距离下次重置|套餐到期|去除.*线路|跳转域名|请勿连接)).*$"
 }
 
 # ⑤ 区域过滤锚点
@@ -322,27 +323,36 @@ proxy-groups:
   - {name: Claude, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Claude.png'}
   - {name: Gemini, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Gemini.png'}
 
-  # === 常用服务分组 ===
-  - {name: YouTube, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/YouTube.png'}
-  - {name: Google, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Google.png'}
-  - {name: GitHub, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/GitHub.png'}
-  - {name: Telegram, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Telegram.png'}
-  - {name: Twitter, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Twitter.png'}
-  - {name: TikTok, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TikTok.png'}
-  - {name: Netflix, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Netflix.png'}
-  - {name: Disney, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Disney.png'}
-  - {name: Spotify, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Spotify.png'}
-  - {name: PayPal, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png'}
-  - {name: Speedtest, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Speedtest.png'}
-  - {name: AppleTV, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AppleTV.png'}
+  # === 场景服务分组 ===
+  # 流媒体（YouTube、Netflix、Disney、Spotify、TikTok、AppleTV）
+  - {name: 流媒体, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Netflix.png'}
+
+  # 通信（Telegram、Twitter）
+  - {name: 通信, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Telegram.png'}
+
+  # 云服务（GitHub、Google、Speedtest）
+  - {name: 云服务, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/GitHub.png'}
+
+  # 金融（PayPal）
+  - {name: 金融, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png'}
 
   # === 直连优先服务 ===
   - {name: Microsoft, <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Microsoft.png'}
   - {name: OneDrive, <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OneDrive.png'}
   - {name: Apple, <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Apple.png'}
 
-  # === 兜底 ===
-  - {name: 漏网之鱼, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png'}
+  # === 兜底（添加国内直连选项）===
+  - name: 漏网之鱼
+    type: select
+    proxies: [
+      一键代理,
+      国内直连,
+      香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡,
+      欧洲负载均衡, 其他负载均衡,
+      香港最快, 台湾最快, 美国最快,
+      全部节点
+    ]
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png'
 
 
 
@@ -362,37 +372,39 @@ rules:
   - RULE-SET,anthropic_domain,Claude
   - RULE-SET,google-gemini_domain,Gemini
 
-  # 第四优先级：高频国外服务
-  - RULE-SET,youtube_domain,YouTube
-  - RULE-SET,google_domain,Google
-  - RULE-SET,google_ip,Google,no-resolve
-  - RULE-SET,telegram_domain,Telegram
-  - RULE-SET,telegram_ip,Telegram,no-resolve
-  - RULE-SET,github_domain,GitHub
-  - RULE-SET,twitter_domain,Twitter
-  - RULE-SET,twitter_ip,Twitter,no-resolve
+  # 第四优先级：流媒体服务
+  - RULE-SET,youtube_domain,流媒体
+  - RULE-SET,netflix_domain,流媒体
+  - RULE-SET,netflix_ip,流媒体,no-resolve
+  - RULE-SET,tiktok_domain,流媒体
+  - RULE-SET,disney_domain,流媒体
+  - RULE-SET,spotify_domain,流媒体
+  - RULE-SET,appletv_domain,流媒体
 
-  # 第五优先级：流媒体
-  - RULE-SET,netflix_domain,Netflix
-  - RULE-SET,netflix_ip,Netflix,no-resolve
-  - RULE-SET,tiktok_domain,TikTok
-  - RULE-SET,disney_domain,Disney
-  - RULE-SET,spotify_domain,Spotify
+  # 第五优先级：通信服务
+  - RULE-SET,telegram_domain,通信
+  - RULE-SET,telegram_ip,通信,no-resolve
+  - RULE-SET,twitter_domain,通信
+  - RULE-SET,twitter_ip,通信,no-resolve
 
-  # 第六优先级：其他常用服务
-  - RULE-SET,speedtest_domain,Speedtest
-  - RULE-SET,paypal_domain,PayPal
+  # 第六优先级：云服务
+  - RULE-SET,google_domain,云服务
+  - RULE-SET,google_ip,云服务,no-resolve
+  - RULE-SET,github_domain,云服务
+  - RULE-SET,speedtest_domain,云服务
 
-  # 第七优先级：Apple 生态
-  - RULE-SET,appletv_domain,AppleTV
+  # 第七优先级：金融服务
+  - RULE-SET,paypal_domain,金融
+
+  # 第八优先级：Apple 生态
   - RULE-SET,apple_domain,Apple
   - RULE-SET,apple_ip,Apple,no-resolve
 
-  # 第八优先级：Microsoft 生态
+  # 第九优先级：Microsoft 生态
   - RULE-SET,onedrive_domain,OneDrive
   - RULE-SET,microsoft_domain,Microsoft
 
-  # 第九优先级：国内直连加速
+  # 第十优先级：国内直连加速
   - RULE-SET,ResourceSite,国内直连
   - RULE-SET,PanVod,国内直连
   - RULE-SET,add_direct_domain,国内直连
