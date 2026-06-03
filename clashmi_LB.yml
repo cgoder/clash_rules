@@ -118,7 +118,7 @@ external-ui-name: zashboard
 external-ui: ui
 external-controller: 127.0.0.1:9090
 secret: ""
-external-ui-url: https://v4.v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip
+external-ui-url: https://v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip
 
 # TUN配置
 tun:
