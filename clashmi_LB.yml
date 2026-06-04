@@ -41,31 +41,43 @@ Anchor_UT: &Anchor_UT {
   hidden: true
 }
 
-# ④ 手动选择锚点（排除无效节点）
+# ④ 手动选择锚点（展示分组而非单节点）
 Anchor_HS: &Anchor_HS {
   type: select,
-  include-all: true,
-  filter: "^(?!.*(剩余流量|距离下次重置|套餐到期|去除.*线路|跳转域名|请勿连接)).*$"
+  proxies: [
+    香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡, 韩国负载均衡,
+    德国负载均衡, 英国负载均衡, 荷兰负载均衡, 芬兰负载均衡, 瑞士负载均衡, 意大利负载均衡,
+    欧洲负载均衡, 其他负载均衡,
+    香港最快, 台湾最快, 美国最快, 日本最快, 新加坡最快
+  ]
 }
 
 # ⑤ 区域过滤锚点
 Anchor_HK: &Anchor_HK '^(?i)(?=.*(香港|HKG|HK|Hong)).*$'
 Anchor_TW: &Anchor_TW '^(?i)(?=.*(台湾|台灣|TW|Taiwan)).*$'
-Anchor_JP: &Anchor_JP '^(?i)(?=.*(日本|JP|Japan|Vless)).*$'
+Anchor_JP: &Anchor_JP '^(?i)(?=.*(日本|JP|Japan)).*$'
+Anchor_KR: &Anchor_KR '^(?i)(?=.*(韩国|韓國|KR|Korea)).*$'
 Anchor_US: &Anchor_US '^(?i)(?=.*(美国|美國|US|America)).*$'
 Anchor_SG: &Anchor_SG '^(?i)(?=.*(新加坡|SG|Singapore)).*$'
-Anchor_EU: &Anchor_EU '^(?i)(?=.*(英国|西班牙|意大利|荷兰|德国|UK|Spain|Italy|Netherlands|Germany)).*$'
-Anchor_OT: &Anchor_OT '^(?i)(?=.*(俄罗斯|加拿大|印度|土耳其|Russia|Canada|India|Turkey)).*$'
+Anchor_DE: &Anchor_DE '^(?i)(?=.*(德国|德國|DE|Germany)).*$'
+Anchor_GB: &Anchor_GB '^(?i)(?=.*(英国|英國|UK|Britain|United Kingdom)).*$'
+Anchor_NL: &Anchor_NL '^(?i)(?=.*(荷兰|荷蘭|NL|Netherlands)).*$'
+Anchor_FI: &Anchor_FI '^(?i)(?=.*(芬兰|芬蘭|FI|Finland)).*$'
+Anchor_CH: &Anchor_CH '^(?i)(?=.*(瑞士|CH|Switzerland)).*$'
+Anchor_IT: &Anchor_IT '^(?i)(?=.*(意大利|義大利|IT|Italy)).*$'
+Anchor_EU: &Anchor_EU '^(?i)(?=.*(西班牙|法国|奥地利|比利时|瑞典|挪威|丹麦|Spain|France|Austria|Belgium|Sweden|Norway|Denmark)).*$'
+Anchor_OT: &Anchor_OT '^(?i)(?=.*(俄罗斯|加拿大|印度|土耳其|南非|Russia|Canada|India|Turkey|ZA|South Africa)).*$'
 
 # ⑥ 出站锚点
 # Anchor_PG: 代理优先组（Load-Balance 优先）
 Anchor_PG: &Anchor_PG {
   type: select,
   proxies: [
-    香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡,
+    香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡, 韩国负载均衡,
+    德国负载均衡, 英国负载均衡, 荷兰负载均衡, 芬兰负载均衡, 瑞士负载均衡, 意大利负载均衡,
     欧洲负载均衡, 其他负载均衡,
-    香港最快, 台湾最快, 美国最快,
-    全部节点
+    香港最快, 台湾最快, 美国最快, 日本最快, 新加坡最快,
+    手动选择
   ]
 }
 
@@ -74,10 +86,11 @@ Anchor_OP: &Anchor_OP {
   type: select,
   proxies: [
     一键代理,
-    香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡,
+    香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡, 韩国负载均衡,
+    德国负载均衡, 英国负载均衡, 荷兰负载均衡, 芬兰负载均衡, 瑞士负载均衡, 意大利负载均衡,
     欧洲负载均衡, 其他负载均衡,
-    香港最快, 台湾最快, 美国最快,
-    全部节点
+    香港最快, 台湾最快, 美国最快, 日本最快, 新加坡最快,
+    手动选择
   ]
 }
 
@@ -86,7 +99,8 @@ Anchor_LD: &Anchor_LD {
   type: select,
   proxies: [
     国内直连, 一键代理,
-    香港负载均衡, 台湾负载均衡, 美国负载均衡
+    香港负载均衡, 台湾负载均衡, 美国负载均衡, 日本负载均衡, 韩国负载均衡,
+    德国负载均衡, 英国负载均衡
   ]
 }
 
@@ -280,14 +294,63 @@ proxy-groups:
     include-all: true
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'
 
-  # 欧洲负载均衡（8个节点）
+  # 韩国负载均衡（2个节点）
+  - name: 韩国负载均衡
+    <<: *Anchor_LB
+    filter: *Anchor_KR
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/KR.png'
+
+  # 德国负载均衡（14个节点）
+  - name: 德国负载均衡
+    <<: *Anchor_LB
+    filter: *Anchor_DE
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/DE.png'
+
+  # 英国负载均衡（3个节点）
+  - name: 英国负载均衡
+    <<: *Anchor_LB
+    filter: *Anchor_GB
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/GB.png'
+
+  # 荷兰负载均衡（5个节点）
+  - name: 荷兰负载均衡
+    <<: *Anchor_LB
+    filter: *Anchor_NL
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/NL.png'
+
+  # 芬兰负载均衡（4个节点）
+  - name: 芬兰负载均衡
+    <<: *Anchor_LB
+    filter: *Anchor_FI
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/FI.png'
+
+  # 瑞士负载均衡（3个节点）
+  - name: 瑞士负载均衡
+    <<: *Anchor_LB
+    filter: *Anchor_CH
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/CH.png'
+
+  # 意大利负载均衡（4个节点）
+  - name: 意大利负载均衡
+    <<: *Anchor_LB
+    filter: *Anchor_IT
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/IT.png'
+
+  # 欧洲其他负载均衡（西班牙/法国/奥地利等）
   - name: 欧洲负载均衡
     <<: *Anchor_LB
     filter: *Anchor_EU
     include-all: true
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'
 
-  # 其他地区负载均衡（俄罗斯/加拿大/印度/土耳其）
+  # 其他地区负载均衡（俄罗斯/加拿大/印度/土耳其/南非）
   - name: 其他负载均衡
     <<: *Anchor_LB
     filter: *Anchor_OT
@@ -313,8 +376,20 @@ proxy-groups:
     include-all: true
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'
 
+  - name: 日本最快
+    <<: *Anchor_UT
+    filter: *Anchor_JP
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'
+
+  - name: 新加坡最快
+    <<: *Anchor_UT
+    filter: *Anchor_SG
+    include-all: true
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'
+
   # === 手动选择组 ===
-  - name: 全部节点
+  - name: 手动选择
     <<: *Anchor_HS
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Rocket.png'
 
@@ -347,10 +422,11 @@ proxy-groups:
     proxies: [
       一键代理,
       国内直连,
-      香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡,
+      香港负载均衡, 台湾负载均衡, 美国负载均衡, 新加坡负载均衡, 日本负载均衡, 韩国负载均衡,
+      德国负载均衡, 英国负载均衡, 荷兰负载均衡, 芬兰负载均衡, 瑞士负载均衡, 意大利负载均衡,
       欧洲负载均衡, 其他负载均衡,
-      香港最快, 台湾最快, 美国最快,
-      全部节点
+      香港最快, 台湾最快, 美国最快, 日本最快, 新加坡最快,
+      手动选择
     ]
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png'
 
