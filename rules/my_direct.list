@@ -5,6 +5,8 @@ DOMAIN-SUFFIX,immersivetranslate.com
 DOMAIN-SUFFIX,unpkg.com
 DOMAIN-SUFFIX,deeplx.org
 DOMAIN-SUFFIX,arxiv.org
+
+# AI services
 DOMAIN-SUFFIX,muyuan.do
 DOMAIN-SUFFIX,zenapi.top
 DOMAIN-SUFFIX,venlacy.com
