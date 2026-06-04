@@ -173,8 +173,12 @@ sniffer:
     - "+.oray.com"
     - "+.sunlogin.net"
 
-# DNS 设置（保守优化版：防泄漏 + 稳定性降级）
-# 修改说明：详见 DNS_LEAK_FIX_EXPLANATION.md 和 CONFIG_CRITICAL_REVIEW.md
+# DNS 设置（简化版：国内 DNS 优先，性能优先）
+# 设计理念：
+#   1. 默认使用国内 DNS 直连（符合大多数流量是国内的实际情况）
+#   2. 仅对必须走代理的国外服务配置代理 DNS
+#   3. 避免直连域名用代理 DNS 导致的 IP 不匹配问题
+#   4. 配置简单，易于维护
 dns:
   enable: true
   ipv6: false
@@ -204,37 +208,31 @@ dns:
   use-hosts: false
   use-system-hosts: false
 
-  # ⚠️ 修改1：冷启动 DNS 改用国际公共服务器（防止初始查询泄漏）
+  # 冷启动 DNS（用于解析 DoH 服务器域名）
   default-nameserver:
-    - 1.1.1.1          # Cloudflare
-    - 8.8.8.8          # Google
-
-  # ⚠️ 致命问题修复：代理节点地址解析改用明文 DNS
-  # DoH 会导致循环依赖死锁（DoH 需要 HTTPS 连接，可能被封锁）
-  # 改用明文 UDP DNS，确保代理节点域名100%可解析
-  proxy-server-nameserver:
     - 223.5.5.5        # 阿里云 DNS
     - 119.29.29.29     # 腾讯 DNS
 
-  # 国内域名专用 DNS（保持国内网站访问速度）
-  nameserver-policy:
-    "geosite:cn,private":
-      - 'https://doh.pub/dns-query'
-      - 'https://dns.alidns.com/dns-query'
+  # 代理节点地址解析（使用明文 DNS，避免循环依赖）
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
 
-  # ⚠️ 最终优化：移除 DIRECT DNS 降级（因用户网络环境封锁 1.1.1.1/8.8.8.8）
-  # 保留降级选项只会产生无意义的超时警告，不会提供实际备用能力
+  # 默认 DNS（国内 DoH，直连）
+  # 所有未特殊指定的域名都用这个解析
   nameserver:
-    - "https://1.1.1.1/dns-query#一键代理"      # 走代理（防泄漏）
-    - "https://8.8.8.8/dns-query#一键代理"
-
-  # 直连域名专用 DNS（配合 nameserver-policy 使用）
-  direct-nameserver:
     - 'https://doh.pub/dns-query'
     - 'https://dns.alidns.com/dns-query'
 
-  direct-nameserver-follow-policy: true
-  respect-rules: true
+  # 特殊域名 DNS 策略（只配置需要走代理 DNS 的服务）
+  nameserver-policy:
+    # 常用国外服务统一使用代理 DNS（合并配置，避免重复）
+    "geosite:openai,anthropic,google-gemini,google,youtube,netflix,disney,spotify,telegram,twitter,tiktok,github,paypal": &proxy_dns
+      - "https://1.1.1.1/dns-query#一键代理"
+      - "https://8.8.8.8/dns-query#一键代理"
+
+    # 自定义代理规则
+    "rule-set:my_proxy": *proxy_dns
 
 
 
