@@ -257,8 +257,8 @@ rules:
   - RULE-SET,private_domain,国内直连
 
   # 自定义本地分流规则
-  - RULE-SET,my_direct,国内直连
   - RULE-SET,my_proxy,一键代理
+  - RULE-SET,my_direct,国内直连
 
   # 国内直连加速（包含资源下载、特定解析、自定义直连与国内常规网域）
   - RULE-SET,ResourceSite,国内直连

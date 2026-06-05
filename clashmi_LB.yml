@@ -433,8 +433,8 @@ rules:
   - RULE-SET,ntp_domain,国内直连
 
   # 第二优先级：自定义本地规则
-  - RULE-SET,my_direct,国内直连
   - RULE-SET,my_proxy,一键代理
+  - RULE-SET,my_direct,国内直连
 
   # 第三优先级：AI 业务（高频服务）
   - RULE-SET,openai_domain,ChatGPT
