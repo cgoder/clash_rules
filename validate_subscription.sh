@@ -26,7 +26,7 @@ TEMP_SUB="/tmp/subscription.yaml"
 
 # 步骤1：下载订阅
 echo "【步骤1】下载订阅数据..."
-curl -s "$SUBSCRIPTION_URL" -o "$TEMP_SUB" 2>/dev/null
+rtk proxy curl -sL "$SUBSCRIPTION_URL" -o "$TEMP_SUB" 2>/dev/null
 if [ $? -ne 0 ] || [ ! -s "$TEMP_SUB" ]; then
     echo "❌ 订阅下载失败"
     exit 1
@@ -34,12 +34,24 @@ fi
 echo "✅ 订阅下载成功"
 echo ""
 
-# 步骤2：提取真实节点（排除策略组）
+# 步骤2：提取真实节点（排除策略组和信息行）
 echo "【步骤2】提取真实节点..."
-grep "^- name:" "$TEMP_SUB" | \
-    sed 's/- name: //' | \
-    grep -E "🇺🇸|🇭🇰|🇹🇼|🇸🇬|🇯🇵|🇰🇷|🇩🇪|🇬🇧|🇫🇷|🇨🇦|🇷🇴|🇮🇪|🇳🇱|🇦🇹|🇭🇺|🇸🇪|🇺🇳|🇦🇺|🇧🇷|🇲🇽|🇹🇭|🇮🇩|🇷🇺|🇵🇱|\|" | \
-    grep -v "^\(PROXY\|AUTO\|FALLBACK\|OPENAI\|YOUTUBE\)$" > /tmp/real_nodes_only.txt
+rtk proxy grep "name:" "$TEMP_SUB" | \
+    sed "s/.*name: //" | \
+    sed "s/,.*//" | \
+    sed "s/^'//" | \
+    sed "s/'$//" | \
+    grep -v "剩余流量" | \
+    grep -v "距离下次重置" | \
+    grep -v "套餐到期" | \
+    grep -v "去除.*线路" | \
+    grep -v "跳转域名" | \
+    grep -v "请勿连接" | \
+    grep -v "www\." | \
+    grep -v "自动选择" | \
+    grep -v "故障转移" | \
+    grep -v "^NCloud$" | \
+    grep -v "^\(PROXY\|AUTO\|FALLBACK\|OPENAI\|YOUTUBE\|DIRECT\|REJECT\)$" > /tmp/real_nodes_only.txt
 
 total_nodes=$(wc -l < /tmp/real_nodes_only.txt)
 echo "✅ 共提取 $total_nodes 个真实节点"
@@ -50,31 +62,32 @@ echo "【步骤3】统计国家/地区分布..."
 declare -A country_count
 
 while IFS= read -r node; do
-    # 提取国家代码
-    if [[ "$node" =~ 🇺🇸 ]] || [[ "$node" =~ [[:space:]]US[[:space:]|] ]]; then country="US"
-    elif [[ "$node" =~ 🇭🇰 ]] || [[ "$node" =~ [[:space:]]HK[[:space:]|] ]]; then country="HK"
-    elif [[ "$node" =~ 🇹🇼 ]] || [[ "$node" =~ [[:space:]]TW[[:space:]|] ]]; then country="TW"
-    elif [[ "$node" =~ 🇸🇬 ]] || [[ "$node" =~ [[:space:]]SG[[:space:]|] ]]; then country="SG"
-    elif [[ "$node" =~ 🇯🇵 ]] || [[ "$node" =~ [[:space:]]JP[[:space:]|] ]]; then country="JP"
-    elif [[ "$node" =~ 🇰🇷 ]] || [[ "$node" =~ [[:space:]]KR[[:space:]|] ]]; then country="KR"
-    elif [[ "$node" =~ 🇩🇪 ]] || [[ "$node" =~ [[:space:]]DE[[:space:]|] ]]; then country="DE"
-    elif [[ "$node" =~ 🇬🇧 ]] || [[ "$node" =~ [[:space:]]GB[[:space:]|] ]]; then country="GB"
-    elif [[ "$node" =~ 🇫🇷 ]] || [[ "$node" =~ [[:space:]]FR[[:space:]|] ]]; then country="FR"
-    elif [[ "$node" =~ 🇨🇦 ]] || [[ "$node" =~ [[:space:]]CA[[:space:]|] ]]; then country="CA"
-    elif [[ "$node" =~ 🇷🇴 ]] || [[ "$node" =~ [[:space:]]RO[[:space:]|] ]]; then country="RO"
-    elif [[ "$node" =~ 🇮🇪 ]] || [[ "$node" =~ [[:space:]]IE[[:space:]|] ]]; then country="IE"
-    elif [[ "$node" =~ 🇳🇱 ]] || [[ "$node" =~ [[:space:]]NL[[:space:]|] ]]; then country="NL"
-    elif [[ "$node" =~ 🇦🇹 ]] || [[ "$node" =~ [[:space:]]AT[[:space:]|] ]]; then country="AT"
-    elif [[ "$node" =~ 🇭🇺 ]] || [[ "$node" =~ [[:space:]]HU[[:space:]|] ]]; then country="HU"
-    elif [[ "$node" =~ 🇸🇪 ]] || [[ "$node" =~ [[:space:]]SE[[:space:]|] ]]; then country="SE"
-    elif [[ "$node" =~ 🇹🇭 ]] || [[ "$node" =~ [[:space:]]TH[[:space:]|] ]]; then country="TH"
-    elif [[ "$node" =~ 🇮🇩 ]] || [[ "$node" =~ [[:space:]]ID[[:space:]|] ]]; then country="ID"
-    elif [[ "$node" =~ 🇷🇺 ]] || [[ "$node" =~ [[:space:]]RU[[:space:]|] ]]; then country="RU"
-    elif [[ "$node" =~ 🇵🇱 ]] || [[ "$node" =~ [[:space:]]PL[[:space:]|] ]]; then country="PL"
-    elif [[ "$node" =~ 🇺🇳 ]] || [[ "$node" =~ [[:space:]]UN[[:space:]|] ]]; then country="UN"
-    elif [[ "$node" =~ 🇦🇺 ]] || [[ "$node" =~ [[:space:]]AU[[:space:]|] ]]; then country="AU"
-    elif [[ "$node" =~ 🇧🇷 ]] || [[ "$node" =~ [[:space:]]BR[[:space:]|] ]]; then country="BR"
-    elif [[ "$node" =~ 🇲🇽 ]] || [[ "$node" =~ [[:space:]]MX[[:space:]|] ]]; then country="MX"
+    # 提取国家代码（支持中文名称、emoji和英文缩写）
+    if [[ "$node" =~ 美国|🇺🇸|US|USA ]]; then country="US"
+    elif [[ "$node" =~ 香港|🇭🇰|HKG|HK ]]; then country="HK"
+    elif [[ "$node" =~ 台湾|台灣|🇹🇼|TW ]]; then country="TW"
+    elif [[ "$node" =~ 新加坡|🇸🇬|SG|SGP ]]; then country="SG"
+    elif [[ "$node" =~ 日本|🇯🇵|JP|JPN ]]; then country="JP"
+    elif [[ "$node" =~ 韩国|韓國|🇰🇷|KR|KOR ]]; then country="KR"
+    elif [[ "$node" =~ 德国|德國|🇩🇪|DE|DEU ]]; then country="DE"
+    elif [[ "$node" =~ 英国|英國|🇬🇧|GB|UK ]]; then country="GB"
+    elif [[ "$node" =~ 法国|法國|🇫🇷|FR|FRA ]]; then country="FR"
+    elif [[ "$node" =~ 加拿大|🇨🇦|CA|CAN ]]; then country="CA"
+    elif [[ "$node" =~ 罗马尼亚|羅馬尼亞|🇷🇴|RO|ROM ]]; then country="RO"
+    elif [[ "$node" =~ 爱尔兰|🇮🇪|IE|IRL ]]; then country="IE"
+    elif [[ "$node" =~ 荷兰|荷蘭|🇳🇱|NL ]]; then country="NL"
+    elif [[ "$node" =~ 奥地利|🇦🇹|AT|AUT ]]; then country="AT"
+    elif [[ "$node" =~ 匈牙利|🇭🇺|HU|HUN ]]; then country="HU"
+    elif [[ "$node" =~ 瑞典|🇸🇪|SE|SWE ]]; then country="SE"
+    elif [[ "$node" =~ 泰国|泰國|🇹🇭|TH ]]; then country="TH"
+    elif [[ "$node" =~ 印尼|印度尼西亚|🇮🇩|ID ]]; then country="ID"
+    elif [[ "$node" =~ 俄罗斯|俄羅斯|🇷🇺|RU ]]; then country="RU"
+    elif [[ "$node" =~ 波兰|🇵🇱|PL|POL ]]; then country="PL"
+    elif [[ "$node" =~ 土耳其|🇹🇷|TR|TUR ]]; then country="TR"
+    elif [[ "$node" =~ 🇺🇳|UN ]]; then country="UN"
+    elif [[ "$node" =~ 澳大利亚|🇦🇺|AU|AUS ]]; then country="AU"
+    elif [[ "$node" =~ 巴西|🇧🇷|BR|BRA ]]; then country="BR"
+    elif [[ "$node" =~ 墨西哥|🇲🇽|MX|MEX ]]; then country="MX"
     else country="OTHER"
     fi
     ((country_count[$country]++))
