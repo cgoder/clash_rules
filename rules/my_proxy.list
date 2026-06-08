@@ -7,3 +7,27 @@ DOMAIN,stun.voip.blackberry.com
 DOMAIN-SUFFIX,linux.do
 DOMAIN-SUFFIX,ldstatic.com
 DOMAIN-SUFFIX,anyrouter.top
+
+# Cloudflare DNS 服务（国内 QoS 限速，UDP 丢包严重）
+DOMAIN-SUFFIX,cloudflare-dns.com
+DOMAIN,dns.cloudflare.com
+DOMAIN,chrome.cloudflare-dns.com
+DOMAIN,firefox.cloudflare-dns.com
+DOMAIN,security.cloudflare-dns.com
+DOMAIN,family.cloudflare-dns.com
+
+# Cloudflare Serverless 服务（无国内节点，经常被限速）
+DOMAIN-SUFFIX,workers.dev
+DOMAIN-SUFFIX,pages.dev
+DOMAIN-SUFFIX,r2.dev
+DOMAIN-SUFFIX,cloudflare-ipfs.com
+
+# Cloudflare 管理后台
+DOMAIN,dash.cloudflare.com
+DOMAIN,api.cloudflare.com
+
+# Cloudflare VPN/Tunnel 服务
+DOMAIN-SUFFIX,cloudflarewarp.com
+DOMAIN-SUFFIX,one.one.one.one
+DOMAIN-SUFFIX,trycloudflare.com
+DOMAIN-SUFFIX,argotunnel.com
