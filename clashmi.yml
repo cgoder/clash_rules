@@ -39,15 +39,8 @@ Anchor_UT: &Anchor_UT {
   hidden: true
 }
 
-# 手动选择锚点（常用地区手动组使用，需要隐藏）
+# 手动选择锚点（大洲地区手动组使用）
 Anchor_HS: &Anchor_HS {
-  type: select,
-  include-all: true,
-  hidden: true
-}
-
-# 手动选择锚点（大洲地区手动组使用，需要显示）
-Anchor_HS_Visible: &Anchor_HS_Visible {
   type: select,
   include-all: true
 }
@@ -240,7 +233,6 @@ proxy-groups:
   - name: 手动选择
     type: select
     proxies: [
-      香港手动, 台湾手动, 新加坡手动, 日本手动, 美国手动,
       亚洲手动, 欧洲手动, 美洲手动, 其他手动
     ]
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Rocket.png'
@@ -308,46 +300,6 @@ proxy-groups:
     include-all: true
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'
 
-  # === 手动选择组（常用地区hidden，大洲visible）===
-  - name: 香港手动
-    <<: *Anchor_HS
-    filter: *Anchor_HK
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/HK.png'
-  - name: 台湾手动
-    <<: *Anchor_HS
-    filter: *Anchor_TW
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/TW.png'
-  - name: 新加坡手动
-    <<: *Anchor_HS
-    filter: *Anchor_SG
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/SG.png'
-  - name: 日本手动
-    <<: *Anchor_HS
-    filter: *Anchor_JP
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/JP.png'
-  - name: 美国手动
-    <<: *Anchor_HS
-    filter: *Anchor_US
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'
-
-  # 地理分组（仅手动选择，移除速度优先）
-  - name: 亚洲手动
-    <<: *Anchor_HS_Visible
-    filter: *Anchor_AS
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AS.png'
-  - name: 欧洲手动
-    <<: *Anchor_HS_Visible
-    filter: *Anchor_EU
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'
-  - name: 美洲手动
-    <<: *Anchor_HS_Visible
-    filter: *Anchor_AM
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AM.png'
-  - name: 其他手动
-    <<: *Anchor_HS_Visible
-    filter: *Anchor_OT
-    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OT.png'
-
   # === AI 服务分组（13选项）===
   - {name: ChatGPT, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/ChatGPT.png'}
   - {name: Claude, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Claude.png'}
@@ -368,6 +320,24 @@ proxy-groups:
   - name: 漏网之鱼
     <<: *Anchor_OP
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png'
+
+  # === 大洲手动组（放在最后，不影响高频场景）===
+  - name: 亚洲手动
+    <<: *Anchor_HS
+    filter: *Anchor_AS
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AS.png'
+  - name: 欧洲手动
+    <<: *Anchor_HS
+    filter: *Anchor_EU
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'
+  - name: 美洲手动
+    <<: *Anchor_HS
+    filter: *Anchor_AM
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AM.png'
+  - name: 其他手动
+    <<: *Anchor_HS
+    filter: *Anchor_OT
+    icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OT.png'
 
 
 
