@@ -39,8 +39,15 @@ Anchor_UT: &Anchor_UT {
   hidden: true
 }
 
-# 手动选择锚点
+# 手动选择锚点（常用地区手动组使用，需要隐藏）
 Anchor_HS: &Anchor_HS {
+  type: select,
+  include-all: true,
+  hidden: true
+}
+
+# 手动选择锚点（大洲地区手动组使用，需要显示）
+Anchor_HS_Visible: &Anchor_HS_Visible {
   type: select,
   include-all: true
 }
@@ -76,16 +83,23 @@ Anchor_PG: &Anchor_PG {
   ]
 }
 
-# Anchor_OP: 综合组（简化版：3选项）
+# Anchor_OP: 综合组（包含所有可用策略）
 Anchor_OP: &Anchor_OP {
   type: select,
-  proxies: [一键代理, 手动选择, 国内直连]
+  proxies: [
+    一键代理, 手动选择, 国内直连,
+    香港负载均衡, 台湾负载均衡, 新加坡负载均衡, 日本负载均衡, 美国负载均衡,
+    香港速度优先, 台湾速度优先, 新加坡速度优先, 日本速度优先, 美国速度优先
+  ]
 }
 
 # Anchor_LD: 直连优先组
 Anchor_LD: &Anchor_LD {
   type: select,
-  proxies: [国内直连, 一键代理, 手动选择]
+  proxies: [
+    国内直连, 一键代理, 手动选择,
+    香港负载均衡, 台湾负载均衡, 新加坡负载均衡, 日本负载均衡, 美国负载均衡
+  ]
 }
 
 # Anchor_DR: 纯直连组
@@ -294,7 +308,7 @@ proxy-groups:
     include-all: true
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/US.png'
 
-  # === 手动选择组（visible，通过手动选择访问）===
+  # === 手动选择组（常用地区hidden，大洲visible）===
   - name: 香港手动
     <<: *Anchor_HS
     filter: *Anchor_HK
@@ -318,42 +332,41 @@ proxy-groups:
 
   # 地理分组（仅手动选择，移除速度优先）
   - name: 亚洲手动
-    <<: *Anchor_HS
+    <<: *Anchor_HS_Visible
     filter: *Anchor_AS
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AS.png'
   - name: 欧洲手动
-    <<: *Anchor_HS
+    <<: *Anchor_HS_Visible
     filter: *Anchor_EU
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/EU.png'
   - name: 美洲手动
-    <<: *Anchor_HS
+    <<: *Anchor_HS_Visible
     filter: *Anchor_AM
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/AM.png'
   - name: 其他手动
-    <<: *Anchor_HS
+    <<: *Anchor_HS_Visible
     filter: *Anchor_OT
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OT.png'
 
-  # === AI 服务分组（简化为3选项）===
+  # === AI 服务分组（13选项）===
   - {name: ChatGPT, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/ChatGPT.png'}
   - {name: Claude, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Claude.png'}
   - {name: Gemini, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Gemini.png'}
 
-  # === 场景服务分组（简化为3选项）===
+  # === 场景服务分组（13选项）===
   - {name: 流媒体, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Netflix.png'}
   - {name: 通信, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Telegram.png'}
   - {name: 云服务, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/GitHub.png'}
   - {name: 金融, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png'}
 
-  # === 直连优先服务（简化为3选项）===
+  # === 直连优先服务（8选项）===
   - {name: Microsoft, <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Microsoft.png'}
   - {name: OneDrive, <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/OneDrive.png'}
   - {name: Apple, <<: *Anchor_LD, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Apple.png'}
 
-  # === 兜底（简化为3选项）===
+  # === 兜底（13选项）===
   - name: 漏网之鱼
-    type: select
-    proxies: [一键代理, 手动选择, 国内直连]
+    <<: *Anchor_OP
     icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/MATCH.png'
 
 
