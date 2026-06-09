@@ -6,6 +6,7 @@ DOMAIN-SUFFIX,unpkg.com
 DOMAIN-SUFFIX,deeplx.org
 DOMAIN-SUFFIX,arxiv.org
 DOMAIN-SUFFIX,hcaptcha.com
+DOMAIN-SUFFIX,bitwarden.com
 
 # AI services
 DOMAIN-SUFFIX,muyuan.do
