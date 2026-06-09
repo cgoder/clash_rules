@@ -7,6 +7,7 @@ DOMAIN-SUFFIX,deeplx.org
 DOMAIN-SUFFIX,arxiv.org
 DOMAIN-SUFFIX,hcaptcha.com
 DOMAIN-SUFFIX,bitwarden.com
+DOMAIN-SUFFIX,bitwarden.net
 
 # AI services
 DOMAIN-SUFFIX,muyuan.do
