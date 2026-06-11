@@ -9,7 +9,7 @@ clash_rules/
 ├── clashmi.yml                  # 主配置文件（推荐使用）
 ├── clashmi_LB.yml              # 负载均衡专用配置
 ├── clashmi_optimized.yml       # 优化版配置
-├── override.yml                # 覆写配置
+├── override.yml                # 简化主配置（无订阅链接）
 ├── docs/                       # 📚 文档目录
 │   ├── README.md              # 文档导航
 │   ├── guides/                # 使用指南
@@ -37,22 +37,19 @@ git clone https://github.com/cgoder/clash_rules.git
 cd clash_rules
 ```
 
-### 2. 修改订阅链接
-编辑 `clashmi.yml`，在 `proxy-providers` 部分添加你的订阅：
-```yaml
-proxy-providers:
-  NCloud:
-    <<: *Anchor_PR
-    url: "你的订阅链接"
-    path: ./proxies/NCloud.yaml
-```
+### 2. 选择配置文件
+- **clashmi.yml**：当前完整主配置，保留更细的区域和场景分组。
+- **override.yml**：`clashmi.yml` 的简化主配置版，不包含订阅链接或 `proxy-providers` 段。
 
-### 3. 导入配置
+### 3. 提供节点来源
+仓库不保存订阅链接或订阅占位。使用 `override.yml` 时，需要由客户端或订阅转换流程先把节点合并进配置，策略组会通过 `include-all` 从已合并节点中筛选。
+
+### 4. 导入配置
 - **Clash Verge Rev**: 导入配置文件
 - **FlClash**: 导入配置文件
 - **Clash Meta**: 使用配置文件路径
 
-### 4. 重启应用
+### 5. 重启应用
 重载配置，开始使用
 
 ---
@@ -139,7 +136,7 @@ Gemini   → 香港负载均衡 / 美国负载均衡
 | **clashmi.yml** | 当前主配置 | ✅ 生产环境推荐 |
 | clashmi_LB.yml | 负载均衡专用 | 节点非常不稳定时 |
 | clashmi_optimized.yml | 优化版配置 | 替代方案 |
-| override.yml | 覆写配置 | 自定义覆盖规则 |
+| override.yml | 简化主配置，无订阅链接，使用短英文策略组 | 需要客户端或订阅转换流程提供节点时 |
 
 ### 配置版本历史
 
@@ -176,7 +173,7 @@ DOMAIN-KEYWORD,google
 ### 验证订阅节点分组
 ```bash
 cd scripts
-./validate_subscription.sh "你的订阅链接"
+./validate_subscription.sh "<订阅文件或URL>"
 ```
 
 **功能**：
@@ -200,10 +197,10 @@ cd scripts
 - ✅ 不稳定节点自动容错
 - ⚠️ 游戏/会议建议用"速度优先"
 
-### 订阅更新
-- 订阅每 24 小时自动更新
-- 手动更新：重载配置
-- 更新后建议运行验证脚本
+### 节点来源更新
+- `override.yml` 不保存节点来源
+- 节点更新由客户端或订阅转换流程负责
+- 更新后建议运行验证脚本检查分组匹配
 
 ---
 

@@ -23,7 +23,7 @@ docs/
 - **clashmi.yml** - 当前生产配置（推荐使用）
 - **clashmi_LB.yml** - 负载均衡专用配置
 - **clashmi_optimized.yml** - 优化版配置
-- **override.yml** - 覆写配置
+- **override.yml** - `clashmi.yml` 的简化主配置版，无订阅链接和 `proxy-providers` 段；节点需由客户端或订阅转换流程提供
 
 ### 核心文档
 1. [负载均衡配置指南](./guides/负载均衡配置指南.md) - Load-Balance 策略详解
@@ -59,6 +59,11 @@ docs/
 - ✅ 场景化服务分组（流媒体/通信/云服务/金融）
 - ✅ DNS 防污染和防泄漏
 - ✅ 自动过滤无效节点
+
+### 简化主配置 (override.yml) 特点
+- 保留核心运行配置、DNS、TUN、sniffer 和主要分流逻辑
+- 使用 `Proxy`、`AI`、`Media`、`Comm`、`Cloud`、`Finance` 等短英文策略组
+- 区域组通过 `include-all` 从已合并节点中筛选，不在仓库中保存节点来源
 
 ### 配置版本历史
 | 版本 | 特点 | 状态 |
