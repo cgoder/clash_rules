@@ -53,7 +53,7 @@ external-ui-name: zashboard
 external-ui: ui
 external-controller: 127.0.0.1:9090
 secret: ""
-external-ui-url: https://v4.v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip
+external-ui-url: https://v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip
 
 # TUN配置
 tun:
@@ -161,9 +161,12 @@ dns:
 
   # ③ 国内/私有域名策略（配置B：精确分流）
   nameserver-policy:
-    "geosite:cn,private":
+    "geosite:cn,private": &domestic_dns
       - 'https://doh.pub/dns-query'
       - 'https://dns.alidns.com/dns-query'
+    # my_direct 走直连，DNS 必须用国内解析，不能依赖代理（默认 nameserver 走 #RULES 经代理，
+    # 启动初期/代理故障时会导致直连域名解析死锁）
+    "rule-set:my_direct": *domestic_dns
 
   # ④ 国外域名 → 国外 DNS + 强制代理（配置B：防污染核心）
   nameserver:

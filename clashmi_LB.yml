@@ -242,8 +242,8 @@ dns:
 
     # 自定义代理规则
     "rule-set:my_proxy": *proxy_dns
-    # 自定义直连规则（通过代理 DNS 解析，获取真实 IP，防 DNS 污染）
-    "rule-set:my_direct": *proxy_dns
+    # my_direct 走直连，DNS 必须用国内解析（回落默认 nameserver），
+    # 否则直连域名的解析依赖代理：启动初期/代理故障时会全部失败
 
 
 
