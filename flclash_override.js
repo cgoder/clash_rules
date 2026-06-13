@@ -21,48 +21,48 @@ const PROXY_GROUPS = [
   {
     name: "Proxy",
     type: "select",
-    proxies: ["Auto", "HK", "Asia", "NorthAmerica", "Europe", "DIRECT"]
+    proxies: ["Auto", "HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe", "DIRECT"]
   },
 
   // === AI 服务组 ===
   {
     name: "AI",
     type: "select",
-    proxies: ["NorthAmerica", "Europe", "HK", "Asia", "Proxy", "DIRECT"]
+    proxies: ["US", "NorthAmerica", "Europe", "SG", "HK", "TW", "Asia", "Proxy", "DIRECT"]
   },
 
   // === 场景服务组 ===
   {
     name: "Media",
     type: "select",
-    proxies: ["HK", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
+    proxies: ["HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
   },
   {
     name: "Comm",
     type: "select",
-    proxies: ["HK", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
+    proxies: ["HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
   },
   {
     name: "Cloud",
     type: "select",
-    proxies: ["Proxy", "HK", "Asia", "NorthAmerica", "Europe", "DIRECT"]
+    proxies: ["SG", "US", "HK", "TW", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
   },
   {
     name: "Finance",
     type: "select",
-    proxies: ["Proxy", "NorthAmerica", "Europe", "HK", "DIRECT"]
+    proxies: ["US", "NorthAmerica", "Europe", "HK", "SG", "Proxy", "DIRECT"]
   },
 
   // === 直连优先组 ===
   {
     name: "Apple",
     type: "select",
-    proxies: ["DIRECT", "Proxy", "HK", "Asia", "NorthAmerica"]
+    proxies: ["DIRECT", "Proxy", "HK", "US", "SG", "Asia", "NorthAmerica"]
   },
   {
     name: "Microsoft",
     type: "select",
-    proxies: ["DIRECT", "Proxy", "HK", "Asia", "NorthAmerica"]
+    proxies: ["DIRECT", "Proxy", "HK", "US", "SG", "Asia", "NorthAmerica"]
   },
   {
     name: "Domestic",
@@ -74,7 +74,7 @@ const PROXY_GROUPS = [
   {
     name: "Final",
     type: "select",
-    proxies: ["Proxy", "DIRECT", "Auto", "HK", "Asia", "NorthAmerica", "Europe"]
+    proxies: ["Proxy", "DIRECT", "Auto", "HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe"]
   },
 
   // === 自动选择组（正则匹配节点）===
@@ -87,7 +87,7 @@ const PROXY_GROUPS = [
     tolerance: 80
   },
 
-  // === 地区分组（正则匹配节点）===
+  // === 常用地区分组（单独罗列）===
   {
     name: "HK",
     type: "url-test",
@@ -96,6 +96,32 @@ const PROXY_GROUPS = [
     interval: 300,
     tolerance: 80
   },
+  {
+    name: "TW",
+    type: "url-test",
+    match: /(台湾|台灣|🇹🇼|\bTW\b|Taiwan)/i,
+    url: "https://www.gstatic.com/generate_204",
+    interval: 300,
+    tolerance: 80
+  },
+  {
+    name: "SG",
+    type: "url-test",
+    match: /(新加坡|狮城|🇸🇬|\bSG\b|\bSGP\b|Singapore)/i,
+    url: "https://www.gstatic.com/generate_204",
+    interval: 300,
+    tolerance: 80
+  },
+  {
+    name: "US",
+    type: "url-test",
+    match: /(美国|美國|🇺🇸|\bUS\b|\bUSA\b|United States|America)/i,
+    url: "https://www.gstatic.com/generate_204",
+    interval: 300,
+    tolerance: 80
+  },
+
+  // === 大洲地区分组 ===
   {
     name: "Asia",
     type: "url-test",
