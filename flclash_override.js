@@ -1,16 +1,22 @@
 // ============================================================
-// 🔧 FlClash 动态配置脚本 v2.0
+// 🔧 FlClash 动态配置脚本 v3.0
 // 基于 clashmi.yml 转换
 //
 // ✅ 功能：
-// 1. 完全覆盖订阅的规则（清空后重建）
-// 2. 添加兜底规则（Final 漏网之鱼）
-// 3. 自动创建地区分组和场景策略组
+// 1. 完全覆盖订阅的策略组和规则（清空后重建）
+// 2. 添加自定义规则（my_proxy.list / my_direct.list）
+// 3. 添加兜底规则（Final 漏网之鱼）
+// 4. 固定策略组显示顺序（Proxy 始终在第一位）
 //
 // ✅ 使用说明：
 // 1️⃣ FlClash：配置 → 覆写 → 脚本模式 → 粘贴此脚本
-// 2️⃣ 保存后会清空订阅规则，使用本脚本定义的规则
+// 2️⃣ 保存后会清空订阅策略组和规则，使用本脚本定义的配置
 // 3️⃣ 修改 PROXY_GROUPS 和 RULES 部分自定义配置
+//
+// ✅ v3.0 更新：
+// - 新增 OVERRIDE_GROUPS 开关（删除订阅策略组）
+// - 固定策略组顺序（按定义顺序显示）
+// - 集成 my_proxy.list 和 my_direct.list 自定义规则
 // ============================================================
 
 // ======= 用户配置区 =======
@@ -154,7 +160,49 @@ const RULES = [
   "GEOSITE,private,DIRECT",
   "GEOIP,private,DIRECT,no-resolve",
 
-  // 第二优先级：AI 服务
+  // 第二优先级：自定义规则（来自 my_proxy.list）
+  "DOMAIN,gsa.apple.com,Proxy",
+  "DOMAIN,stun.voip.blackberry.com,Proxy",
+  "DOMAIN-SUFFIX,linux.do,Proxy",
+  "DOMAIN-SUFFIX,ldstatic.com,Proxy",
+  "DOMAIN-SUFFIX,anyrouter.top,Proxy",
+  "DOMAIN-SUFFIX,cloudflare-dns.com,Proxy",
+  "DOMAIN,dns.cloudflare.com,Proxy",
+  "DOMAIN,chrome.cloudflare-dns.com,Proxy",
+  "DOMAIN,firefox.cloudflare-dns.com,Proxy",
+  "DOMAIN,security.cloudflare-dns.com,Proxy",
+  "DOMAIN,family.cloudflare-dns.com,Proxy",
+  "DOMAIN-SUFFIX,workers.dev,Proxy",
+  "DOMAIN-SUFFIX,pages.dev,Proxy",
+  "DOMAIN-SUFFIX,r2.dev,Proxy",
+  "DOMAIN-SUFFIX,cloudflare-ipfs.com,Proxy",
+  "DOMAIN,dash.cloudflare.com,Proxy",
+  "DOMAIN,api.cloudflare.com,Proxy",
+  "DOMAIN-SUFFIX,cloudflarewarp.com,Proxy",
+  "DOMAIN-SUFFIX,one.one.one.one,Proxy",
+  "DOMAIN-SUFFIX,trycloudflare.com,Proxy",
+  "DOMAIN-SUFFIX,argotunnel.com,Proxy",
+
+  // 第三优先级：自定义直连规则（来自 my_direct.list）
+  "DOMAIN-SUFFIX,4d4y.com,DIRECT",
+  "DOMAIN-SUFFIX,gh-proxy.org,DIRECT",
+  "DOMAIN-SUFFIX,cloudflare.com,DIRECT",
+  "DOMAIN-SUFFIX,immersivetranslate.com,DIRECT",
+  "DOMAIN-SUFFIX,unpkg.com,DIRECT",
+  "DOMAIN-SUFFIX,deeplx.org,DIRECT",
+  "DOMAIN-SUFFIX,arxiv.org,DIRECT",
+  "DOMAIN-SUFFIX,hcaptcha.com,DIRECT",
+  "DOMAIN-SUFFIX,bitwarden.com,DIRECT",
+  "DOMAIN-SUFFIX,bitwarden.net,DIRECT",
+  "DOMAIN-SUFFIX,muyuan.do,DIRECT",
+  "DOMAIN-SUFFIX,zenapi.top,DIRECT",
+  "DOMAIN-SUFFIX,venlacy.com,DIRECT",
+  "DOMAIN-SUFFIX,lyclaude.site,DIRECT",
+  "DOMAIN-SUFFIX,chybenzun.top,DIRECT",
+  "DOMAIN-SUFFIX,hotaruapi.com,DIRECT",
+  "DOMAIN-SUFFIX,bestblogs.dev,DIRECT",
+
+  // 第四优先级：AI 服务
   "GEOSITE,openai,AI",
   "GEOSITE,anthropic,AI",
   "GEOSITE,google-gemini,AI",
@@ -163,7 +211,7 @@ const RULES = [
   "DOMAIN-SUFFIX,anthropic.com,AI",
   "DOMAIN-SUFFIX,claude.ai,AI",
 
-  // 第三优先级：流媒体
+  // 第五优先级：流媒体
   "GEOSITE,youtube,Media",
   "GEOSITE,netflix,Media",
   "GEOSITE,disney,Media",
@@ -171,29 +219,29 @@ const RULES = [
   "GEOSITE,tiktok,Media",
   "GEOIP,netflix,Media,no-resolve",
 
-  // 第四优先级：通信服务
+  // 第六优先级：通信服务
   "GEOSITE,telegram,Comm",
   "GEOSITE,twitter,Comm",
   "GEOIP,telegram,Comm,no-resolve",
   "GEOIP,twitter,Comm,no-resolve",
 
-  // 第五优先级：云服务
+  // 第七优先级：云服务
   "GEOSITE,google,Cloud",
   "GEOSITE,github,Cloud",
   "GEOIP,google,Cloud,no-resolve",
 
-  // 第六优先级：金融服务
+  // 第八优先级：金融服务
   "GEOSITE,paypal,Finance",
 
-  // 第七优先级：Apple 生态
+  // 第九优先级：Apple 生态
   "GEOSITE,apple,Apple",
   "GEOIP,apple,Apple,no-resolve",
 
-  // 第八优先级：Microsoft 生态
+  // 第十优先级：Microsoft 生态
   "GEOSITE,onedrive,Microsoft",
   "GEOSITE,microsoft,Microsoft",
 
-  // 第九优先级：国内直连
+  // 第十一优先级：国内直连
   "GEOSITE,cn,Domestic",
   "GEOIP,cn,Domestic,no-resolve",
 
@@ -204,10 +252,13 @@ const RULES = [
 // 是否完全覆盖订阅规则（true=清空订阅规则，false=在订阅规则前插入）
 const OVERRIDE_RULES = true;
 
+// 是否完全覆盖订阅策略组（true=删除订阅策略组，false=保留订阅策略组）
+const OVERRIDE_GROUPS = true;
+
 // ======= 核心逻辑 =======
 
 const main = (config) => {
-  console.log("🚀 FlClash 配置脚本 v2.0 开始执行");
+  console.log("🚀 FlClash 配置脚本 v3.0 开始执行");
 
   // 确保关键字段存在
   config.proxies ??= [];
@@ -221,7 +272,17 @@ const main = (config) => {
   console.log(`📋 订阅策略组数量: ${groups.length}`);
   console.log(`📜 订阅规则数量: ${config.rules.length}`);
 
-  // === 1. 处理代理组 ===
+  // === 1. 处理策略组 ===
+  if (OVERRIDE_GROUPS) {
+    // 完全覆盖模式：清空订阅策略组，使用脚本策略组
+    const oldGroupsCount = groups.length;
+    config["proxy-groups"] = [];
+    console.log(`🔥 完全覆盖模式: 清空订阅的 ${oldGroupsCount} 个策略组`);
+  }
+
+  // 按照定义顺序添加策略组（确保 Proxy 等核心组在最前面）
+  const newGroups = [];
+
   for (const groupDef of PROXY_GROUPS) {
     let proxies = [];
 
@@ -249,17 +310,12 @@ const main = (config) => {
     if (groupDef.interval) newGroup.interval = groupDef.interval;
     if (groupDef.tolerance) newGroup.tolerance = groupDef.tolerance;
 
-    // 查找是否已存在同名组
-    const existingIndex = groups.findIndex(g => g.name === newGroup.name);
-    if (existingIndex === -1) {
-      groups.push(newGroup);
-      console.log(`✅ 添加代理组: ${newGroup.name} (${proxies.length} 个代理)`);
-    } else {
-      // 替换已存在的组
-      groups[existingIndex] = newGroup;
-      console.log(`🔄 覆盖代理组: ${newGroup.name} (${proxies.length} 个代理)`);
-    }
+    newGroups.push(newGroup);
+    console.log(`✅ 添加代理组: ${newGroup.name} (${proxies.length} 个代理)`);
   }
+
+  // 替换为新的策略组列表（保持定义顺序）
+  config["proxy-groups"] = newGroups;
 
   // === 2. 处理规则 ===
   if (OVERRIDE_RULES) {
