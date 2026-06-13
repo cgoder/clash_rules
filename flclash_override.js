@@ -1,29 +1,37 @@
 // ============================================================
-// 🔧 FlClash 动态配置脚本
+// 🔧 FlClash 动态配置脚本 v2.0
 // 基于 clashmi.yml 转换
-// 说明：FlClash 在加载配置时调用 main(config)，返回修改后的配置
+//
+// ✅ 功能：
+// 1. 完全覆盖订阅的规则（清空后重建）
+// 2. 添加兜底规则（Final 漏网之鱼）
+// 3. 自动创建地区分组和场景策略组
 //
 // ✅ 使用说明：
-// 1️⃣ 在 FlClash 中：配置 → 覆写 → 脚本模式 → 粘贴此脚本
-// 2️⃣ 保存后会自动在订阅节点基础上创建策略组和规则
-// 3️⃣ 根据需要修改 PROXY_GROUPS 和 NEW_RULES 部分
+// 1️⃣ FlClash：配置 → 覆写 → 脚本模式 → 粘贴此脚本
+// 2️⃣ 保存后会清空订阅规则，使用本脚本定义的规则
+// 3️⃣ 修改 PROXY_GROUPS 和 RULES 部分自定义配置
 // ============================================================
 
 // ======= 用户配置区 =======
 
-// 代理组配置（基于 clashmi.yml）
+// 代理组配置
 const PROXY_GROUPS = [
-  // 核心出站
+  // === 核心出站组 ===
   {
     name: "Proxy",
     type: "select",
     proxies: ["Auto", "HK", "Asia", "NorthAmerica", "Europe", "DIRECT"]
   },
+
+  // === AI 服务组 ===
   {
     name: "AI",
     type: "select",
     proxies: ["NorthAmerica", "Europe", "HK", "Asia", "Proxy", "DIRECT"]
   },
+
+  // === 场景服务组 ===
   {
     name: "Media",
     type: "select",
@@ -44,6 +52,8 @@ const PROXY_GROUPS = [
     type: "select",
     proxies: ["Proxy", "NorthAmerica", "Europe", "HK", "DIRECT"]
   },
+
+  // === 直连优先组 ===
   {
     name: "Apple",
     type: "select",
@@ -57,15 +67,17 @@ const PROXY_GROUPS = [
   {
     name: "Domestic",
     type: "select",
-    proxies: ["DIRECT", "Proxy", "REJECT"]
+    proxies: ["DIRECT", "Proxy"]
   },
+
+  // === 兜底规则（漏网之鱼）===
   {
     name: "Final",
     type: "select",
     proxies: ["Proxy", "DIRECT", "Auto", "HK", "Asia", "NorthAmerica", "Europe"]
   },
 
-  // 自动选择组
+  // === 自动选择组（正则匹配节点）===
   {
     name: "Auto",
     type: "url-test",
@@ -75,7 +87,7 @@ const PROXY_GROUPS = [
     tolerance: 80
   },
 
-  // 地区分组 - 使用正则匹配节点
+  // === 地区分组（正则匹配节点）===
   {
     name: "HK",
     type: "url-test",
@@ -110,13 +122,13 @@ const PROXY_GROUPS = [
   }
 ];
 
-// 规则配置（基于 clashmi.yml 的规则优先级）
-const NEW_RULES = [
-  // 内网/私有流量
+// 规则配置（完全覆盖订阅规则，按优先级排序）
+const RULES = [
+  // 第一优先级：内网/私有流量
   "GEOSITE,private,DIRECT",
   "GEOIP,private,DIRECT,no-resolve",
 
-  // AI 服务
+  // 第二优先级：AI 服务
   "GEOSITE,openai,AI",
   "GEOSITE,anthropic,AI",
   "GEOSITE,google-gemini,AI",
@@ -125,7 +137,7 @@ const NEW_RULES = [
   "DOMAIN-SUFFIX,anthropic.com,AI",
   "DOMAIN-SUFFIX,claude.ai,AI",
 
-  // 流媒体
+  // 第三优先级：流媒体
   "GEOSITE,youtube,Media",
   "GEOSITE,netflix,Media",
   "GEOSITE,disney,Media",
@@ -133,37 +145,43 @@ const NEW_RULES = [
   "GEOSITE,tiktok,Media",
   "GEOIP,netflix,Media,no-resolve",
 
-  // 通信服务
+  // 第四优先级：通信服务
   "GEOSITE,telegram,Comm",
   "GEOSITE,twitter,Comm",
   "GEOIP,telegram,Comm,no-resolve",
   "GEOIP,twitter,Comm,no-resolve",
 
-  // 云服务
+  // 第五优先级：云服务
   "GEOSITE,google,Cloud",
   "GEOSITE,github,Cloud",
   "GEOIP,google,Cloud,no-resolve",
 
-  // 金融服务
+  // 第六优先级：金融服务
   "GEOSITE,paypal,Finance",
 
-  // Apple 生态
+  // 第七优先级：Apple 生态
   "GEOSITE,apple,Apple",
   "GEOIP,apple,Apple,no-resolve",
 
-  // Microsoft 生态
+  // 第八优先级：Microsoft 生态
   "GEOSITE,onedrive,Microsoft",
   "GEOSITE,microsoft,Microsoft",
 
-  // 国内直连
+  // 第九优先级：国内直连
   "GEOSITE,cn,Domestic",
-  "GEOIP,cn,Domestic,no-resolve"
+  "GEOIP,cn,Domestic,no-resolve",
+
+  // 兜底规则（漏网之鱼）
+  "MATCH,Final"
 ];
 
-// ======= 核心逻辑（无需修改）=======
+// 是否完全覆盖订阅规则（true=清空订阅规则，false=在订阅规则前插入）
+const OVERRIDE_RULES = true;
+
+// ======= 核心逻辑 =======
 
 const main = (config) => {
-  console.log("🚀 FlClash 配置脚本开始执行");
+  console.log("🚀 FlClash 配置脚本 v2.0 开始执行");
 
   // 确保关键字段存在
   config.proxies ??= [];
@@ -173,7 +191,11 @@ const main = (config) => {
   const allProxyNames = config.proxies.map(p => p.name);
   const groups = config["proxy-groups"];
 
-  // === 处理代理组 ===
+  console.log(`📦 订阅节点数量: ${allProxyNames.length}`);
+  console.log(`📋 订阅策略组数量: ${groups.length}`);
+  console.log(`📜 订阅规则数量: ${config.rules.length}`);
+
+  // === 1. 处理代理组 ===
   for (const groupDef of PROXY_GROUPS) {
     let proxies = [];
 
@@ -181,11 +203,11 @@ const main = (config) => {
       // 直接使用手动列出的 proxies（引用其他组）
       proxies = groupDef.proxies;
     } else if (groupDef.match instanceof RegExp) {
-      // 模糊匹配（正则）- 从实际节点中匹配
+      // 正则匹配 - 从实际节点中筛选
       proxies = allProxyNames.filter(name => groupDef.match.test(name));
 
       if (proxies.length === 0) {
-        console.log(`⚠️ 代理组 [${groupDef.name}] 未匹配到任何节点`);
+        console.log(`⚠️  代理组 [${groupDef.name}] 未匹配到任何节点，跳过`);
         continue;
       }
     }
@@ -196,52 +218,70 @@ const main = (config) => {
       proxies
     };
 
-    // 添加额外属性（url-test 需要）
+    // 添加额外属性（url-test/load-balance 需要）
     if (groupDef.url) newGroup.url = groupDef.url;
     if (groupDef.interval) newGroup.interval = groupDef.interval;
     if (groupDef.tolerance) newGroup.tolerance = groupDef.tolerance;
 
-    // 防止重复添加
+    // 查找是否已存在同名组
     const existingIndex = groups.findIndex(g => g.name === newGroup.name);
     if (existingIndex === -1) {
       groups.push(newGroup);
-      console.log(`✅ 添加代理组：${newGroup.name}（${proxies.length} 个代理）`);
+      console.log(`✅ 添加代理组: ${newGroup.name} (${proxies.length} 个代理)`);
     } else {
       // 替换已存在的组
       groups[existingIndex] = newGroup;
-      console.log(`🔄 替换代理组：${newGroup.name}（${proxies.length} 个代理）`);
+      console.log(`🔄 覆盖代理组: ${newGroup.name} (${proxies.length} 个代理)`);
     }
   }
 
-  // === 处理规则 ===
-  const rules = config.rules;
-  const upperRules = rules.map(r => r.toUpperCase().trim());
-
-  // 插入点：第一个 MATCH / FINAL 规则之前
-  let insertIndex = rules.findIndex(r => {
-    const u = r.toUpperCase();
-    return u.startsWith("MATCH") || u.startsWith("FINAL");
-  });
-
-  if (insertIndex === -1) insertIndex = rules.length;
-
-  let addedCount = 0;
-  for (const rule of NEW_RULES) {
-    const upper = rule.toUpperCase().trim();
-    if (!upperRules.includes(upper)) {
-      rules.splice(insertIndex, 0, rule);
-      insertIndex++;
-      addedCount++;
-    }
-  }
-
-  if (addedCount > 0) {
-    console.log(`✅ 添加规则 ${addedCount} 条`);
+  // === 2. 处理规则 ===
+  if (OVERRIDE_RULES) {
+    // 完全覆盖模式：清空订阅规则，使用脚本规则
+    const oldRulesCount = config.rules.length;
+    config.rules = [...RULES];
+    console.log(`🔥 完全覆盖模式: 清空订阅的 ${oldRulesCount} 条规则`);
+    console.log(`✅ 应用脚本规则: ${RULES.length} 条`);
   } else {
-    console.log("⚠️ 无需添加规则（均已存在）");
+    // 插入模式：在订阅规则前插入脚本规则
+    const rules = config.rules;
+    const upperRules = rules.map(r => r.toUpperCase().trim());
+
+    // 找到 MATCH/FINAL 的位置
+    let matchIndex = rules.findIndex(r => {
+      const u = r.toUpperCase();
+      return u.startsWith("MATCH") || u.startsWith("FINAL");
+    });
+
+    // 如果没有 MATCH/FINAL，插入到末尾
+    if (matchIndex === -1) {
+      matchIndex = rules.length;
+    }
+
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    // 从后往前插入（保持顺序）
+    for (let i = RULES.length - 1; i >= 0; i--) {
+      const rule = RULES[i];
+      const upper = rule.toUpperCase().trim();
+
+      // 检查是否已存在
+      if (!upperRules.includes(upper)) {
+        rules.splice(matchIndex, 0, rule);
+        addedCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    console.log(`✅ 插入模式: 添加 ${addedCount} 条规则, 跳过 ${skippedCount} 条重复规则`);
   }
 
-  console.log("🎉 FlClash 配置更新完成");
+  console.log(`📊 最终策略组数量: ${config["proxy-groups"].length}`);
+  console.log(`📊 最终规则数量: ${config.rules.length}`);
+  console.log("🎉 FlClash 配置更新完成\n");
+
   return config;
 };
 
