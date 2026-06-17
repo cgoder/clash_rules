@@ -76,6 +76,7 @@ const DOMAIN_RULES = {
   // 内网/私有
   PRIVATE: [
     'localhost',
+    '*.orb.local',
     '*.local',
     '*.lan',
     '*.home.arpa',

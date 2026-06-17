@@ -156,6 +156,10 @@ const PROXY_GROUPS = [
 
 // 规则配置（完全覆盖订阅规则，按优先级排序）
 const RULES = [
+  // OrbStack 本地容器域名直连
+  "DOMAIN-SUFFIX,orb.local,DIRECT",
+  "DOMAIN-SUFFIX,local,DIRECT",
+
   // 第一优先级：内网/私有流量
   "GEOSITE,private,DIRECT",
   "GEOIP,private,DIRECT,no-resolve",
@@ -264,6 +268,30 @@ const main = (config) => {
   config.proxies ??= [];
   config["proxy-groups"] ??= [];
   config.rules ??= [];
+
+  // === 0. 处理 DNS 以支持 OrbStack 本地解析 ===
+  config.dns ??= {};
+  config.dns["fake-ip-filter"] ??= [];
+  if (Array.isArray(config.dns["fake-ip-filter"])) {
+    if (!config.dns["fake-ip-filter"].includes("+.orb.local")) {
+      config.dns["fake-ip-filter"].push("+.orb.local");
+    }
+    if (!config.dns["fake-ip-filter"].includes("+.local")) {
+      config.dns["fake-ip-filter"].push("+.local");
+    }
+    if (!config.dns["fake-ip-filter"].includes("*.local")) {
+      config.dns["fake-ip-filter"].push("*.local");
+    }
+    if (!config.dns["fake-ip-filter"].includes("*.lan")) {
+      config.dns["fake-ip-filter"].push("*.lan");
+    }
+  }
+  config.dns["nameserver-policy"] ??= {};
+  if (typeof config.dns["nameserver-policy"] === 'object') {
+    config.dns["nameserver-policy"]["+.orb.local"] = "system";
+    config.dns["nameserver-policy"]["+.local"] = "system";
+    config.dns["nameserver-policy"]["+.lan"] = "system";
+  }
 
   const allProxyNames = config.proxies.map(p => p.name);
   const groups = config["proxy-groups"];

@@ -191,6 +191,7 @@ dns:
   fake-ip-filter:
     - '*.lan'
     - '*.local'
+    - '+.orb.local'
     - 'localhost'
     - '*.home.arpa'
     - 'time.*.com'
@@ -221,6 +222,10 @@ dns:
       - "https://1.1.1.1/dns-query#一键代理"
       - "https://8.8.8.8/dns-query#一键代理"
     "rule-set:my_proxy": *proxy_dns
+    "+.lan": system
+    "+.local": system
+    "+.orb.local": system
+    "+.home": system
     # my_direct 走直连，DNS 必须用国内解析（回落默认 nameserver），
     # 否则直连域名的解析依赖代理：启动初期/代理故障时会全部失败
 
@@ -345,6 +350,8 @@ proxy-groups:
 
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
+  - DOMAIN-SUFFIX,orb.local,国内直连
+  - DOMAIN-SUFFIX,local,国内直连
   # 第一优先级：内网/私有流量
   - RULE-SET,private_ip,国内直连,no-resolve
   - RULE-SET,private_domain,国内直连
