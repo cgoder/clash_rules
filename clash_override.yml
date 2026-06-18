@@ -86,8 +86,6 @@ dns:
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter-mode: blacklist
   fake-ip-filter:
-    - "*.lan"
-    - "*.local"
     - "+.orb.local"
     - localhost
     - "*.home.arpa"
@@ -133,10 +131,7 @@ dns:
     "+.telegram.org": *proxy_dns
     "+.t.me": *proxy_dns
     "geosite:private": system
-    "+.lan": system
-    "+.local": system
     "+.orb.local": system
-    "+.home": system
 
 proxy-groups:
   - name: Proxy
@@ -285,8 +280,6 @@ rule-providers:
   cn_ip: {type: http, behavior: ipcidr, format: mrs, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs", path: ./ruleset/cn_ip.mrs, interval: 86400}
 
 rules:
-  - DOMAIN-SUFFIX,orb.local,Direct
-  - DOMAIN-SUFFIX,local,Direct
   - RULE-SET,category-ads-all,Reject
   - RULE-SET,private_ip,Direct,no-resolve
   - RULE-SET,private_domain,Direct

@@ -121,8 +121,6 @@ dns:
   fake-ip-filter-mode: blacklist
   # 精简 fake-ip-filter（参考配置A+B）
   fake-ip-filter:
-    - '*.lan'
-    - '*.local'
     - '+.orb.local'
     - 'localhost'
     - '*.home.arpa'
@@ -168,10 +166,7 @@ dns:
     # my_direct 走直连，DNS 必须用国内解析，不能依赖代理（默认 nameserver 走 #RULES 经代理，
     # 启动初期/代理故障时会导致直连域名解析死锁）
     "rule-set:my_direct": *domestic_dns
-    "+.lan": system
-    "+.local": system
     "+.orb.local": system
-    "+.home": system
 
   # ④ 国外域名 → 国外 DNS + 强制代理（配置B：防污染核心）
   nameserver:
@@ -252,8 +247,6 @@ proxy-groups:
 
 # ※※※※※※※※※※※※※※※ 规则匹配（优化顺序）※※※※※※※※※※※※※※※
 rules:
-  - DOMAIN-SUFFIX,orb.local,国内直连
-  - DOMAIN-SUFFIX,local,国内直连
   # 第一优先级：内网/私有流量
   - RULE-SET,ntp_domain,国内直连
   - RULE-SET,private_ip,国内直连,no-resolve
@@ -356,4 +349,3 @@ rule-providers:
   cn_ip:             { <<: *Anchor_IP, url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}
 
 # ※※※※※※※※※※※※※※※ 配置结束 ※※※※※※※※※※※※※※※
-
