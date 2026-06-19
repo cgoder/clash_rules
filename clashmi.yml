@@ -205,11 +205,13 @@ dns:
     - '+.xboxlive.com'
     - '+.speedtest.net'
   hosts:
-    'a-ocnfniawgw.cn-shanghai.fcapp.run':
-    'anyrouter.top':
+    'a-ocnfniawgw.cn-shanghai.fcapp.run': 
       - 47.246.23.192
       - 47.246.23.200
-  use-hosts: false
+    anyrouter.top:
+      - 47.246.23.192
+      - 47.246.23.200
+  use-hosts: true
   use-system-hosts: false
   default-nameserver:
     - 223.5.5.5
