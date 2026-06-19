@@ -168,7 +168,6 @@ const RULES = [
   "DOMAIN,stun.voip.blackberry.com,Proxy",
   "DOMAIN-SUFFIX,linux.do,Proxy",
   "DOMAIN-SUFFIX,ldstatic.com,Proxy",
-  "DOMAIN-SUFFIX,anyrouter.top,Proxy",
   "DOMAIN-SUFFIX,cloudflare-dns.com,Proxy",
   "DOMAIN,dns.cloudflare.com,Proxy",
   "DOMAIN,chrome.cloudflare-dns.com,Proxy",
