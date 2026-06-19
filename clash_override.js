@@ -77,8 +77,6 @@ const DOMAIN_RULES = {
   PRIVATE: [
     'localhost',
     '*.orb.local',
-    '*.local',
-    '*.lan',
     '*.home.arpa',
     '*.localdomain',
     '*.example',
