@@ -348,6 +348,8 @@ proxy-groups:
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
   # 第一优先级：内网/私有流量
+  - DOMAIN-SUFFIX,cn-shanghai.fcapp.run,国内直连
+  - DOMAIN,anyrouter.top,国内直连
   - RULE-SET,private_ip,国内直连,no-resolve
   - RULE-SET,private_domain,国内直连
   - RULE-SET,ntp_domain,国内直连
