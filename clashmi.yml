@@ -206,6 +206,11 @@ dns:
     - '+.stun.playstation.net'
     - '+.xboxlive.com'
     - '+.speedtest.net'
+  hosts:
+    'a-ocnfniawgw.cn-shanghai.fcapp.run':
+    'anyrouter.top':
+      - 47.246.23.192
+      - 47.246.23.200
   use-hosts: false
   use-system-hosts: false
   default-nameserver:
