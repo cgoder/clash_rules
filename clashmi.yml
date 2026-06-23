@@ -216,7 +216,7 @@ dns:
     - 'https://doh.pub/dns-query'
     - 'https://dns.alidns.com/dns-query'
   nameserver-policy:
-    "geosite:openai,anthropic,google-gemini,google,youtube,netflix,disney,spotify,telegram,twitter,tiktok,github,paypal": &proxy_dns
+    "rule-set:geolocation-!cn": &proxy_dns
       - "https://1.1.1.1/dns-query#一键代理"
       - "https://8.8.8.8/dns-query#一键代理"
     "rule-set:my_proxy": *proxy_dns
