@@ -8,6 +8,7 @@ DOMAIN-SUFFIX,arxiv.org
 DOMAIN-SUFFIX,hcaptcha.com
 DOMAIN-SUFFIX,bitwarden.com
 DOMAIN-SUFFIX,bitwarden.net
+DOMAIN-SUFFIX,warp.dev
 
 # OrbStack local domains
 DOMAIN-SUFFIX,orb.local
