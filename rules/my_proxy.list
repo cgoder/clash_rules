@@ -8,6 +8,7 @@ DOMAIN-SUFFIX,linux.do
 DOMAIN-SUFFIX,ldstatic.com
 DOMAIN-SUFFIX,anyrouter.top
 DOMAIN-SUFFIX,venlacy.com
+DOMAIN-SUFFIX,chybenzun.top
 
 # Cloudflare DNS 服务（国内 QoS 限速，UDP 丢包严重）
 DOMAIN-SUFFIX,cloudflare-dns.com
