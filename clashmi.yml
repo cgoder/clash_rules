@@ -135,7 +135,7 @@ tun:
   auto-detect-interface: true
   auto-route: true
   auto-redirect: true
-  strict-route: false
+  strict-route: true
   endpoint-independent-nat: true
   route-exclude-cidr:
     - 192.168.0.0/16
