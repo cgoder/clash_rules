@@ -131,6 +131,7 @@ external-ui-url: https://v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/
 tun:
   enable: true
   stack: mixed
+  mtu: 1300
   dns-hijack: ['any:53', 'tcp://any:53']
   auto-detect-interface: true
   auto-route: true
