@@ -9,6 +9,11 @@ DOMAIN-SUFFIX,hcaptcha.com
 DOMAIN-SUFFIX,bitwarden.com
 DOMAIN-SUFFIX,bitwarden.net
 DOMAIN-SUFFIX,warp.dev
+DOMAIN-SUFFIX,bestblogs.dev
+DOMAIN-SUFFIX,gdstudio.xyz
+DOMAIN-SUFFIX,sayqz.com
+DOMAIN-SUFFIX,oiapi.net
+DOMAIN-SUFFIX,rustdesk.com
 
 # OrbStack local domains
 DOMAIN-SUFFIX,orb.local
@@ -17,9 +22,7 @@ DOMAIN-SUFFIX,orb.local
 DOMAIN-SUFFIX,zenapi.top
 DOMAIN-SUFFIX,lyclaude.site
 DOMAIN-SUFFIX,muyuan.do
+DOMAIN-SUFFIX,laxa.com
+DOMAIN-SUFFIX,imtintl.com
+DOMAIN-SUFFIX,exa.ai
 
-DOMAIN-SUFFIX,bestblogs.dev
-DOMAIN-SUFFIX,gdstudio.xyz
-DOMAIN-SUFFIX,sayqz.com
-DOMAIN-SUFFIX,oiapi.net
-DOMAIN-SUFFIX,rustdesk.com
