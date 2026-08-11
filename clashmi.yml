@@ -193,6 +193,7 @@ dns:
   fake-ip-filter-mode: blacklist
   fake-ip-filter:
     - '+.orb.local'
+    - '+.litta.cn'
     - 'localhost'
     - '*.home.arpa'
     - 'time.*.com'
@@ -224,6 +225,7 @@ dns:
       - "https://8.8.8.8/dns-query#一键代理"
     "rule-set:my_proxy": *proxy_dns
     "+.orb.local": system
+    "+.litta.cn": 10.255.255.11
     # my_direct 走直连，DNS 必须用国内解析（回落默认 nameserver），
     # 否则直连域名的解析依赖代理：启动初期/代理故障时会全部失败
 
