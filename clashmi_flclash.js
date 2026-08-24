@@ -200,8 +200,10 @@ function buildDnsAndHosts(filteredProxies) {
   // 仅保留与 clashmi 相关的假 IP 过滤，按 mihomoScript.js 思路：节点域名需走真实 IP
   const chinaDNS = ["223.5.5.5","119.29.29.29"];
   const foreignDNS = ["https://doh.pub/dns-query","https://dns.alidns.com/dns-query"];
-  // BettBox 的 Dns.nameserverPolicy 要求 Map<String,String>，值为单条 String（逗号分隔多条）
-  // mihomo 原生支持 List，但为过 Dart 的 `e as String` 校验，这里统一用 String
+  // Go 要求 nameserver-policy 值为 String 或 List<String>（mihomo 支持 List），
+  // Dart 的 Dns.nameserverPolicy 要求 Map<String,String>（e as String），
+  // 为同时通过 Go 的 DNS 解析与 Dart 的 getConfig 强转，这里对多 DNS 仅取首个，单条 String
+  // 避免 "223.5.5.5, 119.29.29.29" 被 Go 解析为 "udp://223.5.5.5, 119..." 而报 invalid character " ".
   return {
     dns: {
       enable: true, ipv6: false, listen: "0.0.0.0:7874",
@@ -211,9 +213,9 @@ function buildDnsAndHosts(filteredProxies) {
       "proxy-server-nameserver": chinaDNS,
       nameserver: foreignDNS,
       "nameserver-policy": {
-        "geosite:cn": chinaDNS.join(", "),
-        "rule-set:geolocation_not_cn": "https://1.1.1.1/dns-query#一键代理, https://8.8.8.8/dns-query#一键代理",
-        "rule-set:my_proxy": "https://1.1.1.1/dns-query#一键代理, https://8.8.8.8/dns-query#一键代理",
+        "geosite:cn": chinaDNS[0],
+        "rule-set:geolocation_not_cn": "https://1.1.1.1/dns-query#一键代理",
+        "rule-set:my_proxy": "https://1.1.1.1/dns-query#一键代理",
         "+.orb.local": "system",
       },
     },
