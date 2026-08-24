@@ -212,7 +212,7 @@ function buildDnsAndHosts(filteredProxies) {
       nameserver: foreignDNS,
       "nameserver-policy": {
         "geosite:cn": chinaDNS.join(", "),
-        "rule-set:geolocation-!cn": "https://1.1.1.1/dns-query#一键代理, https://8.8.8.8/dns-query#一键代理",
+        "rule-set:geolocation_not_cn": "https://1.1.1.1/dns-query#一键代理, https://8.8.8.8/dns-query#一键代理",
         "rule-set:my_proxy": "https://1.1.1.1/dns-query#一键代理, https://8.8.8.8/dns-query#一键代理",
         "+.orb.local": "system",
       },
