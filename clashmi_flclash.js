@@ -214,8 +214,9 @@ function buildDnsAndHosts(filteredProxies) {
       nameserver: foreignDNS,
       "nameserver-policy": {
         "geosite:cn": chinaDNS[0],
-        "rule-set:geolocation_not_cn": "https://1.1.1.1/dns-query#一键代理",
-        "rule-set:my_proxy": "https://1.1.1.1/dns-query#一键代理",
+        // 为避免代理未就绪时 DoH 经代理超时，这里对国外分流改用直连 DoH；如需防污染可改回 "#一键代理"
+        "rule-set:geolocation_not_cn": "https://1.1.1.1/dns-query",
+        "rule-set:my_proxy": "https://1.1.1.1/dns-query",
         "+.orb.local": "system",
       },
     },
