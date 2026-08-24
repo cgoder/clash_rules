@@ -111,9 +111,9 @@ const dialerProxyName = '链式中转';
 const excludeFilter =
   /群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|电报|无法|说明|使用|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|禁止|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|⚠️|@|t\.me\/\+|\bexpire\b|\bhttps?:\/\/|\.com|\btraffic\b/iu;
 
-// 屏蔽国外QUIC
+// 屏蔽国外QUIC（已移除 353355.xyz 特例，仅保留 cn_ip 白名单）
 const blockForeignQuic = [
-  'AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((OR,((RULE-SET,cn_additional),(RULE-SET,cn_ip,no-resolve)))))),REJECT',
+  'AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((RULE-SET,cn_ip,no-resolve)))),REJECT',
 ];
 
 // 直连节点
@@ -150,32 +150,32 @@ const regionDefinitions = [
     name: '香港',
     flag: '🇭🇰',
     regex: /🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\s*kong/i,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Hong_Kong.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png',
   },
   {
     name: '日本',
     flag: '🇯🇵',
     regex: /🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan/i,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Japan.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png',
   },
   {
     name: '美国',
     flag: '🇺🇸',
     regex:
       /🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|圣地亚哥|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\s*states/i,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/United_States.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png',
   },
   {
     name: '新加坡',
     flag: '🇸🇬',
     regex: /🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore/i,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Singapore.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png',
   },
   {
     name: '台湾省',
     flag: '🇹🇼',
     regex: /🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan/i,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Taiwan.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Taiwan.png',
   },
 ];
 
@@ -187,13 +187,13 @@ const rateRegionDefinitions = [
   {
     name: lowRateRegionName,
     regex: /^(?!.*(?:剩|期|客户端|软件)).*(?:(?<!\d)0\.[0-5]|下载|低倍)/,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Available_1.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Available_1.png',
   },
   {
     name: highRateRegionName,
     regex:
       /(?:[*×xX✕✖⨉]\s*(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?\s*(?:倍|[*×xX✕✖⨉]))/u,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Airport.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Airport.png',
   },
 ];
 
@@ -202,7 +202,7 @@ const allRegionDefinitions = [...regionDefinitions, ...rateRegionDefinitions];
 
 // --- clashmi 注入：大陆分组定义（亚洲/欧洲/美洲/其他地区）---
 // 与 clashmi.yml 的 Anchor_AS/EU/AM/OT 1:1，实现“常用地区可重复归属大陆组”
-const ICON_BASE_CLASHMI = 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons';
+const ICON_BASE_CLASHMI = 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons';
 const continentDefinitions = [
   {
     name: '亚洲',
@@ -255,55 +255,55 @@ const baseRuleProviders = {
 
   private: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/private.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs',
     path: './ruleset/private.mrs',
     'path-in-bundle': 'geo/geosite/private.mrs',
   },
   private_ip: {
     ...ruleProviderCommonIpcidr,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geoip/private.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs',
     path: './ruleset/private_ip.mrs',
     'path-in-bundle': 'geo/geoip/private.mrs',
   },
   games_cn: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-games@cn.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-games@cn.mrs',
     path: './ruleset/category-games@cn.mrs',
     'path-in-bundle': 'geo/geosite/category-games@cn.mrs',
   },
   epicgames: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/epicgames.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.mrs',
     path: './ruleset/epicgames.mrs',
     'path-in-bundle': 'geo/geosite/epicgames.mrs',
   },
   nvidia_cn: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/nvidia@cn.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nvidia@cn.mrs',
     path: './ruleset/nvidia@cn.mrs',
     'path-in-bundle': 'geo/geosite/nvidia@cn.mrs',
   },
   apple_cn: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple@cn.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple@cn.mrs',
     path: './ruleset/apple@cn.mrs',
     'path-in-bundle': 'geo/geosite/apple@cn.mrs',
   },
   microsoft_cn: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/microsoft@cn.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft@cn.mrs',
     path: './ruleset/microsoft@cn.mrs',
     'path-in-bundle': 'geo/geosite/microsoft@cn.mrs',
   },
   'geolocation-cn': {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/geolocation-cn.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-cn.mrs',
     path: './ruleset/geolocation-cn.mrs',
     'path-in-bundle': 'geo/geosite/geolocation-cn.mrs',
   },
   cn_ip: {
     ...ruleProviderCommonIpcidr,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geoip/cn.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs',
     path: './ruleset/cn_ip.mrs',
     'path-in-bundle': 'geo/geoip/cn.mrs',
   },
@@ -312,7 +312,7 @@ const baseRuleProviders = {
 
   gfw: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/gfw.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.mrs',
     path: './ruleset/gfw.mrs',
     'path-in-bundle': 'geo/geosite/gfw.mrs',
   },
@@ -321,19 +321,13 @@ const baseRuleProviders = {
 
   fakeip_filter: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/wwqgtxx/clash-rules@release/fakeip-filter.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs',
     path: './ruleset/fakeip-filter.mrs',
     'path-in-bundle': 'geo/geosite/private.mrs',
   },
-  cn_additional: {
-    ...ruleProviderCommonDomain,
-    url: 'https://static-file-global.353355.xyz/rules/cn-additional-list.mrs',
-    path: './ruleset/cn-additional-list.mrs',
-    'path-in-bundle': 'geo/geosite/cn.mrs',
-  },
   cn: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/wwqgtxx/clash-rules@release/direct.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/direct.mrs',
     path: './ruleset/cn.mrs',
     'path-in-bundle': 'geo/geosite/cn.mrs',
   },
@@ -350,24 +344,24 @@ const clashmiExtraProviders = {
   // NTP 时间同步
   ntp_domain: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-ntp.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ntp.mrs',
     path: './ruleset/ntp_domain.mrs',
   },
   private_domain: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/private.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs',
     path: './ruleset/private_domain.mrs',
   },
   // 测速
   speedtest_domain: {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/ookla-speedtest.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs',
     path: './ruleset/speedtest.mrs',
   },
   // 国外分流（gfw 兜底前的细化域名，注入后由规则引用）
   'geolocation-!cn': {
     ...ruleProviderCommonDomain,
-    url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/geolocation-!cn.mrs',
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs',
     path: './ruleset/geolocation-!cn.mrs',
   },
   // 自定义直连/代理（classical）
@@ -430,7 +424,7 @@ const urlTestBaseOption = {
   type: 'url-test',
   tolerance: 50,
   'exclude-type': 'DIRECT',
-  icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Auto.png',
+  icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png',
   hidden: true,
 };
 
@@ -440,7 +434,7 @@ const loadBalanceBaseOption = {
   type: 'load-balance',
   strategy: 'sticky-sessions',
   'exclude-type': 'DIRECT',
-  icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Round_Robin.png',
+  icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Round_Robin.png',
   hidden: true,
 };
 
@@ -450,19 +444,19 @@ const baseGroups = [
     name: '手动选择',
     baseOption: selectBaseOption,
     includeAll: true,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Static.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Static.png',
   },
   {
     name: '自动选择',
     baseOption: urlTestBaseOption,
     includeAll: true,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Auto.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png',
   },
   {
     name: '负载均衡',
     baseOption: loadBalanceBaseOption,
     includeAll: true,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Round_Robin.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Round_Robin.png',
   },
 ];
 
@@ -477,7 +471,7 @@ const serviceConfigs = [
     providers: {
       openai_domain: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/openai.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs',
         path: './ruleset/openai.mrs',
         'path-in-bundle': 'geo/geosite/openai.mrs',
       },
@@ -492,7 +486,7 @@ const serviceConfigs = [
     providers: {
       anthropic_domain: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/anthropic.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs',
         path: './ruleset/anthropic.mrs',
         'path-in-bundle': 'geo/geosite/anthropic.mrs',
       },
@@ -507,7 +501,7 @@ const serviceConfigs = [
     providers: {
       'google-gemini_domain': {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/google-gemini.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-gemini.mrs',
         path: './ruleset/google-gemini.mrs',
         'path-in-bundle': 'geo/geosite/google-gemini.mrs',
       },
@@ -522,66 +516,66 @@ const serviceConfigs = [
     providers: {
       youtube: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs',
         path: './ruleset/youtube.mrs',
         'path-in-bundle': 'geo/geosite/youtube.mrs',
       },
       instagram: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/instagram.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/instagram.mrs',
         path: './ruleset/instagram.mrs',
         'path-in-bundle': 'geo/geosite/instagram.mrs',
       },
       netflix: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/netflix.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs',
         path: './ruleset/netflix.mrs',
         'path-in-bundle': 'geo/geosite/netflix.mrs',
       },
       netflix_ip: {
         ...ruleProviderCommonIpcidr,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geoip/netflix.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs',
         path: './ruleset/netflix_ip.mrs',
         'path-in-bundle': 'geo/geoip/netflix.mrs',
       },
       hbo: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/hbo.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hbo.mrs',
         path: './ruleset/hbo.mrs',
         'path-in-bundle': 'geo/geosite/hbo.mrs',
       },
       twitch: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/twitch.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitch.mrs',
         path: './ruleset/twitch.mrs',
         'path-in-bundle': 'geo/geosite/twitch.mrs',
       },
       disney: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/disney.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs',
         path: './ruleset/disney.mrs',
         'path-in-bundle': 'geo/geosite/disney.mrs',
       },
       niconico: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/niconico.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/niconico.mrs',
         path: './ruleset/niconico.mrs',
         'path-in-bundle': 'geo/geosite/niconico.mrs',
       },
       bbc: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/bbc.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bbc.mrs',
         path: './ruleset/bbc.mrs',
         'path-in-bundle': 'geo/geosite/bbc.mrs',
       },
       pornhub: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/pornhub.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pornhub.mrs',
         path: './ruleset/pornhub.mrs',
         'path-in-bundle': 'geo/geosite/pornhub.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/ForeignMedia.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ForeignMedia.png',
     rules: [
       'RULE-SET,youtube,Media',
       'RULE-SET,instagram,Media',
@@ -603,12 +597,12 @@ const serviceConfigs = [
     providers: {
       googlefcm: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/googlefcm.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/googlefcm.mrs',
         path: './ruleset/googlefcm.mrs',
         'path-in-bundle': 'geo/geosite/googlefcm.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/MiToverG422/Qure@master/IconSet/Color/fcm.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MiToverG422/Qure/master/IconSet/Color/fcm.png',
     rules: ['RULE-SET,googlefcm,FCM'],
   },
   {
@@ -617,18 +611,18 @@ const serviceConfigs = [
     providers: {
       google: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/google.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs',
         path: './ruleset/google.mrs',
         'path-in-bundle': 'geo/geosite/google.mrs',
       },
       google_ip: {
         ...ruleProviderCommonIpcidr,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geoip/google.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs',
         path: './ruleset/google_ip.mrs',
         'path-in-bundle': 'geo/geoip/google.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Google_Search.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Google_Search.png',
     rules: ['RULE-SET,google,Google', 'RULE-SET,google_ip,Google,no-resolve'],
   },
   {
@@ -638,18 +632,18 @@ const serviceConfigs = [
     providers: {
       github: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/github.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs',
         path: './ruleset/github.mrs',
         'path-in-bundle': 'geo/geosite/github.mrs',
       },
       microsoft: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/microsoft.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs',
         path: './ruleset/microsoft.mrs',
         'path-in-bundle': 'geo/geosite/microsoft.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Microsoft.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Microsoft.png',
     rules: ['RULE-SET,github,默认代理', 'RULE-SET,microsoft,Microsoft'],
   },
   {
@@ -659,12 +653,12 @@ const serviceConfigs = [
     providers: {
       apple: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs',
         path: './ruleset/apple.mrs',
         'path-in-bundle': 'geo/geosite/apple.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Apple.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Apple.png',
     rules: ['RULE-SET,apple,Apple'],
   },
   {
@@ -673,18 +667,18 @@ const serviceConfigs = [
     providers: {
       telegram: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs',
         path: './ruleset/telegram.mrs',
         'path-in-bundle': 'geo/geosite/telegram.mrs',
       },
       telegram_ip: {
         ...ruleProviderCommonIpcidr,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geoip/telegram.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs',
         path: './ruleset/telegram_ip.mrs',
         'path-in-bundle': 'geo/geoip/telegram.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Telegram.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png',
     rules: ['RULE-SET,telegram,Telegram', 'RULE-SET,telegram_ip,Telegram,no-resolve'],
   },
   {
@@ -694,12 +688,12 @@ const serviceConfigs = [
     providers: {
       steam: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/steam.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs',
         path: './ruleset/steam.mrs',
         'path-in-bundle': 'geo/geosite/steam.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Steam.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Steam.png',
     rules: ['RULE-SET,steam,Steam'],
   },
   {
@@ -709,12 +703,12 @@ const serviceConfigs = [
     providers: {
       tiktok: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/tiktok.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs',
         path: './ruleset/tiktok.mrs',
         'path-in-bundle': 'geo/geosite/tiktok.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/TikTok.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/TikTok.png',
     rules: ['RULE-SET,tiktok,TikTok'],
   },
   {
@@ -723,18 +717,18 @@ const serviceConfigs = [
     providers: {
       twitter: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/twitter.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs',
         path: './ruleset/twitter.mrs',
         'path-in-bundle': 'geo/geosite/twitter.mrs',
       },
       twitter_ip: {
         ...ruleProviderCommonIpcidr,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geoip/twitter.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs',
         path: './ruleset/twitter_ip.mrs',
         'path-in-bundle': 'geo/geoip/twitter.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Twitter.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Twitter.png',
     rules: ['RULE-SET,twitter,Twitter', 'RULE-SET,twitter_ip,Twitter,no-resolve'],
   },
   {
@@ -744,18 +738,18 @@ const serviceConfigs = [
     providers: {
       emby: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/666OS/rules@release/mihomo/domain/Emby.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/666OS/rules/release/mihomo/domain/Emby.mrs',
         path: './ruleset/emby.mrs',
         'path-in-bundle': 'geo/geosite/category-emby.mrs',
       },
       emos: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/binaryu/emos-proxy-rule@main/rules/emos-mihomo.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/binaryu/emos-proxy-rule/main/rules/emos-mihomo.mrs',
         path: './ruleset/emos.mrs',
         'path-in-bundle': 'geo/geosite/category-emby.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Emby.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Emby.png',
     rules: [
       'RULE-SET,emby,Emby',
       'RULE-SET,emos,Emby',
@@ -778,12 +772,12 @@ const serviceConfigs = [
     providers: {
       pikpak: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/pikpak.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pikpak.mrs',
         path: './ruleset/pikpak.mrs',
         'path-in-bundle': 'geo/geosite/pikpak.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/lige47/QuanX-icon-rule@main/icon/03CNSoft/pikpak.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/lige47/QuanX-icon-rule/main/icon/03CNSoft/pikpak.png',
     rules: ['RULE-SET,pikpak,PikPak'],
   },
   {
@@ -793,12 +787,12 @@ const serviceConfigs = [
     providers: {
       spotify: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/spotify.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs',
         path: './ruleset/spotify.mrs',
         'path-in-bundle': 'geo/geosite/spotify.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Spotify.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Spotify.png',
     rules: ['RULE-SET,spotify,Spotify'],
   },
   {
@@ -808,12 +802,12 @@ const serviceConfigs = [
     providers: {
       cryptocurrency: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-cryptocurrency.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-cryptocurrency.mrs',
         path: './ruleset/cryptocurrency.mrs',
         'path-in-bundle': 'geo/geosite/category-cryptocurrency.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/lige47/QuanX-icon-rule@main/icon/04ProxySoft/Bitcoin.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/lige47/QuanX-icon-rule/main/icon/04ProxySoft/Bitcoin.png',
     rules: ['RULE-SET,cryptocurrency,Crypto'],
   },
   {
@@ -823,12 +817,12 @@ const serviceConfigs = [
     providers: {
       ehentai: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/MetaCubeX/meta-rules-dat@meta/geo/geosite/ehentai.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ehentai.mrs',
         path: './ruleset/ehentai.mrs',
         'path-in-bundle': 'geo/geosite/ehentai.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/lige47/QuanX-icon-rule@main/icon/04ProxySoft/exhentai.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/lige47/QuanX-icon-rule/main/icon/04ProxySoft/exhentai.png',
     rules: ['RULE-SET,ehentai,EHentai'],
   },
   {
@@ -838,12 +832,12 @@ const serviceConfigs = [
     providers: {
       adblockmihomolite: {
         ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://github.com/217heidai/adblockfilters@main/rules/adblockmihomolite.mrs',
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.mrs',
         path: './ruleset/adblockmihomolite.mrs',
         'path-in-bundle': 'geo/geosite/category-ads-all.mrs',
       },
     },
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Advertising.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Advertising.png',
     rules: ['RULE-SET,adblockmihomolite,AdBlock'],
   },
 ];
@@ -1082,7 +1076,7 @@ function buildRegionGroups(filteredProxies, customProxies) {
     generatedRegionGroups.push(
       ...createRegionGroup(
         '其他节点',
-        'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/World_Map.png',
+        'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/World_Map.png',
         otherProxies,
       ),
     );
@@ -1158,7 +1152,7 @@ function buildCustomizeGroups(filteredProxies, customizeList = customizeProxies)
     ...selectBaseOption,
     name: chainEnabled ? '链式落地' : '自建节点',
     proxies: customProxyNames,
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Server.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Server.png',
   };
 
   return {
@@ -1182,11 +1176,6 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
   const functionalGroups = [];
   const functionalRules = [];
   const finalRuleProviders = { ...baseRuleProviders };
-
-  // cn_additional 规则集仅服务于 “屏蔽国外QUIC” 规则，关闭该选项时无需生成
-  if (!blockForeignQuicEnabled) {
-    delete finalRuleProviders.cn_additional;
-  }
 
   // --- clashmi 注入：自定义本地规则 providers --- 
   const enableClashmiLocal = ruleOptionsEnable.启用自定义本地规则;
@@ -1224,7 +1213,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
     ...selectBaseOption,
     name: '默认代理',
     proxies: [...groupNamesOfSelect, ...baseGroupNames, ...customGroupNames],
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Proxy.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Proxy.png',
   });
 
   // 分流规则与规则集收集（AdBlock 规则优先，避免广告域名被其他分流规则抢先匹配）
@@ -1282,7 +1271,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
     ...selectBaseOption,
     name: '漏网之鱼',
     proxies: ['默认代理', '直连', ...groupNamesOfSelect],
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Stack.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Stack.png',
   });
 
   // 添加自建节点策略组（未配置自定义节点时跳过）
@@ -1298,7 +1287,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
           ...selectBaseOption,
           name: dialerProxyName,
           proxies: filteredProxyNames,
-          icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Bypass.png',
+          icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Bypass.png',
         }
       : null;
 
@@ -1307,7 +1296,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
     name: '直连',
     proxies: [...directProxies.map((p) => p.name)],
     url: 'https://connectivitycheck.platform.hicloud.com/generate_204',
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/China_Map.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China_Map.png',
     hidden: hideManualSelectGroupEnabled,
   };
 
@@ -1321,7 +1310,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
       directProxiesGroup.name,
       ...generatedRegionGroups.map((g) => g.name),
     ],
-    icon: 'https://v4.gh-proxy.org/https://github.com/Koolson/Qure@master/IconSet/Color/Global.png',
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Global.png',
   };
 
   return { globalGroup, functionalGroups, functionalRules, finalRuleProviders, chainGroup, directProxiesGroup };
