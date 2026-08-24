@@ -128,22 +128,24 @@ function buildProxyGroups(allProxyNames) {
   const filterOther = () => allProxyNames.filter((n) => isOtherRegion(n));
 
   // 辅助：创建需要过滤节点的组（LB / UT / 手动）
+  // 空节点组返回 ["DIRECT"] 兜底，避免 FLClash 出现空 proxies 导致 _Map 转换或 mihomo 校验失败
+  const ensureProxies = (list) => (list.length > 0 ? list : ["DIRECT"]);
   const lb = (name, re, icon) => ({
     name,
     ...LB_BASE,
-    proxies: filterBy(re),
+    proxies: ensureProxies(filterBy(re)),
     icon,
   });
   const ut = (name, re, icon) => ({
     name,
     ...UT_BASE,
-    proxies: filterBy(re),
+    proxies: ensureProxies(filterBy(re)),
     icon,
   });
   const manual = (name, reOrFn, icon) => ({
     name,
     type: "select",
-    proxies: typeof reOrFn === "function" ? reOrFn() : filterBy(reOrFn),
+    proxies: ensureProxies(typeof reOrFn === "function" ? reOrFn() : filterBy(reOrFn)),
     icon,
   });
 
@@ -318,13 +320,15 @@ const CORE_CONFIG = {
   tun: {
     enable: true,
     stack: "mixed",
-    mtu: 1300,
+    // FLClash 仅识别以下字段，额外 mihomo 字段保留但需与模型兼容
     "dns-hijack": ["any:53", "tcp://any:53"],
-    "auto-detect-interface": true,
     "auto-route": true,
     "auto-redirect": true,
+    "auto-detect-interface": true,
     "strict-route": true,
     "endpoint-independent-nat": true,
+    // mihomo 扩展字段（FLClash 会原样写入 YAML，mihomo 可识别）
+    mtu: 1300,
     "route-exclude-cidr": [
       "192.168.0.0/16",
       "10.0.0.0/8",
@@ -370,11 +374,10 @@ const CORE_CONFIG = {
     enable: true,
     ipv6: false,
     listen: "0.0.0.0:7874",
-    cache: { enable: true, size: 4096, expired: 3600 },
+    // 注意：FLClash 的 Dns 模型没有 cache / fake-ip-filter-mode 字段，移除以避免 Map<String,String> 转换错误
     "enhanced-mode": "fake-ip",
     "prefer-h3": false,
     "fake-ip-range": "198.18.0.1/16",
-    "fake-ip-filter-mode": "blacklist",
     "fake-ip-filter": [
       "+.orb.local",
       "localhost",
@@ -398,8 +401,10 @@ const CORE_CONFIG = {
     "proxy-server-nameserver": ["223.5.5.5", "119.29.29.29"],
     nameserver: ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
     "nameserver-policy": {
-      "rule-set:geolocation-!cn": ["https://1.1.1.1/dns-query#一键代理", "https://8.8.8.8/dns-query#一键代理"],
-      "rule-set:my_proxy": ["https://1.1.1.1/dns-query#一键代理", "https://8.8.8.8/dns-query#一键代理"],
+      // FLClash 的 Dns.nameserverPolicy 是 Map<String,String>，值必须是 String（不能是 List）
+      // mihomo 原生支持 List，但为兼容 FLClash 这里用逗号分隔的 String
+      "rule-set:geolocation-!cn": "https://1.1.1.1/dns-query#一键代理, https://8.8.8.8/dns-query#一键代理",
+      "rule-set:my_proxy": "https://1.1.1.1/dns-query#一键代理, https://8.8.8.8/dns-query#一键代理",
       "+.orb.local": "system",
     },
   },
@@ -446,7 +451,7 @@ function main(config) {
   log(`📋 订阅策略组数: ${config["proxy-groups"].length}`);
   log(`📜 订阅规则数: ${config.rules.length}`);
 
-  // 1. 覆盖核心配置
+  // 1. 覆盖核心配置（按 FLClash 的 PatchClashConfig/Dns/Tun 模型做兼容处理）
   for (const [k, v] of Object.entries(CORE_CONFIG)) {
     const shouldOverride =
       (k === "dns" && OPTIONS.OVERRIDE_DNS) ||
@@ -456,6 +461,20 @@ function main(config) {
     if (shouldOverride) {
       config[k] = JSON.parse(JSON.stringify(v)); // 深拷贝，避免引用污染
     }
+  }
+  // 兼容性修正：FLClash 的 Dns.nameserverPolicy 是 Map<String,String>，旧脚本写成了 Map<String,List<String>>
+  // 已在 CORE_CONFIG 中改为 String，这里再做一次运行时兜底（防止订阅自带 dns 污染）
+  if (config.dns && config.dns["nameserver-policy"]) {
+    for (const [kk, vv] of Object.entries(config.dns["nameserver-policy"])) {
+      if (Array.isArray(vv)) {
+        config.dns["nameserver-policy"][kk] = vv.join(", ");
+      }
+    }
+  }
+  // 清理 FLClash 不识别的字段，避免 Dart 端 as Map<String,dynamic> 强转失败
+  if (config.dns) {
+    delete config.dns.cache;
+    delete config.dns["fake-ip-filter-mode"];
   }
   // 额外确保 DNS 的 orb.local 直连（FLClash 本地容器需要）
   if (config.dns) {
@@ -472,8 +491,34 @@ function main(config) {
     delete config["proxy-providers"];
   }
 
-  // 2. 构建策略组
-  const newGroups = buildProxyGroups(allProxyNames);
+  // 2. 构建策略组（BettBox/mihomo 对空 proxies 会直接抛 `use or proxies missing`，需过滤）
+  let newGroups = buildProxyGroups(allProxyNames);
+  // 兜底：若某过滤组仍为空（ensureProxies 已给 DIRECT，但为避免 BettBox 的 DAG 校验仍报错，做二次过滤）
+  // 策略：若组内只有 DIRECT 且原过滤结果为空，则视为“无可用节点”，从配置中移除，并清理其它组对它的引用
+  const emptyGroups = new Set();
+  for (const g of newGroups) {
+    // 仅检查按正则过滤的 14 个地域组
+    const isRegional = ["香港负载均衡", "台湾负载均衡", "新加坡负载均衡", "日本负载均衡", "美国负载均衡",
+      "香港速度优先", "台湾速度优先", "新加坡速度优先", "日本速度优先", "美国速度优先",
+      "亚洲手动", "欧洲手动", "美洲手动", "其他手动"].includes(g.name);
+    if (isRegional && g.proxies.length === 1 && g.proxies[0] === "DIRECT") {
+      // 说明原始过滤结果为 0，被 ensureProxies 强行填了 DIRECT，视为无效组
+      emptyGroups.add(g.name);
+    }
+  }
+  if (emptyGroups.size > 0) {
+    log(`⚠️  检测到 ${emptyGroups.size} 个空地域组（无匹配节点）：${[...emptyGroups].join("、" )}，将自动剔除并清理引用`);
+    newGroups = newGroups.filter(g => !emptyGroups.has(g.name));
+    // 清理其它组对空组的引用，避免悬空策略组
+    for (const g of newGroups) {
+      if (Array.isArray(g.proxies)) {
+        const before = g.proxies.length;
+        g.proxies = g.proxies.filter(p => !emptyGroups.has(p));
+        if (g.proxies.length === 0) g.proxies = ["DIRECT"]; // 兜底，避免自身变空
+        if (g.proxies.length !== before) log(`  ↳ 已从 [${g.name}] 移除空引用：${[...emptyGroups].filter(x => !g.proxies.includes(x)).join("、")}`);
+      }
+    }
+  }
 
   // 日志：统计每个过滤组匹配数
   for (const g of newGroups) {
