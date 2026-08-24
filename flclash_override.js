@@ -108,11 +108,11 @@ function main(config) {
     lb("新加坡负载均衡","SG.png","SG"); ut("新加坡速度优先","SG.png","SG");
     lb("日本负载均衡","JP.png","JP"); ut("日本速度优先","JP.png","JP");
     lb("美国负载均衡","US.png","US"); ut("美国速度优先","US.png","US");
-    // 服务组（全部指向 一键代理/手动选择 + 可用地域）
+    // 服务组：AI/流媒体 等走代理，Microsoft/Apple 默认 DIRECT 优先（对齐 mihomoScript.js direct:true）
     const op=uniq(["一键代理","手动选择","国内直连",...availableLBUT,...availableManual]);
-    const ld=uniq(["国内直连","一键代理","手动选择",...availableLBUT.slice(0,5)]);
+    const ldDirectFirst=uniq(["国内直连","DIRECT","一键代理","手动选择",...availableLBUT.slice(0,5)]);
     [["ChatGPT","ChatGPT.png"],["Claude","Claude.png"],["Gemini","Gemini.png"],["流媒体","Netflix.png"],["通信","Telegram.png"],["云服务","GitHub.png"],["金融","PayPal.png"]].forEach(([n,i])=>f(n,"select",op,i));
-    [["Microsoft","Microsoft.png"],["OneDrive","OneDrive.png"],["Apple","Apple.png"]].forEach(([n,i])=>f(n,"select",ld,i));
+    [["Microsoft","Microsoft.png"],["OneDrive","OneDrive.png"],["Apple","Apple.png"]].forEach(([n,i])=>f(n,"select",ldDirectFirst,i));
     f("漏网之鱼","select",op,"MATCH.png");
     manual("亚洲手动","AS.png","AS"); manual("欧洲手动","EU.png","EU"); manual("美洲手动","AM.png","AM"); manual("其他手动","OT.png","OT");
     // Fallback 双组（为 全部/AI 增加容灾）
@@ -177,9 +177,10 @@ function main(config) {
   const applySniffer=c=>{ c.sniffer={...c.sniffer, enable:true, "force-dns-mapping":true, "parse-pure-ip":true, "override-destination":true, sniff:{HTTP:{ports:[80,"8080-8880"],"override-destination":true}, TLS:{ports:[443,8443]}, QUIC:{ports:[443,8443]}}, "force-domain": SETTINGS.FORCE_DOMAIN}; };
   const applyTun=c=>{ c.tun={...c.tun, enable:true, stack:"system", "auto-route":true, "auto-detect-interface":true, "strict-route":true, "dns-hijack":["any:53","tcp://any:53"]}; };
   const applyDns=c=>{
-    const cur=c.dns?.["fake-ip-filter"]||[]; c.dns={...c.dns, enable:true, "cache-algorithm":"arc", ipv6:false, listen:c.dns?.listen||"0.0.0.0:7874", "enhanced-mode":"fake-ip", "fake-ip-range":"198.18.0.1/16", "fake-ip-filter":uniq([...cur,...SETTINGS.BASIC_FAKE_IP_FILTER]), "default-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT"], "nameserver-policy":{"geosite:cn":["223.5.5.5#DIRECT","119.29.29.29#DIRECT"], "geosite:private":"system", "rule-set:openai_domain":["https://1.1.1.1/dns-query#一键代理","https://8.8.8.8/dns-query#一键代理"], "rule-set:anthropic_domain":["https://1.1.1.1/dns-query#一键代理"], "rule-set:google_gemini_domain":["https://1.1.1.1/dns-query#一键代理"], "+.orb.local":"system"}, nameserver:["https://1.1.1.1/dns-query#一键代理","https://8.8.8.8/dns-query#一键代理"], "proxy-server-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT","system"], "direct-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT","system"], "direct-nameserver-follow-policy":true};
-  };
-  const applyProfile=c=>{ c.profile={...c.profile, "store-selected":true, "store-fake-ip":false}; };
+    const cur=c.dns?.["fake-ip-filter"]||[]; c.dns={...c.dns, enable:true, "cache-algorithm":"arc", ipv6:false, listen:c.dns?.listen||"0.0.0.0:7874", "enhanced-mode":"fake-ip", "fake-ip-range":"198.18.0.1/16", "fake-ip-filter":uniq([...cur,...SETTINGS.BASIC_FAKE_IP_FILTER]), "default-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT"], "nameserver-policy":{"geosite:cn":["223.5.5.5#DIRECT","119.29.29.29#DIRECT"], "geosite:private":"system", "geosite:microsoft":["223.5.5.5#DIRECT"], "geosite:apple":["223.5.5.5#DIRECT"], "rule-set:openai_domain":["https://1.1.1.1/dns-query#一键代理","https://8.8.8.8/dns-query#一键代理"], "rule-set:anthropic_domain":["https://1.1.1.1/dns-query#一键代理"], "rule-set:google_gemini_domain":["https://1.1.1.1/dns-query#一键代理"], "+.orb.local":"system"}, nameserver:["https://1.1.1.1/dns-query#一键代理","https://8.8.8.8/dns-query#一键代理"], "proxy-server-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT","system"], "direct-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT","system"], "direct-nameserver-follow-policy":true};
+  }; // Microsoft/Apple 走 direct-nameserver，避免 DoH 经死节点超时
+
+  const applyProfile=c=>{ c.profile={...c.profile, "store-selected":false, "store-fake-ip":false}; }; // BettBox 强制 store-selected:false，避免记住死节点
 
   // ==================== 6. 主流程 ====================
   config=ensureConfigObject(config);
