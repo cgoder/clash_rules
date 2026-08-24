@@ -200,23 +200,22 @@ function buildDnsAndHosts(filteredProxies) {
   // 仅保留与 clashmi 相关的假 IP 过滤，按 mihomoScript.js 思路：节点域名需走真实 IP
   const chinaDNS = ["223.5.5.5","119.29.29.29"];
   const foreignDNS = ["https://doh.pub/dns-query","https://dns.alidns.com/dns-query"];
-  // Go 要求 nameserver-policy 值为 String 或 List<String>（mihomo 支持 List），
-  // Dart 的 Dns.nameserverPolicy 要求 Map<String,String>（e as String），
-  // 为同时通过 Go 的 DNS 解析与 Dart 的 getConfig 强转，这里对多 DNS 仅取首个，单条 String
-  // 避免 "223.5.5.5, 119.29.29.29" 被 Go 解析为 "udp://223.5.5.5, 119..." 而报 invalid character " ".
+  // 对齐 mihomoScript.js：国外走 cloudflare/google 经代理，国内走直连；
+  // 之前用 https://1.1.1.1 直连在部分网络下 context deadline exceeded，参考可用的 mihomoScript.js 改为域名 DoH
+  const chinaDoh = ["https://223.5.5.5/dns-query#DIRECT"];
+  const foreignDohViaProxy = ["https://cloudflare-dns.com/dns-query#一键代理","https://dns.google/dns-query#一键代理"];
   return {
     dns: {
       enable: true, ipv6: false, listen: "0.0.0.0:7874",
       "enhanced-mode": "fake-ip", "fake-ip-range": "198.18.0.1/16",
       "fake-ip-filter": ["+.orb.local","localhost","*.home.arpa","time.*.com","ntp.*.com","+.ntp.org","+.pool.ntp.org","captive.apple.com","connectivitycheck.gstatic.com","+.msftconnecttest.com","+.msftncsi.com","stun.*.*","+.stun.playstation.net","+.xboxlive.com","+.speedtest.net"],
       "default-nameserver": chinaDNS,
-      "proxy-server-nameserver": chinaDNS,
-      nameserver: foreignDNS,
+      "proxy-server-nameserver": chinaDoh,
+      nameserver: foreignDohViaProxy,
       "nameserver-policy": {
         "geosite:cn": chinaDNS[0],
-        // 为避免代理未就绪时 DoH 经代理超时，这里对国外分流改用直连 DoH；如需防污染可改回 "#一键代理"
-        "rule-set:geolocation_not_cn": "https://1.1.1.1/dns-query",
-        "rule-set:my_proxy": "https://1.1.1.1/dns-query",
+        "rule-set:geolocation_not_cn": foreignDohViaProxy[0],
+        "rule-set:my_proxy": foreignDohViaProxy[0],
         "+.orb.local": "system",
       },
     },
