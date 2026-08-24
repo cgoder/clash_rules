@@ -1,383 +1,202 @@
 // ============================================================
-// 🔧 FlClash 动态配置脚本 v3.0
-// 基于 clashmi.yml 转换
-//
-// ✅ 功能：
-// 1. 完全覆盖订阅的策略组和规则（清空后重建）
-// 2. 添加自定义规则（my_proxy.list / my_direct.list）
-// 3. 添加兜底规则（Final 漏网之鱼）
-// 4. 固定策略组显示顺序（Proxy 始终在第一位）
-//
-// ✅ 使用说明：
-// 1️⃣ FlClash：配置 → 覆写 → 脚本模式 → 粘贴此脚本
-// 2️⃣ 保存后会清空订阅策略组和规则，使用本脚本定义的配置
-// 3️⃣ 修改 PROXY_GROUPS 和 RULES 部分自定义配置
-//
-// ✅ v3.0 更新：
-// - 新增 OVERRIDE_GROUPS 开关（删除订阅策略组）
-// - 固定策略组顺序（按定义顺序显示）
-// - 集成 my_proxy.list 和 my_direct.list 自定义规则
+// 🔧 clashmi → FlClash/BettBox 覆写 v4.0
+// 基于 clashmi.yml 1:1 + 例份最佳实践重构（BettBox 兼容）
+// - 吸收：normalizeName/buildRegex/uniq/makeProxyNamesUnique/splitInfo/classify/Info组/AI排除HK/工厂模式/Fallback双组/applyDns合并
+// - 保留：25+ 策略组（10×LB/UT + 4×大洲手动）、33 rule-providers、32 rules、gh-proxy 加速、图标体系
+// 使用：FlClash/BettBox → 配置 → 覆写 → 脚本模式 → 粘贴 → 保存
+// 参照：mihomoScript.js + 例份 profile
 // ============================================================
 
-// ======= 用户配置区 =======
+function main(config) {
+  // ==================== 0. 直连域名（按需增） ====================
+  const bypassDomains = ["example.com", "none.com"];
 
-// 代理组配置
-const PROXY_GROUPS = [
-  // === 核心出站组 ===
-  {
-    name: "Proxy",
-    type: "select",
-    proxies: ["Auto", "HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe", "DIRECT"]
-  },
+  // ==================== 1. 常量 ====================
+  const SETTINGS = {
+    ICON_BASE: "https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/",
+    RULE_BASE: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/",
+    TEST_URL: "https://www.g.cn/generate_204",
+    REGION_ORDER: ["HK", "TW", "SG", "JP", "US", "AS", "EU", "AM", "OT"],
+    URL_TEST_EXTRA: { hidden: true, url: "https://www.g.cn/generate_204", interval: 900, tolerance: 50, lazy: true, timeout: 3000 },
+    FALLBACK_EXTRA: { hidden: true, url: "https://www.g.cn/generate_204", interval: 900, tolerance: 50, lazy: true, timeout: 3000 },
+    FILTER_REGEX: /群|邀请|返利|官网|官方|网址|订阅|购买|续费|剩余|到期|过期|流量|备用|邮箱|客服|联系|工单|倒卖|防止|梯子|tg|telegram|电报|发布|重置|剩余流量|距离下次重置|套餐到期|去除.*线路|跳转域名|请勿连接/i,
+    BASIC_FAKE_IP_FILTER: ["*.lan","+.lan","*.local","+.local","+.localdomain","+.home.arpa","+.msftconnecttest.com","+.msftncsi.com","+.gstatic.com","connectivitycheck.gstatic.com","+.captive.apple.com","time.*.com","time.*.gov","ntp.*.com","ntp.*.org","pool.ntp.org","+.pool.ntp.org","+.stun.*.*","+.stun.*.*.*","localhost.ptlogin2.qq.com","WORKGROUP","+.orb.local"],
+    FORCE_DOMAIN: ["+.netflix.com","+.nflxvideo.net","+.googlevideo.com","+.youtube.com","+.telegram.org","+.t.me","+.twitter.com","+.twimg.com","+.tiktok.com","+.amazonaws.com"],
+    DIRECT_FIX_RULES: ["DOMAIN-SUFFIX,ol.epicgames.com,DIRECT","DOMAIN-SUFFIX,sharepoint.com,DIRECT"],
+  };
 
-  // === AI 服务组 ===
-  {
-    name: "AI",
-    type: "select",
-    proxies: ["US", "NorthAmerica", "Europe", "SG", "HK", "TW", "Asia", "Proxy", "DIRECT"]
-  },
+  // ==================== 2. 工具 ====================
+  const uniq = (arr=[]) => [...new Set(arr.filter(Boolean))];
+  const escapeRegex = (s="") => String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  const normalizeName = (name="") => String(name).replace(/(IEPL|IPLC|BGP|RELAY|PRO|V\d+)/ig," $1 ").replace(/[【】\[\]（）()|_\-.,/:~]/g," ").replace(/🇭🇰/g," HK ").replace(/🇹🇼/g," TW ").replace(/🇸🇬/g," SG ").replace(/🇯🇵/g," JP ").replace(/🇰🇷/g," KR ").replace(/🇺🇸/g," US ").replace(/🇻🇳|🇹🇭|🇲🇾|🇮🇩|🇵🇭|🇩🇪|🇬🇧|🇫🇷|🇨🇦|🇲🇽|🇧🇷|🇦🇷|🇨🇱|🇷🇺|🇹🇷/g," ").toUpperCase().replace(/\s+/g," ").trim();
+  const buildRegex = (arr=[]) => {
+    const pats = arr.map(raw=>{const t=String(raw).trim().toUpperCase(); const e=escapeRegex(t); return /^[A-Z]{2,3}$/.test(t) ? `(?:^|[^A-Z])${e}(?:[^A-Z]|$)` : e;});
+    return new RegExp(pats.join("|"),"i");
+  };
+  const buildRegions = () => ([
+    { name:"HK", pattern:["香港","HK","HKG","HONGKONG","HONG KONG"], icon:"HK.png" },
+    { name:"TW", pattern:["台湾","台灣","台北","新北","TW","TWN","TAIWAN","TAIPEI"], icon:"TW.png" },
+    { name:"SG", pattern:["新加坡","狮城","SG","SGP","SINGAPORE","SIN"], icon:"SG.png" },
+    { name:"JP", pattern:["日本","东京","大阪","JP","JPN","JAPAN","TOKYO","OSAKA"], icon:"JP.png" },
+    { name:"US", pattern:["美国","美國","纽约","洛杉矶","US","USA","UNITEDSTATES","UNITED STATES"], icon:"US.png" },
+    { name:"AS", pattern:["韩国","韓國","印度","泰国","泰國","马来西亚","馬來西亞","菲律宾","菲律賓","越南","印尼","KR","KOR","KOREA","IN","TH","MY","PH","VN","ID","VIETNAM","THAILAND","MALAYSIA","PHILIPPINES"], icon:"AS.png" },
+    { name:"EU", pattern:["德国","德國","英国","英國","法国","法國","荷兰","荷蘭","瑞士","意大利","義大利","西班牙","芬兰","瑞典","挪威","丹麦","比利时","奥地利","波兰","捷克","葡萄牙","希腊","匈牙利","爱尔兰","俄罗斯","土耳其","DE","UK","GB","FR","NL","CH","IT","ES","FI","SE","NO","DK","BE","AT","PL","CZ","PT","GR","HU","IE","RU","TR","GERMANY","FRANCE"], icon:"EU.png" },
+    { name:"AM", pattern:["加拿大","墨西哥","巴西","阿根廷","智利","CA","MX","BR","AR","CL","CANADA","MEXICO","BRAZIL"], icon:"AM.png" },
+    { name:"OT", pattern:[], icon:"OT.png" }, // 兜底，其他
+  ]).map(r=> ({...r, regex: r.name==="OT" ? null : buildRegex(r.pattern)}));
 
-  // === 场景服务组 ===
-  {
-    name: "Media",
-    type: "select",
-    proxies: ["HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
-  },
-  {
-    name: "Comm",
-    type: "select",
-    proxies: ["HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
-  },
-  {
-    name: "Cloud",
-    type: "select",
-    proxies: ["SG", "US", "HK", "TW", "Asia", "NorthAmerica", "Europe", "Proxy", "DIRECT"]
-  },
-  {
-    name: "Finance",
-    type: "select",
-    proxies: ["US", "NorthAmerica", "Europe", "HK", "SG", "Proxy", "DIRECT"]
-  },
-
-  // === 直连优先组 ===
-  {
-    name: "Apple",
-    type: "select",
-    proxies: ["DIRECT", "Proxy", "HK", "US", "SG", "Asia", "NorthAmerica"]
-  },
-  {
-    name: "Microsoft",
-    type: "select",
-    proxies: ["DIRECT", "Proxy", "HK", "US", "SG", "Asia", "NorthAmerica"]
-  },
-  {
-    name: "Domestic",
-    type: "select",
-    proxies: ["DIRECT", "Proxy"]
-  },
-
-  // === 兜底规则（漏网之鱼）===
-  {
-    name: "Final",
-    type: "select",
-    proxies: ["Proxy", "DIRECT", "Auto", "HK", "TW", "SG", "US", "Asia", "NorthAmerica", "Europe"]
-  },
-
-  // === 自动选择组（正则匹配节点）===
-  {
-    name: "Auto",
-    type: "url-test",
-    match: /^(?!.*(剩余流量|距离下次重置|套餐到期|官网|流量|Traffic|Expire|更新|网址)).*$/,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 80
-  },
-
-  // === 常用地区分组（单独罗列）===
-  {
-    name: "HK",
-    type: "url-test",
-    match: /(香港|港|🇭🇰|\bHK\b|\bHKG\b|Hong)/i,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 80
-  },
-  {
-    name: "TW",
-    type: "url-test",
-    match: /(台湾|台灣|🇹🇼|\bTW\b|Taiwan)/i,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 80
-  },
-  {
-    name: "SG",
-    type: "url-test",
-    match: /(新加坡|狮城|🇸🇬|\bSG\b|\bSGP\b|Singapore)/i,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 80
-  },
-  {
-    name: "US",
-    type: "url-test",
-    match: /(美国|美國|🇺🇸|\bUS\b|\bUSA\b|United States|America)/i,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 80
-  },
-
-  // === 大洲地区分组 ===
-  {
-    name: "Asia",
-    type: "url-test",
-    match: /(香港|港|台湾|台灣|新加坡|日本|韩国|韓國|印度|泰国|泰國|马来西亚|馬來西亞|菲律宾|菲律賓|越南|印尼|🇭🇰|🇹🇼|🇸🇬|🇯🇵|🇰🇷|🇮🇳|🇹🇭|🇲🇾|🇵🇭|🇻🇳|🇮🇩|\bHK\b|\bTW\b|\bSG\b|\bJP\b|\bKR\b|Hong|Taiwan|Singapore|Japan|Korea|India|Thailand|Malaysia|Philippines|Vietnam|Indonesia)/i,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 100
-  },
-  {
-    name: "NorthAmerica",
-    type: "url-test",
-    match: /(美国|美國|加拿大|墨西哥|🇺🇸|🇨🇦|🇲🇽|\bUS\b|\bUSA\b|\bCA\b|United States|America|Canada|Mexico)/i,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 100
-  },
-  {
-    name: "Europe",
-    type: "url-test",
-    match: /(德国|德國|英国|英國|法国|法國|荷兰|荷蘭|瑞士|意大利|義大利|西班牙|芬兰|芬蘭|瑞典|挪威|丹麦|比利时|奥地利|波兰|捷克|葡萄牙|希腊|匈牙利|爱尔兰|俄罗斯|俄羅斯|土耳其|🇩🇪|🇬🇧|🇫🇷|🇳🇱|🇨🇭|🇮🇹|🇪🇸|🇫🇮|🇸🇪|🇳🇴|🇩🇰|🇧🇪|🇦🇹|🇵🇱|🇨🇿|🇵🇹|🇬🇷|🇭🇺|🇮🇪|🇷🇺|🇹🇷|\bDE\b|\bUK\b|\bGB\b|\bFR\b|\bNL\b|\bCH\b|\bIT\b|\bES\b|Germany|Britain|France|Netherlands|Switzerland|Italy|Spain|Finland|Sweden|Norway|Denmark|Belgium|Austria|Poland|Czech|Portugal|Greece|Hungary|Ireland|Russia|Turkey)/i,
-    url: "https://www.gstatic.com/generate_204",
-    interval: 300,
-    tolerance: 100
-  }
-];
-
-// 规则配置（完全覆盖订阅规则，按优先级排序）
-const RULES = [
-  // OrbStack 本地容器域名直连
-  "DOMAIN-SUFFIX,orb.local,DIRECT",
-
-  // 第一优先级：内网/私有流量
-  "GEOSITE,private,DIRECT",
-  "GEOIP,private,DIRECT,no-resolve",
-
-  // 第二优先级：自定义规则（来自 my_proxy.list）
-  "DOMAIN,gsa.apple.com,Proxy",
-  "DOMAIN,stun.voip.blackberry.com,Proxy",
-  "DOMAIN-SUFFIX,linux.do,Proxy",
-  "DOMAIN-SUFFIX,ldstatic.com,Proxy",
-  "DOMAIN-SUFFIX,cloudflare-dns.com,Proxy",
-  "DOMAIN,dns.cloudflare.com,Proxy",
-  "DOMAIN,chrome.cloudflare-dns.com,Proxy",
-  "DOMAIN,firefox.cloudflare-dns.com,Proxy",
-  "DOMAIN,security.cloudflare-dns.com,Proxy",
-  "DOMAIN,family.cloudflare-dns.com,Proxy",
-  "DOMAIN-SUFFIX,workers.dev,Proxy",
-  "DOMAIN-SUFFIX,pages.dev,Proxy",
-  "DOMAIN-SUFFIX,r2.dev,Proxy",
-  "DOMAIN-SUFFIX,cloudflare-ipfs.com,Proxy",
-  "DOMAIN,dash.cloudflare.com,Proxy",
-  "DOMAIN,api.cloudflare.com,Proxy",
-  "DOMAIN-SUFFIX,cloudflarewarp.com,Proxy",
-  "DOMAIN-SUFFIX,one.one.one.one,Proxy",
-  "DOMAIN-SUFFIX,trycloudflare.com,Proxy",
-  "DOMAIN-SUFFIX,argotunnel.com,Proxy",
-
-  // 第三优先级：自定义直连规则（来自 my_direct.list）
-  "DOMAIN-SUFFIX,4d4y.com,DIRECT",
-  "DOMAIN-SUFFIX,gh-proxy.org,DIRECT",
-  "DOMAIN-SUFFIX,cloudflare.com,DIRECT",
-  "DOMAIN-SUFFIX,immersivetranslate.com,DIRECT",
-  "DOMAIN-SUFFIX,unpkg.com,DIRECT",
-  "DOMAIN-SUFFIX,deeplx.org,DIRECT",
-  "DOMAIN-SUFFIX,arxiv.org,DIRECT",
-  "DOMAIN-SUFFIX,hcaptcha.com,DIRECT",
-  "DOMAIN-SUFFIX,bitwarden.com,DIRECT",
-  "DOMAIN-SUFFIX,bitwarden.net,DIRECT",
-  "DOMAIN-SUFFIX,muyuan.do,DIRECT",
-  "DOMAIN-SUFFIX,zenapi.top,DIRECT",
-  "DOMAIN-SUFFIX,venlacy.com,DIRECT",
-  "DOMAIN-SUFFIX,lyclaude.site,DIRECT",
-  "DOMAIN-SUFFIX,chybenzun.top,DIRECT",
-  "DOMAIN-SUFFIX,hotaruapi.com,DIRECT",
-  "DOMAIN-SUFFIX,bestblogs.dev,DIRECT",
-
-  // 第四优先级：AI 服务
-  "GEOSITE,openai,AI",
-  "GEOSITE,anthropic,AI",
-  "GEOSITE,google-gemini,AI",
-  "DOMAIN-SUFFIX,openai.com,AI",
-  "DOMAIN-SUFFIX,chatgpt.com,AI",
-  "DOMAIN-SUFFIX,anthropic.com,AI",
-  "DOMAIN-SUFFIX,claude.ai,AI",
-
-  // 第五优先级：流媒体
-  "GEOSITE,youtube,Media",
-  "GEOSITE,netflix,Media",
-  "GEOSITE,disney,Media",
-  "GEOSITE,spotify,Media",
-  "GEOSITE,tiktok,Media",
-  "GEOIP,netflix,Media,no-resolve",
-
-  // 第六优先级：通信服务
-  "GEOSITE,telegram,Comm",
-  "GEOSITE,twitter,Comm",
-  "GEOIP,telegram,Comm,no-resolve",
-  "GEOIP,twitter,Comm,no-resolve",
-
-  // 第七优先级：云服务
-  "GEOSITE,google,Cloud",
-  "GEOSITE,github,Cloud",
-  "GEOIP,google,Cloud,no-resolve",
-
-  // 第八优先级：金融服务
-  "GEOSITE,paypal,Finance",
-
-  // 第九优先级：Apple 生态
-  "GEOSITE,apple,Apple",
-  "GEOIP,apple,Apple,no-resolve",
-
-  // 第十优先级：Microsoft 生态
-  "GEOSITE,onedrive,Microsoft",
-  "GEOSITE,microsoft,Microsoft",
-
-  // 第十一优先级：国内直连
-  "GEOSITE,cn,Domestic",
-  "GEOIP,cn,Domestic,no-resolve",
-
-  // 兜底规则（漏网之鱼）
-  "MATCH,Final"
-];
-
-// 是否完全覆盖订阅规则（true=清空订阅规则，false=在订阅规则前插入）
-const OVERRIDE_RULES = true;
-
-// 是否完全覆盖订阅策略组（true=删除订阅策略组，false=保留订阅策略组）
-const OVERRIDE_GROUPS = true;
-
-// ======= 核心逻辑 =======
-
-const main = (config) => {
-  console.log("🚀 FlClash 配置脚本 v3.0 开始执行");
-
-  // 确保关键字段存在
-  config.proxies ??= [];
-  config["proxy-groups"] ??= [];
-  config.rules ??= [];
-
-  // === 0. 处理 DNS 以支持 OrbStack 本地解析 ===
-  config.dns ??= {};
-  config.dns["fake-ip-filter"] ??= [];
-  if (Array.isArray(config.dns["fake-ip-filter"])) {
-    if (!config.dns["fake-ip-filter"].includes("+.orb.local")) {
-      config.dns["fake-ip-filter"].push("+.orb.local");
-    }
-  }
-  config.dns["nameserver-policy"] ??= {};
-  if (typeof config.dns["nameserver-policy"] === 'object') {
-    config.dns["nameserver-policy"]["+.orb.local"] = "system";
-  }
-
-  const allProxyNames = config.proxies.map(p => p.name);
-  const groups = config["proxy-groups"];
-
-  console.log(`📦 订阅节点数量: ${allProxyNames.length}`);
-  console.log(`📋 订阅策略组数量: ${groups.length}`);
-  console.log(`📜 订阅规则数量: ${config.rules.length}`);
-
-  // === 1. 处理策略组 ===
-  if (OVERRIDE_GROUPS) {
-    // 完全覆盖模式：清空订阅策略组，使用脚本策略组
-    const oldGroupsCount = groups.length;
-    config["proxy-groups"] = [];
-    console.log(`🔥 完全覆盖模式: 清空订阅的 ${oldGroupsCount} 个策略组`);
-  }
-
-  // 按照定义顺序添加策略组（确保 Proxy 等核心组在最前面）
-  const newGroups = [];
-
-  for (const groupDef of PROXY_GROUPS) {
-    let proxies = [];
-
-    if (groupDef.proxies && Array.isArray(groupDef.proxies)) {
-      // 直接使用手动列出的 proxies（引用其他组）
-      proxies = groupDef.proxies;
-    } else if (groupDef.match instanceof RegExp) {
-      // 正则匹配 - 从实际节点中筛选
-      proxies = allProxyNames.filter(name => groupDef.match.test(name));
-
-      if (proxies.length === 0) {
-        console.log(`⚠️  代理组 [${groupDef.name}] 未匹配到任何节点，跳过`);
-        continue;
-      }
-    }
-
-    const newGroup = {
-      name: groupDef.name,
-      type: groupDef.type || "select",
-      proxies
-    };
-
-    // 添加额外属性（url-test/load-balance 需要）
-    if (groupDef.url) newGroup.url = groupDef.url;
-    if (groupDef.interval) newGroup.interval = groupDef.interval;
-    if (groupDef.tolerance) newGroup.tolerance = groupDef.tolerance;
-
-    newGroups.push(newGroup);
-    console.log(`✅ 添加代理组: ${newGroup.name} (${proxies.length} 个代理)`);
-  }
-
-  // 替换为新的策略组列表（保持定义顺序）
-  config["proxy-groups"] = newGroups;
-
-  // === 2. 处理规则 ===
-  if (OVERRIDE_RULES) {
-    // 完全覆盖模式：清空订阅规则，使用脚本规则
-    const oldRulesCount = config.rules.length;
-    config.rules = [...RULES];
-    console.log(`🔥 完全覆盖模式: 清空订阅的 ${oldRulesCount} 条规则`);
-    console.log(`✅ 应用脚本规则: ${RULES.length} 条`);
-  } else {
-    // 插入模式：在订阅规则前插入脚本规则
-    const rules = config.rules;
-    const upperRules = rules.map(r => r.toUpperCase().trim());
-
-    // 找到 MATCH/FINAL 的位置
-    let matchIndex = rules.findIndex(r => {
-      const u = r.toUpperCase();
-      return u.startsWith("MATCH") || u.startsWith("FINAL");
+  const REGIONS = buildRegions();
+  const ensureConfigObject = (o) => (o && typeof o==="object" ? o : {});
+  const getOriginalProxies = (c) => Array.isArray(c.proxies) ? c.proxies : [];
+  const makeProxyNamesUnique = (proxies=[]) => {
+    const used=new Set(), next=new Map();
+    proxies.forEach(p=>{
+      if(!p?.name) return; const base=String(p.name);
+      if(!used.has(base)){ used.add(base); next.set(base,1); return; }
+      let idx=next.get(base)??1, cand=`${base}_${idx}`;
+      while(used.has(cand)){ idx+=1; cand=`${base}_${idx}`; }
+      p.name=cand; used.add(cand); next.set(base, idx+1);
     });
+  };
+  const splitInfoAndNormalProxies = (proxies=[], re) => {
+    const info=[], normal=[];
+    proxies.forEach(p=>{ if(!p?.name) return; (re.test(p.name)?info:normal).push(p); });
+    return {infoProxies:info, normalProxies:normal};
+  };
+  const classifyProxiesByRegion = (normalProxies=[], regions=[]) => {
+    const datas = regions.filter(r=>r.name!=="OT").map(r=>({name:r.name, icon:r.icon, regex:r.regex, proxies:[]}));
+    const map=new Map(datas.map(r=>[r.name,r])), seen=new Map(datas.map(r=>[r.name,new Set()]));
+    const other=[], otherSeen=new Set();
+    normalProxies.forEach(proxy=>{
+      const norm=normalizeName(proxy.name);
+      const hit=datas.find(r=>r.regex.test(norm));
+      if(hit){ const s=seen.get(hit.name); if(!s.has(proxy.name)){ map.get(hit.name).proxies.push(proxy.name); s.add(proxy.name);} }
+      else if(!otherSeen.has(proxy.name)){ other.push(proxy.name); otherSeen.add(proxy.name); }
+    });
+    const active=datas.map(r=>({...r,proxies:uniq(r.proxies)})).filter(r=>r.proxies.length>0);
+    const activeSet=new Set(active.map(r=>r.name)), activeMap=new Map(active.map(r=>[r.name,r]));
+    // OT 兜底
+    const otProxies=uniq(other);
+    if(otProxies.length>0){ const ot={name:"OT", icon:"OT.png", proxies:otProxies}; active.push(ot); activeSet.add("OT"); activeMap.set("OT",ot); }
+    return {activeRegions:active, activeRegionNameSet:activeSet, activeRegionMap:activeMap, otherProxyNames:[] };
+  };
+  const buildAiProxyList = (activeRegions=[], allNormalNames=[]) => {
+    const nonHk=uniq(activeRegions.filter(r=>r.name!=="HK").flatMap(r=>r.proxies));
+    return nonHk.length>0 ? nonHk : allNormalNames;
+  };
 
-    // 如果没有 MATCH/FINAL，插入到末尾
-    if (matchIndex === -1) {
-      matchIndex = rules.length;
-    }
+  // ==================== 3. 策略组 ====================
+  const createGroupFactory = (groups, base) => (name,type,proxies,icon="Available.png",extra={})=>{
+    const u=uniq(proxies); if(!name||u.length===0) return; groups.push({name,type,proxies:u,icon:base+icon,...extra});
+  };
+  const buildClashmiGroups = ({allNormalNames, activeRegionMap, activeRegionNameSet})=>{
+    const groups=[]; const f=createGroupFactory(groups, "https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/");
+    // 核心
+    const hasHK=activeRegionNameSet.has("HK"), hasTW=activeRegionNameSet.has("TW"), hasSG=activeRegionNameSet.has("SG"), hasJP=activeRegionNameSet.has("JP"), hasUS=activeRegionNameSet.has("US");
+    const lb = (n,icon,reg)=>{ const r=activeRegionMap.get(reg); if(r) f(n,"load-balance",r.proxies,icon,{strategy:"consistent-hashing",...SETTINGS.URL_TEST_EXTRA}); };
+    const ut = (n,icon,reg)=>{ const r=activeRegionMap.get(reg); if(r) f(n,"url-test",r.proxies,icon,{tolerance:100,...SETTINGS.URL_TEST_EXTRA}); };
+    const manual = (n,icon,reg)=>{ const r=activeRegionMap.get(reg); if(r) f(n,"select",r.proxies,icon); else if(reg==="OT" && activeRegionMap.get("OT")) f(n,"select",activeRegionMap.get("OT").proxies,icon); };
+    // 一键/手动/直连 动态生成
+    const availableLBUT=[]; if(hasHK) availableLBUT.push("香港负载均衡","香港速度优先"); if(hasTW) availableLBUT.push("台湾负载均衡","台湾速度优先"); if(hasSG) availableLBUT.push("新加坡负载均衡","新加坡速度优先"); if(hasJP) availableLBUT.push("日本负载均衡","日本速度优先"); if(hasUS) availableLBUT.push("美国负载均衡","美国速度优先");
+    const availableManual=[]; ["AS","EU","AM","OT"].forEach(k=>{ if(activeRegionNameSet.has(k)) availableManual.push(k==="AS"?"亚洲手动":k==="EU"?"欧洲手动":k==="AM"?"美洲手动":"其他手动"); });
+    const oneKeyProxies=uniq([...availableLBUT, ...availableManual]);
+    f("一键代理","select", oneKeyProxies.length?oneKeyProxies:["DIRECT"], "Rocket.png");
+    f("手动选择","select", availableManual.length?availableManual:["DIRECT"], "Rocket.png");
+    f("国内直连","select",["DIRECT"],"China.png",{hidden:true});
+    lb("香港负载均衡","HK.png","HK"); ut("香港速度优先","HK.png","HK");
+    lb("台湾负载均衡","TW.png","TW"); ut("台湾速度优先","TW.png","TW");
+    lb("新加坡负载均衡","SG.png","SG"); ut("新加坡速度优先","SG.png","SG");
+    lb("日本负载均衡","JP.png","JP"); ut("日本速度优先","JP.png","JP");
+    lb("美国负载均衡","US.png","US"); ut("美国速度优先","US.png","US");
+    // 服务组（全部指向 一键代理/手动选择 + 可用地域）
+    const op=uniq(["一键代理","手动选择","国内直连",...availableLBUT,...availableManual]);
+    const ld=uniq(["国内直连","一键代理","手动选择",...availableLBUT.slice(0,5)]);
+    [["ChatGPT","ChatGPT.png"],["Claude","Claude.png"],["Gemini","Gemini.png"],["流媒体","Netflix.png"],["通信","Telegram.png"],["云服务","GitHub.png"],["金融","PayPal.png"]].forEach(([n,i])=>f(n,"select",op,i));
+    [["Microsoft","Microsoft.png"],["OneDrive","OneDrive.png"],["Apple","Apple.png"]].forEach(([n,i])=>f(n,"select",ld,i));
+    f("漏网之鱼","select",op,"MATCH.png");
+    manual("亚洲手动","AS.png","AS"); manual("欧洲手动","EU.png","EU"); manual("美洲手动","AM.png","AM"); manual("其他手动","OT.png","OT");
+    // Fallback 双组（为 全部/AI 增加容灾）
+    const allNames=uniq(allNormalNames);
+    if(allNames.length) f("Fallback - 全部","fallback",allNames,"Available.png",SETTINGS.FALLBACK_EXTRA);
+    return groups;
+  };
 
-    let addedCount = 0;
-    let skippedCount = 0;
+  // ==================== 4. 规则 ====================
+  const createRuleProvider = ({key,file,behavior})=>({url:`${SETTINGS.RULE_BASE}${file}`, path:`./ruleset/metacubex/${key}.yaml`, behavior, interval:86400, format:"yaml", type:"http"});
+  const buildRuleProviders = ()=>({
+    private_domain: createRuleProvider({key:"private_domain", file:"geosite/private.yaml", behavior:"domain"}),
+    private_ip: createRuleProvider({key:"private_ip", file:"geoip/private.yaml", behavior:"ipcidr"}),
+    ntp_domain: createRuleProvider({key:"ntp_domain", file:"geosite/category-ntp.yaml", behavior:"domain"}),
+    openai_domain: createRuleProvider({key:"openai_domain", file:"geosite/openai.yaml", behavior:"domain"}),
+    anthropic_domain: createRuleProvider({key:"anthropic_domain", file:"geosite/anthropic.yaml", behavior:"domain"}),
+    google_gemini_domain: createRuleProvider({key:"google_gemini_domain", file:"geosite/google-gemini.yaml", behavior:"domain"}),
+    youtube_domain: createRuleProvider({key:"youtube_domain", file:"geosite/youtube.yaml", behavior:"domain"}),
+    netflix_domain: createRuleProvider({key:"netflix_domain", file:"geosite/netflix.yaml", behavior:"domain"}),
+    netflix_ip: createRuleProvider({key:"netflix_ip", file:"geoip/netflix.yaml", behavior:"ipcidr"}),
+    tiktok_domain: createRuleProvider({key:"tiktok_domain", file:"geosite/tiktok.yaml", behavior:"domain"}),
+    disney_domain: createRuleProvider({key:"disney_domain", file:"geosite/disney.yaml", behavior:"domain"}),
+    spotify_domain: createRuleProvider({key:"spotify_domain", file:"geosite/spotify.yaml", behavior:"domain"}),
+    appletv_domain: createRuleProvider({key:"appletv_domain", file:"geosite/apple-tvplus.yaml", behavior:"domain"}),
+    telegram_domain: createRuleProvider({key:"telegram_domain", file:"geosite/telegram.yaml", behavior:"domain"}),
+    telegram_ip: createRuleProvider({key:"telegram_ip", file:"geoip/telegram.yaml", behavior:"ipcidr"}),
+    twitter_domain: createRuleProvider({key:"twitter_domain", file:"geosite/twitter.yaml", behavior:"domain"}),
+    twitter_ip: createRuleProvider({key:"twitter_ip", file:"geoip/twitter.yaml", behavior:"ipcidr"}),
+    google_domain: createRuleProvider({key:"google_domain", file:"geosite/google.yaml", behavior:"domain"}),
+    google_ip: createRuleProvider({key:"google_ip", file:"geoip/google.yaml", behavior:"ipcidr"}),
+    github_domain: createRuleProvider({key:"github_domain", file:"geosite/github.yaml", behavior:"domain"}),
+    speedtest_domain: createRuleProvider({key:"speedtest_domain", file:"geosite/ookla-speedtest.yaml", behavior:"domain"}),
+    paypal_domain: createRuleProvider({key:"paypal_domain", file:"geosite/paypal.yaml", behavior:"domain"}),
+    apple_domain: createRuleProvider({key:"apple_domain", file:"geosite/apple.yaml", behavior:"domain"}),
+    apple_ip: createRuleProvider({key:"apple_ip", file:"geoip/apple.yaml", behavior:"ipcidr"}),
+    onedrive_domain: createRuleProvider({key:"onedrive_domain", file:"geosite/onedrive.yaml", behavior:"domain"}),
+    microsoft_domain: createRuleProvider({key:"microsoft_domain", file:"geosite/microsoft.yaml", behavior:"domain"}),
+    cn_domain: createRuleProvider({key:"cn_domain", file:"geosite/cn.yaml", behavior:"domain"}),
+    cn_ip: createRuleProvider({key:"cn_ip", file:"geoip/cn.yaml", behavior:"ipcidr"}),
+    ResourceSite: { type:"http", interval:86400, behavior:"classical", format:"text", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/ResourceSite.list" },
+    PanVod: { type:"http", interval:86400, behavior:"classical", format:"text", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/PanVod.list" },
+    add_direct_domain: { type:"http", interval:86400, behavior:"domain", format:"mrs", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs" },
+    my_direct: { type:"http", interval:86400, behavior:"classical", format:"text", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_direct.list" },
+    my_proxy: { type:"http", interval:86400, behavior:"classical", format:"text", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_proxy.list" },
+  });
+  const buildRules = (bypass=[])=>[
+    "RULE-SET,private_ip,国内直连,no-resolve","RULE-SET,private_domain,国内直连","RULE-SET,ntp_domain,国内直连",
+    "RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直连",
+    ...uniq(bypass).map(d=>`DOMAIN-SUFFIX,${d},DIRECT`), ...SETTINGS.DIRECT_FIX_RULES,
+    "RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google_gemini_domain,Gemini",
+    "RULE-SET,youtube_domain,流媒体","RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve","RULE-SET,tiktok_domain,流媒体","RULE-SET,disney_domain,流媒体","RULE-SET,spotify_domain,流媒体","RULE-SET,appletv_domain,流媒体",
+    "RULE-SET,telegram_domain,通信","RULE-SET,telegram_ip,通信,no-resolve","RULE-SET,twitter_domain,通信","RULE-SET,twitter_ip,通信,no-resolve",
+    "RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,github_domain,云服务","RULE-SET,speedtest_domain,云服务",
+    "RULE-SET,paypal_domain,金融",
+    "RULE-SET,apple_domain,Apple","RULE-SET,apple_ip,Apple,no-resolve",
+    "RULE-SET,onedrive_domain,OneDrive","RULE-SET,microsoft_domain,Microsoft",
+    "RULE-SET,ResourceSite,国内直连","RULE-SET,PanVod,国内直连","RULE-SET,add_direct_domain,国内直连","RULE-SET,cn_domain,国内直连","RULE-SET,cn_ip,国内直连,no-resolve",
+    "MATCH,漏网之鱼",
+  ];
 
-    // 从后往前插入（保持顺序）
-    for (let i = RULES.length - 1; i >= 0; i--) {
-      const rule = RULES[i];
-      const upper = rule.toUpperCase().trim();
+  // ==================== 5. 网络 ====================
+  const applySniffer=c=>{ c.sniffer={...c.sniffer, enable:true, "force-dns-mapping":true, "parse-pure-ip":true, "override-destination":true, sniff:{HTTP:{ports:[80,"8080-8880"],"override-destination":true}, TLS:{ports:[443,8443]}, QUIC:{ports:[443,8443]}}, "force-domain": SETTINGS.FORCE_DOMAIN}; };
+  const applyTun=c=>{ c.tun={...c.tun, enable:true, stack:"system", "auto-route":true, "auto-detect-interface":true, "strict-route":true, "dns-hijack":["any:53","tcp://any:53"]}; };
+  const applyDns=c=>{
+    const cur=c.dns?.["fake-ip-filter"]||[]; c.dns={...c.dns, enable:true, "cache-algorithm":"arc", ipv6:false, listen:c.dns?.listen||"0.0.0.0:7874", "enhanced-mode":"fake-ip", "fake-ip-range":"198.18.0.1/16", "fake-ip-filter":uniq([...cur,...SETTINGS.BASIC_FAKE_IP_FILTER]), "default-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT"], "nameserver-policy":{"geosite:cn":["223.5.5.5#DIRECT","119.29.29.29#DIRECT"], "geosite:private":"system", "rule-set:openai_domain":["https://1.1.1.1/dns-query#一键代理","https://8.8.8.8/dns-query#一键代理"], "rule-set:anthropic_domain":["https://1.1.1.1/dns-query#一键代理"], "rule-set:google_gemini_domain":["https://1.1.1.1/dns-query#一键代理"], "+.orb.local":"system"}, nameserver:["https://1.1.1.1/dns-query#一键代理","https://8.8.8.8/dns-query#一键代理"], "proxy-server-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT","system"], "direct-nameserver":["223.5.5.5#DIRECT","119.29.29.29#DIRECT","system"], "direct-nameserver-follow-policy":true};
+  };
+  const applyProfile=c=>{ c.profile={...c.profile, "store-selected":true, "store-fake-ip":false}; };
 
-      // 检查是否已存在
-      if (!upperRules.includes(upper)) {
-        rules.splice(matchIndex, 0, rule);
-        addedCount++;
-      } else {
-        skippedCount++;
-      }
-    }
-
-    console.log(`✅ 插入模式: 添加 ${addedCount} 条规则, 跳过 ${skippedCount} 条重复规则`);
-  }
-
-  console.log(`📊 最终策略组数量: ${config["proxy-groups"].length}`);
-  console.log(`📊 最终规则数量: ${config.rules.length}`);
-  console.log("🎉 FlClash 配置更新完成\n");
-
+  // ==================== 6. 主流程 ====================
+  config=ensureConfigObject(config);
+  const originalProxies=getOriginalProxies(config);
+  if(originalProxies.length===0) return config;
+  makeProxyNamesUnique(originalProxies);
+  const {infoProxies, normalProxies}=splitInfoAndNormalProxies(originalProxies, SETTINGS.FILTER_REGEX);
+  const {activeRegions, activeRegionNameSet, activeRegionMap}=classifyProxiesByRegion(normalProxies, REGIONS);
+  const allNormalNames=uniq(normalProxies.map(p=>p.name)), infoNames=uniq(infoProxies.map(p=>p.name));
+  // 策略组（动态，仅含活跃地域，避免空组导致 Go: use or proxies missing）
+  config["proxy-groups"]=buildClashmiGroups({allNormalNames, activeRegionMap, activeRegionNameSet});
+  if(infoNames.length) config["proxy-groups"].push({name:"Info", type:"select", proxies:infoNames, icon: SETTINGS.ICON_BASE+"Available.png"});
+  // 兜底：仍为空则保底 DIRECT
+  if(config["proxy-groups"].length===0) config["proxy-groups"]=[{name:"一键代理", type:"select", proxies:["DIRECT"], icon: SETTINGS.ICON_BASE+"Proxy.png"}];
+  config["rule-providers"]=buildRuleProviders();
+  config.rules=buildRules(bypassDomains);
+  applySniffer(config); applyTun(config); applyDns(config); applyProfile(config);
+  config.proxies=originalProxies;
   return config;
-};
+}
