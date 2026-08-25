@@ -5,8 +5,17 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v2.8  (基于 mihomoScript.js 重构)
+// 🔧 clashmi.yml → BettBox JS Override  v2.9  (基于 mihomoScript.js 重构)
 // ⏰ 更新时间: 2026-08-25 15:10:00 CST
+//
+// v2.9 变更（修复 GitHub 被 microsoft_domain 规则集截走导致直连）：
+// - 根因：MetaCubeX geosite/microsoft 分类 include 了全部 github 域名（v2fly
+//   domain-list-community microsoft 首行 include:github），RULE-SET,microsoft_domain
+//   会命中 api.github.com/github.githubassets.com 等，而 Microsoft 组默认国内直连
+//   → GitHub 国内无法访问（日志实证: dial Microsoft match RuleSet/microsoft_domain --> api.github.com）
+// - 修复：对齐 mihomoScript.js（其 Microsoft 服务单独配 RULE-SET,github,默认代理），
+//   github_domain 规则独立前置（优先于 microsoft 规则）→ 一键代理；
+//   github_domain 规则集从 Google 服务移入 RULE_PROVIDERS_BASE（常驻，不受开关影响）
 //
 // v2.8 变更（吸收 mihomoScript.js 架构优点）：
 // - 数据驱动 serviceConfigs：一个服务 = 组+规则+规则集 单点定义，删除 PROVIDER_BY_SWITCH/SUB_SWITCH
@@ -298,7 +307,7 @@ const RULES_MY = ["RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直
 const RULES_AI = ["RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google-gemini_domain,Gemini"];
 const RULES_MEDIA = ["RULE-SET,youtube_domain,流媒体","RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve",...(ruleOptionsEnable.TikTok?["RULE-SET,tiktok_domain,流媒体"]:[]),"RULE-SET,disney_domain,流媒体",...(ruleOptionsEnable.Spotify?["RULE-SET,spotify_domain,流媒体"]:[]),"RULE-SET,appletv_domain,流媒体"];
 const RULES_TELEGRAM = ["RULE-SET,telegram_domain,通信","RULE-SET,telegram_ip,通信,no-resolve",...(ruleOptionsEnable.Twitter?["RULE-SET,twitter_domain,通信","RULE-SET,twitter_ip,通信,no-resolve"]:[])];
-const RULES_GOOGLE = ["RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,github_domain,云服务","RULE-SET,speedtest_domain,云服务"];
+const RULES_GOOGLE = ["RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,speedtest_domain,云服务"];
 const RULES_PAYPAL = ["RULE-SET,paypal_domain,金融"];
 const RULES_APPLE = ["RULE-SET,apple_domain,Apple","RULE-SET,apple_ip,Apple,no-resolve"];
 const RULES_MS = ["RULE-SET,onedrive_domain,OneDrive","RULE-SET,microsoft_domain,Microsoft"];
@@ -337,7 +346,7 @@ const serviceConfigs = [
     sw: "Google", proxiesKey: "svc",
     groups: [{ name: "云服务", icon: ICON.GitHub }],
     rules: RULES_GOOGLE,
-    providers: { google_domain: M("google"), google_ip: MI("google"), github_domain: M("github"), speedtest_domain: M("ookla-speedtest") },
+    providers: { google_domain: M("google"), google_ip: MI("google"), speedtest_domain: M("ookla-speedtest") },
   },
   {
     sw: "金融", proxiesKey: "svc",
@@ -359,13 +368,17 @@ const serviceConfigs = [
   },
 ];
 
-// 组装规则：前置基础规则 + 数据驱动服务规则（serviceConfigs 收集）+ 尾部兜底
+// 组装规则：前置基础规则 + github 独立代理规则（必须在 microsoft 规则之前，否则被
+// microsoft_domain 规则集截走——该规则集含全部 github 域名）+ 数据驱动服务规则 + 尾部兜底
 function buildRules(serviceRules) {
   return [
     ...(ruleOptionsEnable.AdBlock ? ["RULE-SET,adblock,REJECT"] : []),
     ...RULES_PRIVATE,
     ...RULES_CN_FAST,
     ...RULES_MY,
+    // github 走代理（mihomoScript.js 设计）：microsoft_domain 规则集 include 了 github，
+    // 必须先于 RULES_MS 命中，否则 github 会被 Microsoft 组（默认国内直连）截走
+    "RULE-SET,github_domain,一键代理",
     ...serviceRules,
     ...RULES_CN_TAIL,
     ...(ruleOptionsEnable["屏蔽国外QUIC"] ? RULES_QUIC : []),
@@ -390,6 +403,8 @@ const RULE_PROVIDERS_BASE = {
   private_ip: MI("private"),
   "geolocation_not_cn": M("geolocation-!cn"),
   gfw: M("gfw"),
+  // github 独立代理规则集（v2.9：从 Google 服务移入常驻；microsoft.mrs 含 github 域名，规则必须前置）
+  github_domain: M("github"),
   // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules）
   fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules@release/fakeip-filter.mrs" },
   add_direct_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs" },
@@ -467,7 +482,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v2.8 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v2.9 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);

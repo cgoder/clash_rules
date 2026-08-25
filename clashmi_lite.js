@@ -5,10 +5,17 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi_lite.js v1.3 — 简版覆写脚本
+// 🔧 clashmi_lite.js v1.4 — 简版覆写脚本
 // 设计：Script.js（AIsouler/MyClash 精简版）骨架 × clashmi.yml 优势融合
 // 参考：https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/Script.js
 // ⏰ 更新时间: 2026-08-25 15:10:00 CST
+//
+// v1.4 变更（修复 GitHub 被 microsoft_domain 规则集截走导致直连，同 clashmi_flclash.js v2.9）：
+// - 根因：MetaCubeX geosite/microsoft 分类 include 全部 github 域名（v2fly 数据源
+//   microsoft 首行 include:github），RULE-SET,microsoft_domain 命中 github 域名，
+//   而 Microsoft 组默认国内直连 → GitHub 无法访问
+// - 修复：github_domain 规则独立前置（优先于 microsoft 规则）→ 默认代理；
+//   github_domain 规则集加入常驻 BASE
 //
 // v1.3 变更（吸收 mihomoScript.js 架构优点）：
 // - 数据驱动 serviceConfigs：服务 = 组+规则+规则集 单点定义，删除 PROVIDER_BY_SWITCH
@@ -280,6 +287,8 @@ function buildRules(serviceRules) {
     ...RULES_PRIVATE,
     ...RULES_CN_FAST,
     ...RULES_MY,
+    // github 走默认代理（v1.4：microsoft_domain 规则集含 github 域名，必须先于 Microsoft 规则命中）
+    "RULE-SET,github_domain,默认代理",
     ...serviceRules,
     ...RULES_CN_TAIL,
     ...(ruleOptionsEnable["屏蔽国外QUIC"] ? RULES_QUIC : []),
@@ -327,6 +336,8 @@ const RULE_PROVIDERS_BASE = {
   private_ip: MI("private"),
   "geolocation_not_cn": M("geolocation-!cn"),
   gfw: M("gfw"),
+  // github 独立代理规则集（v1.4：microsoft.mrs 含 github 域名，规则必须前置）
+  github_domain: M("github"),
   // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules）
   fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules@release/fakeip-filter.mrs" },
   // AdBlock（仅 ruleOptionsEnable.AdBlock 开启时下发，默认不下载）
@@ -399,7 +410,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_lite.js v1.3（Script.js × clashmi.yml 融合简版）");
+  log("🚀 clashmi_lite.js v1.4（Script.js × clashmi.yml 融合简版）");
   try {
     const filteredProxies = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
