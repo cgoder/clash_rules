@@ -1,6 +1,6 @@
 // ============================================================
 // 🔧 clashmi → FlClash/BettBox 覆写 v4.0
-// ⏰ 更新时间: 2026-08-25 11:26:01 CST
+// ⏰ 更新时间: 2026-08-25 11:37:27 CST
 // 基于 clashmi.yml 1:1 + 例份最佳实践重构（BettBox 兼容）
 // - 吸收：normalizeName/buildRegex/uniq/makeProxyNamesUnique/splitInfo/classify/Info组/AI排除HK/工厂模式/Fallback双组/applyDns合并
 // - 保留：25+ 策略组（10×LB/UT + 4×大洲手动）、33 rule-providers、32 rules、gh-proxy 加速、图标体系
@@ -9,7 +9,21 @@
 // ============================================================
 
 function main(config) {
-  // ==================== 0. 直连域名（按需增） ====================
+  // ==================== 0. 可开关选项（参照 mihomoScript.js ruleOptionsEnable） ====================
+  const TOGGLES = {
+    手动选择: true, // 亚洲/欧洲/美洲/其他 手动组
+    自动选择: true, // Fallback/URL Test 双组
+    负载均衡: true, // 香港/台湾/… 负载均衡组
+    生成地区自动选择组: true, // 为每个地区生成 XX-自动选择(url-test)
+    隐藏地区手动选择组: false,
+    生成倍率组: false, // 低倍率/高倍率（预留，当前未启用）
+    分流组添加所有节点: false,
+    过滤高倍率节点: false,
+    过滤非地区节点: false, // clashmi 默认 false，避免丢节点导致仅剩印度
+    屏蔽国外QUIC: true,
+    代理IPV4优先: false,
+    代理IPV6优先: false,
+  };
   const bypassDomains = ["example.com", "none.com"];
 
   // ==================== 1. 常量 ====================
@@ -36,16 +50,17 @@ function main(config) {
     const pats = arr.map(raw=>{const t=String(raw).trim().toUpperCase(); const e=escapeRegex(t); return /^[A-Z]{2,3}$/.test(t) ? `(?:^|[^A-Z])${e}(?:[^A-Z]|$)` : e;});
     return new RegExp(pats.join("|"),"i");
   };
+  // 参照 clashmi.yml Anchors 1:1，含全部旗帜/中英/代码/别称，避免漏命中（如仅剩印度）
   const buildRegions = () => ([
-    { name:"HK", pattern:["香港","HK","HKG","HONGKONG","HONG KONG"], icon:"HK.png" },
-    { name:"TW", pattern:["台湾","台灣","台北","新北","TW","TWN","TAIWAN","TAIPEI"], icon:"TW.png" },
-    { name:"SG", pattern:["新加坡","狮城","SG","SGP","SINGAPORE","SIN"], icon:"SG.png" },
-    { name:"JP", pattern:["日本","东京","大阪","JP","JPN","JAPAN","TOKYO","OSAKA"], icon:"JP.png" },
-    { name:"US", pattern:["美国","美國","纽约","洛杉矶","US","USA","UNITEDSTATES","UNITED STATES"], icon:"US.png" },
-    { name:"AS", pattern:["韩国","韓國","印度","泰国","泰國","马来西亚","馬來西亞","菲律宾","菲律賓","越南","印尼","KR","KOR","KOREA","IN","TH","MY","PH","VN","ID","VIETNAM","THAILAND","MALAYSIA","PHILIPPINES"], icon:"AS.png" },
-    { name:"EU", pattern:["德国","德國","英国","英國","法国","法國","荷兰","荷蘭","瑞士","意大利","義大利","西班牙","芬兰","瑞典","挪威","丹麦","比利时","奥地利","波兰","捷克","葡萄牙","希腊","匈牙利","爱尔兰","俄罗斯","土耳其","DE","UK","GB","FR","NL","CH","IT","ES","FI","SE","NO","DK","BE","AT","PL","CZ","PT","GR","HU","IE","RU","TR","GERMANY","FRANCE"], icon:"EU.png" },
-    { name:"AM", pattern:["加拿大","墨西哥","巴西","阿根廷","智利","CA","MX","BR","AR","CL","CANADA","MEXICO","BRAZIL"], icon:"AM.png" },
-    { name:"OT", pattern:[], icon:"OT.png" }, // 兜底，其他
+    { name:"HK", pattern:["香港","🇭🇰","HK","HKG","Hong","HONGKONG","HONG KONG"], icon:"HK.png" },
+    { name:"TW", pattern:["台湾","台灣","台北","新北","🇹🇼","TW","TWN","TAIWAN","TAIPEI"], icon:"TW.png" },
+    { name:"SG", pattern:["新加坡","狮城","🇸🇬","SG","SGP","SINGAPORE","SIN"], icon:"SG.png" },
+    { name:"JP", pattern:["日本","🇯🇵","东京","大阪","JP","JPN","JAPAN","TOKYO","OSAKA"], icon:"JP.png" },
+    { name:"US", pattern:["美国","美國","纽约","洛杉矶","旧金山","🇺🇸","US","USA","AMERICA","UNITED STATES"], icon:"US.png" },
+    { name:"AS", pattern:["韩国","韓國","印度","印度尼西亚","泰国","泰國","马来西亚","馬來西亞","菲律宾","菲律賓","越南","印尼","🇰🇷","🇮🇳","🇹🇭","🇲🇾","🇵🇭","🇻🇳","🇮🇩","KR","KOR","KOREA","IN","TH","MY","PH","VN","ID","VIETNAM","THAILAND","MALAYSIA","PHILIPPINES","INDONESIA"], icon:"AS.png" },
+    { name:"EU", pattern:["德国","德國","英国","英國","法国","法國","荷兰","荷蘭","瑞士","意大利","義大利","西班牙","芬兰","芬蘭","瑞典","挪威","丹麦","比利时","奥地利","波兰","罗马尼亚","羅馬尼亞","捷克","葡萄牙","希腊","匈牙利","爱尔兰","俄罗斯","俄羅斯","土耳其","🇩🇪","🇬🇧","🇫🇷","🇳🇱","🇨🇭","🇮🇹","🇪🇸","🇫🇮","🇸🇪","🇳🇴","🇩🇰","🇧🇪","🇦🇹","🇵🇱","🇷🇴","🇨🇿","🇵🇹","🇬🇷","🇭🇺","🇮🇪","🇷🇺","🇹🇷","DE","UK","GB","FR","NL","CH","IT","ES","FI","SE","NO","DK","BE","AT","PL","RO","CZ","PT","GR","HU","IE","RU","TR","GERMANY","BRITAIN","FRANCE","NETHERLANDS","SWITZERLAND","ITALY","SPAIN","FINLAND","SWEDEN","NORWAY","DENMARK","BELGIUM","AUSTRIA","POLAND","ROMANIA","CZECH","PORTUGAL","GREECE","HUNGARY","IRELAND","RUSSIA","TURKEY"], icon:"EU.png" },
+    { name:"AM", pattern:["美国","美國","加拿大","墨西哥","巴西","阿根廷","智利","🇺🇸","🇨🇦","🇲🇽","🇧🇷","🇦🇷","🇨🇱","US","USA","CA","MX","BR","AR","CL","AMERICA","UNITED STATES","CANADA","MEXICO","BRAZIL","ARGENTINA","CHILE"], icon:"AM.png" },
+    { name:"OT", pattern:[], icon:"OT.png" },
   ]).map(r=> ({...r, regex: r.name==="OT" ? null : buildRegex(r.pattern)}));
 
   const REGIONS = buildRegions();
