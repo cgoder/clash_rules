@@ -338,8 +338,8 @@ const RULE_PROVIDERS_BASE = {
   gfw: M("gfw"),
   // github 独立代理规则集（v1.4：microsoft.mrs 含 github 域名，规则必须前置）
   github_domain: M("github"),
-  // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules）
-  fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules@release/fakeip-filter.mrs" },
+  // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules，分支 release 用 / 不用 @）
+  fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs" },
   // AdBlock（仅 ruleOptionsEnable.AdBlock 开启时下发，默认不下载）
   adblock: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.mrs" },
 };

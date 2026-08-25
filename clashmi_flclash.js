@@ -405,8 +405,8 @@ const RULE_PROVIDERS_BASE = {
   gfw: M("gfw"),
   // github 独立代理规则集（v2.9：从 Google 服务移入常驻；microsoft.mrs 含 github 域名，规则必须前置）
   github_domain: M("github"),
-  // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules）
-  fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules@release/fakeip-filter.mrs" },
+  // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules，分支 release 用 / 不用 @）
+  fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs" },
   add_direct_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs" },
   my_direct: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_direct.list" },
   my_proxy: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_proxy.list" },
