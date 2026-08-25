@@ -1,6 +1,6 @@
 // ============================================================
 // 🔧 clashmi → FlClash/BettBox 覆写 v4.0
-// ⏰ 更新时间: 2026-08-25 11:20:35 CST
+// ⏰ 更新时间: 2026-08-25 11:24:31 CST
 // 基于 clashmi.yml 1:1 + 例份最佳实践重构（BettBox 兼容）
 // - 吸收：normalizeName/buildRegex/uniq/makeProxyNamesUnique/splitInfo/classify/Info组/AI排除HK/工厂模式/Fallback双组/applyDns合并
 // - 保留：25+ 策略组（10×LB/UT + 4×大洲手动）、33 rule-providers、32 rules、gh-proxy 加速、图标体系
@@ -135,7 +135,7 @@ function main(config) {
     ntp_domain: mrsDN("geosite/category-ntp.mrs"),
     openai_domain: mrsDN("geosite/openai.mrs"),
     anthropic_domain: mrsDN("geosite/anthropic.mrs"),
-    "google-gemini_domain": mrsDN("geosite/google-gemini.mrs"),
+    google_gemini_domain: mrsDN("geosite/google-gemini.mrs"),
     youtube_domain: mrsDN("geosite/youtube.mrs"),
     netflix_domain: mrsDN("geosite/netflix.mrs"),
     netflix_ip: mrsIP("geoip/netflix.mrs"),
@@ -152,7 +152,7 @@ function main(config) {
     github_domain: mrsDN("geosite/github.mrs"),
     speedtest_domain: mrsDN("geosite/ookla-speedtest.mrs"),
     paypal_domain: mrsDN("geosite/paypal.mrs"),
-    "geolocation-!cn": mrsDN("geosite/geolocation-!cn.mrs"),
+    "geolocation-!cn": mrsDN("geosite/geolocation-!cn.mrs"), // keep quoted due to !
     apple_domain: mrsDN("geosite/apple.mrs"),
     apple_ip: { type:"http", interval:86400, behavior:"ipcidr", format:"mrs", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs", path:"./ruleset/geo-lite/geoip/apple.mrs" },
     onedrive_domain: mrsDN("geosite/onedrive.mrs"),
@@ -169,7 +169,7 @@ function main(config) {
     "RULE-SET,private_ip,国内直连,no-resolve","RULE-SET,private_domain,国内直连","RULE-SET,ntp_domain,国内直连",
     "RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直连",
     ...uniq(bypass).map(d=>`DOMAIN-SUFFIX,${d},DIRECT`), ...SETTINGS.DIRECT_FIX_RULES,
-    "RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google-gemini_domain,Gemini",
+    "RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google_gemini_domain,Gemini",
     "RULE-SET,youtube_domain,流媒体","RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve","RULE-SET,tiktok_domain,流媒体","RULE-SET,disney_domain,流媒体","RULE-SET,spotify_domain,流媒体","RULE-SET,appletv_domain,流媒体",
     "RULE-SET,telegram_domain,通信","RULE-SET,telegram_ip,通信,no-resolve","RULE-SET,twitter_domain,通信","RULE-SET,twitter_ip,通信,no-resolve",
     "RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,github_domain,云服务","RULE-SET,speedtest_domain,云服务",
