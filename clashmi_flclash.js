@@ -1,6 +1,22 @@
+// 适配 BettBox 自定义配置参数（保持与 mihomoScript.js 一致）
+// ⚠️ 必须位于文件前 2000 字符内：BettBox 仅检查 head.substring(0,2000) 是否含
+//    'Compatible_With_Bettbox'（lib/models/common.dart isCompatibleWithBettbox），
+//    否则策略组面板不显示 ruleOptionsEnable 开关菜单
+const Compatible_With_Bettbox = { ruleOptionsEnable: true };
+
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v2.5  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-08-25 13:10:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v2.7  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-08-25 15:10:00 CST
+//
+// v2.7 变更（修复 DNS 全断，同 clashmi_lite.js v1.2）：
+// - 默认 nameserver 改用国内直连 DoH（doh.pub/dns.alidns.com），国外域名仍走代理 DoH；
+// - nameserver-policy 增加 rule-set:my_direct → 223.5.5.5（直连域名国内解析防死锁）
+//
+// v2.6 变更（修复 BettBox 面板不显示 ruleOptionsEnable 菜单）：
+// - 根因：BettBox 源码仅检查脚本前 2000 字符是否含 'Compatible_With_Bettbox'
+//   (lib/models/common.dart isCompatibleWithBettbox)，v2.1 起头部 changelog 渐长
+//   把该标记挤出 2000 字符窗口 → 面板开关菜单消失
+// - 修复：将 Compatible_With_Bettbox 移到文件首行（任何版本注释增长都不再影响）
 //
 // v2.5 变更（修复 ruleOptionsEnable 开关全部失效的问题）：
 // - 服务组开关 AI/Media/Telegram/Google/Microsoft/Apple/金融 真正驱动 组+规则+规则集
@@ -46,9 +62,6 @@
 //   采用 newConfig = {} 全量重建 + filterAndNormalizeProxies + buildDnsAndHostsConfig
 // ============================================================
 
-// 适配 BettBox 自定义配置参数（保持与 mihomoScript.js 一致）
-const Compatible_With_Bettbox = { ruleOptionsEnable: true };
-
 // 用户可调开关（映射到 mihomoScript.js 的 ruleOptionsEnable）
 const OPTIONS = {
   OVERRIDE_GROUPS: true,
@@ -91,8 +104,10 @@ const ruleOptionsEnable = {
   生成倍率组: false, 过滤高倍率节点: false, 代理IPV4优先: false, 代理IPV6优先: false, 链式代理: false,
 };
 
-// 图标
-const ICON_BASE = "https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons";
+// 图标（gh-proxy + raw 直链，国内可达）
+// 勿用 github.com/.../raw/... 路径：gh-proxy 需跟随 302 跳转才能到 raw.githubusercontent.com，
+// 部分实现跟随失败导致图标 404；raw 直链无跳转更可靠（clashmi_lite.js v1.1 同款修复）
+const ICON_BASE = "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons";
 const ICON = {
   Rocket: `${ICON_BASE}/Rocket.png`,
   China: `${ICON_BASE}/China.png`,
@@ -324,9 +339,9 @@ const RULE_PROVIDERS = {
 function buildDnsAndHosts(filteredProxies) {
   // 仅保留与 clashmi 相关的假 IP 过滤，按 mihomoScript.js 思路：节点域名需走真实 IP
   const chinaDNS = ["223.5.5.5","119.29.29.29"];
+  // 默认 nameserver 用国内直连 DoH（clashmi.yml 方案）：节点/代理不可用时国内直连流量 DNS 不断；
+  // 国外域名由 geolocation_not_cn policy 走代理 DoH（出口解析质量最优）
   const foreignDNS = ["https://doh.pub/dns-query","https://dns.alidns.com/dns-query"];
-  // 对齐 mihomoScript.js：国外走 cloudflare/google 经代理，国内走直连；
-  // 之前用 https://1.1.1.1 直连在部分网络下 context deadline exceeded，参考可用的 mihomoScript.js 改为域名 DoH
   const chinaDoh = ["https://223.5.5.5/dns-query#DIRECT"];
   const foreignDohViaProxy = ["https://cloudflare-dns.com/dns-query#一键代理","https://dns.google/dns-query#一键代理"];
   return {
@@ -336,9 +351,11 @@ function buildDnsAndHosts(filteredProxies) {
       "fake-ip-filter": ["+.orb.local","localhost","*.home.arpa","time.*.com","ntp.*.com","+.ntp.org","+.pool.ntp.org","captive.apple.com","connectivitycheck.gstatic.com","+.msftconnecttest.com","+.msftncsi.com","stun.*.*","+.stun.playstation.net","+.xboxlive.com","+.speedtest.net"],
       "default-nameserver": chinaDNS,
       "proxy-server-nameserver": chinaDoh,
-      nameserver: foreignDohViaProxy,
+      nameserver: foreignDNS,
       "nameserver-policy": {
         "geosite:cn": chinaDNS[0],
+        // my_direct 域名走国内 DNS 直连解析（防死锁：节点/代理不可用时直连流量仍可用）
+        "rule-set:my_direct": chinaDNS[0],
         "rule-set:geolocation_not_cn": foreignDohViaProxy[0],
         "rule-set:my_proxy": foreignDohViaProxy[0],
         "+.orb.local": "system",
@@ -378,7 +395,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v2.5 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v2.7 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
