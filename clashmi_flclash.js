@@ -5,8 +5,16 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v2.7  (基于 mihomoScript.js 重构)
+// 🔧 clashmi.yml → BettBox JS Override  v2.8  (基于 mihomoScript.js 重构)
 // ⏰ 更新时间: 2026-08-25 15:10:00 CST
+//
+// v2.8 变更（吸收 mihomoScript.js 架构优点）：
+// - 数据驱动 serviceConfigs：一个服务 = 组+规则+规则集 单点定义，删除 PROVIDER_BY_SWITCH/SUB_SWITCH
+// - normalizeProxyName 国旗标准化 + regionMatchCache 正则缓存（参考配置节点治理管道）
+// - GLOBAL 全量聚合组（参考配置主入口，BettBox 主开关）
+// - DNS 增强：use-hosts/use-system-hosts/cache-algorithm arc/direct-nameserver/
+//   fake-ip-filter 规则集级条目（rule-set:private_domain/fakeip_filter/cn_domain）
+// - exclude-type DIRECT（UT/LB 测速排除直连）；hosts 多 IP 数组兑底
 //
 // v2.7 变更（修复 DNS 全断，同 clashmi_lite.js v1.2）：
 // - 默认 nameserver 改用国内直连 DoH（doh.pub/dns.alidns.com），国外域名仍走代理 DoH；
@@ -151,29 +159,51 @@ const RE = {
   EU: /(德国|德國|英国|英國|法国|法國|荷兰|荷蘭|瑞士|意大利|義大利|西班牙|芬兰|芬蘭|瑞典|挪威|丹麦|比利时|奥地利|波兰|罗马尼亚|羅馬尼亞|捷克|葡萄牙|希腊|匈牙利|爱尔兰|俄罗斯|俄羅斯|土耳其|🇩🇪|🇬🇧|🇫🇷|🇳🇱|🇨🇭|🇮🇹|🇪🇸|🇫🇮|🇸🇪|🇳🇴|🇩🇰|🇧🇪|🇦🇹|🇵🇱|🇷🇴|🇨🇿|🇵🇹|🇬🇷|🇭🇺|🇮🇪|🇷🇺|🇹🇷|(?<![A-Za-z])DE(?![A-Za-z])|(?<![A-Za-z])GB(?![A-Za-z])|(?<![A-Za-z])UK(?![A-Za-z])|(?<![A-Za-z])FR(?![A-Za-z])|(?<![A-Za-z])NL(?![A-Za-z])|(?<![A-Za-z])CH(?![A-Za-z])|(?<![A-Za-z])IT(?![A-Za-z])|(?<![A-Za-z])ES(?![A-Za-z])|(?<![A-Za-z])FI(?![A-Za-z])|(?<![A-Za-z])SE(?![A-Za-z])|(?<![A-Za-z])NO(?![A-Za-z])|(?<![A-Za-z])DK(?![A-Za-z])|(?<![A-Za-z])BE(?![A-Za-z])|(?<![A-Za-z])AT(?![A-Za-z])|(?<![A-Za-z])PL(?![A-Za-z])|(?<![A-Za-z])RO(?![A-Za-z])|(?<![A-Za-z])CZ(?![A-Za-z])|(?<![A-Za-z])PT(?![A-Za-z])|(?<![A-Za-z])GR(?![A-Za-z])|(?<![A-Za-z])HU(?![A-Za-z])|(?<![A-Za-z])IE(?![A-Za-z])|(?<![A-Za-z])RU(?![A-Za-z])|(?<![A-Za-z])TR(?![A-Za-z])|germany|britain|france|netherlands|switzerland|italy|spain|finland|sweden|norway|denmark|belgium|austria|poland|romania|czech|portugal|greece|hungary|ireland|russia|turkey)/i,
   AM: /(美国|美國|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|圣地亚哥|加拿大|墨西哥|巴西|阿根廷|智利|🇺🇸|🇨🇦|🇲🇽|🇧🇷|🇦🇷|🇨🇱|(?<![A-Za-z])USA?(?![A-Za-z])|(?<![A-Za-z])CA(?![A-Za-z])|(?<![A-Za-z])MX(?![A-Za-z])|(?<![A-Za-z])BR(?![A-Za-z])|(?<![A-Za-z])AR(?![A-Za-z])|(?<![A-Za-z])CL(?![A-Za-z])|america|united\s*states|canada|mexico|brazil|argentina|chile)/i,
 };
-const ALL_REGION_KEYWORDS_RE = new RegExp([RE.AS.source, RE.EU.source, RE.AM.source].join("|"), "i");
-function isOtherRegion(name) { return !ALL_REGION_KEYWORDS_RE.test(name); }
-
 // 策略组模板（与 mihomoScript.js 的 groupBaseOption 语义一致）
 // 健康检查调优：interval 300s 常驻 + timeout 2000ms 快速失败 + max-failed-times 2 快速剔除死节点
 const groupBaseOption = {
   interval: 300, timeout: 2000, url: "https://www.g.cn/generate_204",
   lazy: false, "max-failed-times": 2, "empty-fallback": "DIRECT",
 };
-const LB_BASE = { type: "load-balance", strategy: "consistent-hashing", ...groupBaseOption, hidden: true };
-const UT_BASE = { type: "url-test", tolerance: 100, ...groupBaseOption, hidden: true };
+const LB_BASE = { type: "load-balance", strategy: "consistent-hashing", ...groupBaseOption, hidden: true, "exclude-type": "DIRECT" };
+const UT_BASE = { type: "url-test", tolerance: 100, ...groupBaseOption, hidden: true, "exclude-type": "DIRECT" };
 // fallback 兜底组（顺序故障转移）：地区节点全挂时自动切到任意活节点，避免 url-test 粘死
 const FALLBACK_GROUP_NAME = "兜底自动选择";
 const FALLBACK_BASE = { type: "fallback", ...groupBaseOption, hidden: true };
 
-// 地区/大洲定义（顺序即生成顺序，动态地域组用）
+// 地区/大洲定义（顺序即生成顺序，动态地域组用）；地区含国旗（normalizeProxyName 用）
 const REGION_ORDER = [
-  ["香港", RE.HK, ICON.HK], ["台湾", RE.TW, ICON.TW], ["新加坡", RE.SG, ICON.SG],
-  ["日本", RE.JP, ICON.JP], ["美国", RE.US, ICON.US],
+  ["香港", "🇭🇰", RE.HK, ICON.HK], ["台湾", "🇹🇼", RE.TW, ICON.TW], ["新加坡", "🇸🇬", RE.SG, ICON.SG],
+  ["日本", "🇯🇵", RE.JP, ICON.JP], ["美国", "🇺🇸", RE.US, ICON.US],
 ];
 const CONTINENT_ORDER = [
   ["亚洲", RE.AS, ICON.AS], ["欧洲", RE.EU, ICON.EU], ["美洲", RE.AM, ICON.AM],
 ];
+
+// 国旗正则（emoji 地区标识）
+const FLAG_RE = /[\u{1F1E6}-\u{1F1FF}]{2}/u;
+// 节点分类缓存：避免地区/大洲正则对同一节点名重复执行（参考配置 regionMatchCache）
+const regionMatchCache = new Map();
+function classifyNode(name) {
+  const cached = regionMatchCache.get(name);
+  if (cached) return cached;
+  const regions = [], continents = [];
+  for (const [rname,, re] of REGION_ORDER) if (re.test(name)) regions.push(rname);
+  for (const [cname, re] of CONTINENT_ORDER) if (re.test(name)) continents.push(cname);
+  const res = { regions, continents };
+  regionMatchCache.set(name, res);
+  return res;
+}
+// 标准化节点名：保留原国旗；无国旗时按匹配地区补国旗；折叠多余空格（参考配置 normalizeProxyName）
+function normalizeProxyName(proxy) {
+  const name = proxy.name;
+  const flag = name.match(FLAG_RE)?.[0];
+  const nameWithoutFlag = (flag ? name.replace(flag, "") : name).replace(/\s+/g, " ").trim();
+  const { regions } = classifyNode(name);
+  const regionFlag = flag || REGION_ORDER.find(([rname]) => regions.includes(rname))?.[1];
+  const normalized = regionFlag ? `${regionFlag} ${nameWithoutFlag}` : nameWithoutFlag;
+  return normalized === name ? proxy : { ...proxy, name: normalized };
+}
 
 // 多版本直连节点（mihomoScript.js 设计）：国内直连 组提供 双栈/IPv4优先/IPv6优先/仅IPv4/仅IPv6
 const DIRECT_PROXIES = [
@@ -186,57 +216,62 @@ const DIRECT_PROXIES = [
 
 // 动态生成策略组（flclash v4.0 合并 + 开关联动）：仅生成有节点的活跃地域组；服务组按 ruleOptionsEnable 生成
 function buildProxyGroups(allProxyNames, infoNames) {
-  const filterBy = (re) => allProxyNames.filter((n) => re.test(n));
   const genUt = ruleOptionsEnable["自动选择"] || ruleOptionsEnable["生成地区自动选择组"];
+  const addAll = ruleOptionsEnable["分流组添加所有节点"];
 
-  // 1. 活跃地区组（无节点不生成；LB/UT 分别受 负载均衡/自动选择 开关控制）
+  // 1. 一次遍历分类（regionMatchCache 缓存正则结果）
+  const byRegion = new Map(), byContinent = new Map();
+  const otherNames = [];
+  for (const n of allProxyNames) {
+    const { regions, continents } = classifyNode(n);
+    for (const r of regions) { if (!byRegion.has(r)) byRegion.set(r, []); byRegion.get(r).push(n); }
+    for (const c of continents) { if (!byContinent.has(c)) byContinent.set(c, []); byContinent.get(c).push(n); }
+    if (regions.length === 0 && continents.length === 0) otherNames.push(n);
+  }
+
+  // 2. 活跃地区组（无节点不生成；LB/UT 分别受 负载均衡/自动选择 开关控制）
   const regionGroups = [];
   const lbNames = [], utNames = [], manualNames = [];
-  for (const [name, re, icon] of REGION_ORDER) {
-    const nodes = filterBy(re);
+  for (const [name,, , icon] of REGION_ORDER) {
+    const nodes = byRegion.get(name) || [];
     if (nodes.length === 0) continue;
     if (ruleOptionsEnable["负载均衡"]) { regionGroups.push({ name: `${name}负载均衡`, ...LB_BASE, proxies: nodes, icon }); lbNames.push(`${name}负载均衡`); }
     if (genUt) { regionGroups.push({ name: `${name}速度优先`, ...UT_BASE, proxies: [...nodes, FALLBACK_GROUP_NAME], icon }); utNames.push(`${name}速度优先`); }
   }
-  // 2. 大洲手动组（受 手动选择 开关控制；隐藏地区手动选择组 控制 hidden）
+  // 3. 大洲手动组（受 手动选择 开关控制；隐藏地区手动选择组 控制 hidden）
   if (ruleOptionsEnable["手动选择"]) {
     const hidden = ruleOptionsEnable["隐藏地区手动选择组"];
     for (const [name, re, icon] of CONTINENT_ORDER) {
-      const nodes = filterBy(re);
+      const nodes = byContinent.get(name) || [];
       if (nodes.length === 0) continue;
       regionGroups.push({ name: `${name}手动`, type: "select", proxies: nodes, icon, ...(hidden ? { hidden: true } : {}) });
       manualNames.push(`${name}手动`);
     }
-    const otherNodes = allProxyNames.filter((n) => isOtherRegion(n));
-    if (otherNodes.length > 0) {
-      regionGroups.push({ name: "其他手动", type: "select", proxies: otherNodes, icon: ICON.OT, ...(hidden ? { hidden: true } : {}) });
+    if (otherNames.length > 0) {
+      regionGroups.push({ name: "其他手动", type: "select", proxies: otherNames, icon: ICON.OT, ...(hidden ? { hidden: true } : {}) });
       manualNames.push("其他手动");
     }
   }
 
-  // 3. 动态出站列表
+  // 4. 动态出站列表
   const pg = [...lbNames, ...utNames, ...manualNames];
   const op = ["一键代理", "手动选择", "国内直连", ...lbNames, ...utNames, ...manualNames];
   const ld = ["国内直连", "一键代理", "手动选择", ...lbNames];
   const ai = op.filter((n) => !n.startsWith("香港")); // AI 排除香港（flclash v4.0 合并）
-  const svcProxies = ruleOptionsEnable["分流组添加所有节点"] ? allProxyNames : op;
+  const proxyLists = { op, ld, ai, svc: addAll ? allProxyNames : op };
 
-  // 4. 服务组（按开关生成）
+  // 5. 服务组（数据驱动：组+规则+规则集三联动）
   const services = [];
-  if (ruleOptionsEnable.AI) services.push(
-    { name: "ChatGPT", type: "select", proxies: ai, icon: ICON.ChatGPT },
-    { name: "Claude", type: "select", proxies: ai, icon: ICON.Claude },
-    { name: "Gemini", type: "select", proxies: ai, icon: ICON.Gemini });
-  if (ruleOptionsEnable.Media) services.push({ name: "流媒体", type: "select", proxies: svcProxies, icon: ICON.Netflix });
-  if (ruleOptionsEnable.Telegram) services.push({ name: "通信", type: "select", proxies: svcProxies, icon: ICON.Telegram });
-  if (ruleOptionsEnable.Google) services.push({ name: "云服务", type: "select", proxies: svcProxies, icon: ICON.GitHub });
-  if (ruleOptionsEnable["金融"]) services.push({ name: "金融", type: "select", proxies: svcProxies, icon: ICON.PayPal });
-  if (ruleOptionsEnable.Microsoft) services.push(
-    { name: "Microsoft", type: "select", proxies: ld, icon: ICON.Microsoft },
-    { name: "OneDrive", type: "select", proxies: ld, icon: ICON.OneDrive });
-  if (ruleOptionsEnable.Apple) services.push({ name: "Apple", type: "select", proxies: ld, icon: ICON.Apple });
+  const serviceRules = [];
+  const serviceProviders = {};
+  for (const svc of serviceConfigs) {
+    if (!ruleOptionsEnable[svc.sw]) continue;
+    for (const g of svc.groups) services.push({ name: g.name, type: "select", proxies: proxyLists[svc.proxiesKey], icon: g.icon });
+    serviceRules.push(...svc.rules);
+    Object.assign(serviceProviders, svc.providers);
+  }
 
-  // 5. 组装（核心三组始终生成；空列表兜底防止空组）
+  // 6. 组装（核心三组始终生成；空列表兜底防止空组）
   const groups = [
     { name: "一键代理", type: "select", proxies: pg.length ? pg : ["国内直连"], icon: ICON.Rocket },
     { name: "手动选择", type: "select", proxies: manualNames.length ? manualNames : ["国内直连"], icon: ICON.Rocket },
@@ -249,7 +284,10 @@ function buildProxyGroups(allProxyNames, infoNames) {
   ];
   // 兜底自动选择（顺序故障转移）：仅当存在"XX速度优先"组时生成，作为其最后一个成员
   if (genUt) groups.push({ name: FALLBACK_GROUP_NAME, ...FALLBACK_BASE, proxies: allProxyNames });
-  return groups;
+  // GLOBAL 全量聚合组（参考配置主入口；BettBox 面板首位）
+  const globalProxies = groups.map(g => g.name);
+  groups.unshift({ name: "GLOBAL", type: "select", ...groupBaseOption, proxies: globalProxies, icon: ICON.Rocket });
+  return { groups, serviceRules, serviceProviders };
 }
 
 // 规则块（与 clashmi.yml 1:1；按 ruleOptionsEnable 开关过滤，避免关闭组时悬空引用）
@@ -268,20 +306,67 @@ const RULES_CN_TAIL = ["RULE-SET,ResourceSite,国内直连","RULE-SET,PanVod,国
 // 屏蔽国外QUIC：国内 IP 放行，其余 UDP 443 REJECT（mihomoScript.js 规则简化版）
 const RULES_QUIC = ["AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((RULE-SET,cn_ip,no-resolve)))),REJECT"];
 
-// 组装规则：按开关过滤服务块；AdBlock 置顶避免广告域名被业务分流抢先匹配
-function buildRules() {
+// MetaCubeX meta-rules-dat 规则集构造器（mrs 格式，gh-proxy 镜像国内可达）
+const M = (file, behavior = "domain") => ({ type: "http", interval: 86400, behavior, format: "mrs", url: `https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/${file}.mrs` });
+const MI = (file) => ({ type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: `https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/${file}.mrs` });
+const MIG = (file) => ({ type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: `https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/${file}.mrs` });
+
+// 服务定义（数据驱动，参考配置 serviceConfigs）：一个服务 = 组 + 规则 + 规则集 单点内聚，
+// 组/规则/规则集由同一开关驱动生成，杜绝“规则引用了不存在的组/规则集”式脱节
+// proxiesKey: op=一键代理聚合 / ld=直连优先 / ai=剔除香港 / svc=分流组添加所有节点时全节点
+const serviceConfigs = [
+  {
+    sw: "AI", proxiesKey: "ai",
+    groups: [{ name: "ChatGPT", icon: ICON.ChatGPT }, { name: "Claude", icon: ICON.Claude }, { name: "Gemini", icon: ICON.Gemini }],
+    rules: RULES_AI,
+    providers: { openai_domain: M("openai"), anthropic_domain: M("anthropic"), "google-gemini_domain": M("google-gemini") },
+  },
+  {
+    sw: "Media", proxiesKey: "svc",
+    groups: [{ name: "流媒体", icon: ICON.Netflix }],
+    rules: RULES_MEDIA,
+    providers: { youtube_domain: M("youtube"), netflix_domain: M("netflix"), netflix_ip: MI("netflix"), disney_domain: M("disney"), appletv_domain: M("apple-tvplus"), ...(ruleOptionsEnable.TikTok ? { tiktok_domain: M("tiktok") } : {}), ...(ruleOptionsEnable.Spotify ? { spotify_domain: M("spotify") } : {}) },
+  },
+  {
+    sw: "Telegram", proxiesKey: "svc",
+    groups: [{ name: "通信", icon: ICON.Telegram }],
+    rules: RULES_TELEGRAM,
+    providers: { telegram_domain: M("telegram"), telegram_ip: MI("telegram"), ...(ruleOptionsEnable.Twitter ? { twitter_domain: M("twitter"), twitter_ip: MI("twitter") } : {}) },
+  },
+  {
+    sw: "Google", proxiesKey: "svc",
+    groups: [{ name: "云服务", icon: ICON.GitHub }],
+    rules: RULES_GOOGLE,
+    providers: { google_domain: M("google"), google_ip: MI("google"), github_domain: M("github"), speedtest_domain: M("ookla-speedtest") },
+  },
+  {
+    sw: "金融", proxiesKey: "svc",
+    groups: [{ name: "金融", icon: ICON.PayPal }],
+    rules: RULES_PAYPAL,
+    providers: { paypal_domain: M("paypal") },
+  },
+  {
+    sw: "Microsoft", proxiesKey: "ld",
+    groups: [{ name: "Microsoft", icon: ICON.Microsoft }, { name: "OneDrive", icon: ICON.OneDrive }],
+    rules: RULES_MS,
+    providers: { onedrive_domain: M("onedrive"), microsoft_domain: M("microsoft") },
+  },
+  {
+    sw: "Apple", proxiesKey: "ld",
+    groups: [{ name: "Apple", icon: ICON.Apple }],
+    rules: RULES_APPLE,
+    providers: { apple_domain: M("apple"), apple_ip: MIG("apple") },
+  },
+];
+
+// 组装规则：前置基础规则 + 数据驱动服务规则（serviceConfigs 收集）+ 尾部兜底
+function buildRules(serviceRules) {
   return [
     ...(ruleOptionsEnable.AdBlock ? ["RULE-SET,adblock,REJECT"] : []),
     ...RULES_PRIVATE,
     ...RULES_CN_FAST,
     ...RULES_MY,
-    ...(ruleOptionsEnable.AI ? RULES_AI : []),
-    ...(ruleOptionsEnable.Media ? RULES_MEDIA : []),
-    ...(ruleOptionsEnable.Telegram ? RULES_TELEGRAM : []),
-    ...(ruleOptionsEnable.Google ? RULES_GOOGLE : []),
-    ...(ruleOptionsEnable["金融"] ? RULES_PAYPAL : []),
-    ...(ruleOptionsEnable.Apple ? RULES_APPLE : []),
-    ...(ruleOptionsEnable.Microsoft ? RULES_MS : []),
+    ...serviceRules,
     ...RULES_CN_TAIL,
     ...(ruleOptionsEnable["屏蔽国外QUIC"] ? RULES_QUIC : []),
     // gfw 兜底：未命中业务规则的被墙域名走代理（mihomoScript.js 设计）
@@ -289,50 +374,29 @@ function buildRules() {
     "MATCH,漏网之鱼",
   ];
 }
-const RULE_PROVIDERS = {
+const RULE_PROVIDERS_BASE = {
   ResourceSite: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/ResourceSite.list" },
   PanVod: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/PanVod.list" },
-  ntp_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ntp.mrs" },
+  ntp_domain: M("category-ntp"),
   // 国内直连加速（mihomoScript.js 参考源）
-  games_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-games@cn.mrs" },
-  epicgames: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.mrs" },
-  nvidia_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nvidia@cn.mrs" },
-  apple_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple@cn.mrs" },
-  microsoft_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft@cn.mrs" },
-  private_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs" },
-  speedtest_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs" },
-  openai_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs" },
-  anthropic_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs" },
-  "google-gemini_domain": { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-gemini.mrs" },
-  github_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs" },
-  youtube_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs" },
-  google_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs" },
-  onedrive_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs" },
-  microsoft_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs" },
-  appletv_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-tvplus.mrs" },
-  apple_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs" },
-  tiktok_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs" },
-  twitter_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs" },
-  telegram_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs" },
-  netflix_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs" },
-  disney_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs" },
-  spotify_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs" },
-  paypal_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/paypal.mrs" },
-  "geolocation_not_cn": { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs" },
-  gfw: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.mrs" },
-  // AdBlock 规则集（仅 ruleOptionsEnable.AdBlock 开启时注入，默认不下载）
-  adblock: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.mrs" },
-  cn_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs" },
+  games_cn: M("category-games@cn"),
+  epicgames: M("epicgames"),
+  nvidia_cn: M("nvidia@cn"),
+  apple_cn: M("apple@cn"),
+  microsoft_cn: M("microsoft@cn"),
+  private_domain: M("private"),
+  cn_domain: M("cn"),
+  cn_ip: MI("cn"),
+  private_ip: MI("private"),
+  "geolocation_not_cn": M("geolocation-!cn"),
+  gfw: M("gfw"),
+  // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules）
+  fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules@release/fakeip-filter.mrs" },
   add_direct_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs" },
   my_direct: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_direct.list" },
   my_proxy: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/my_proxy.list" },
-  apple_ip: { type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs" },
-  private_ip: { type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs" },
-  google_ip: { type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs" },
-  telegram_ip: { type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs" },
-  twitter_ip: { type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs" },
-  netflix_ip: { type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs" },
-  cn_ip: { type: "http", interval: 86400, behavior: "ipcidr", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs" },
+  // AdBlock 规则集（仅 ruleOptionsEnable.AdBlock 开启时注入，默认不下载）
+  adblock: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.mrs" },
 };
 
 // ===== mihomoScript.js 的 DNS/hosts 逻辑（精简适配）=====
@@ -347,11 +411,16 @@ function buildDnsAndHosts(filteredProxies) {
   return {
     dns: {
       enable: true, ipv6: false, listen: "0.0.0.0:7874",
+      // mihomoScript.js 参考源细节：系统 hosts 读取 + ARC 缓存 + hosts 生效开关
+      "use-hosts": true, "use-system-hosts": true, "cache-algorithm": "arc",
       "enhanced-mode": "fake-ip", "fake-ip-range": "198.18.0.1/16",
-      "fake-ip-filter": ["+.orb.local","localhost","*.home.arpa","time.*.com","ntp.*.com","+.ntp.org","+.pool.ntp.org","captive.apple.com","connectivitycheck.gstatic.com","+.msftconnecttest.com","+.msftncsi.com","stun.*.*","+.stun.playstation.net","+.xboxlive.com","+.speedtest.net"],
+      // 规则集级 fake-ip-filter（参考配置）：私有/中国大陆/常见无需 fake-ip 的域名走真实 IP
+      "fake-ip-filter": ["rule-set:private_domain","rule-set:fakeip_filter","rule-set:cn_domain","+.orb.local","localhost","*.home.arpa","time.*.com","ntp.*.com","+.ntp.org","+.pool.ntp.org","captive.apple.com","connectivitycheck.gstatic.com","+.msftconnecttest.com","+.msftncsi.com","stun.*.*","+.stun.playstation.net","+.xboxlive.com","+.speedtest.net"],
       "default-nameserver": chinaDNS,
       "proxy-server-nameserver": chinaDoh,
       nameserver: foreignDNS,
+      // DIRECT 流量走国内 DNS（参考配置 direct-nameserver）
+      "direct-nameserver": ["system", ...chinaDNS],
       "nameserver-policy": {
         "geosite:cn": chinaDNS[0],
         // my_direct 域名走国内 DNS 直连解析（防死锁：节点/代理不可用时直连流量仍可用）
@@ -362,31 +431,34 @@ function buildDnsAndHosts(filteredProxies) {
       },
     },
     hosts: {
-      "cloudflare-dns.com": "1.1.1.1",
-      "dns.google": "8.8.8.8",
+      // 多 IP 数组兑底（参考配置 hosts 数组写法）
+      "cloudflare-dns.com": ["1.1.1.1", "1.0.0.1"],
+      "dns.google": ["8.8.8.8", "8.8.4.4"],
       // 解决谷歌商店无法下载的问题
-      "services.googleapis.cn": "services.googleapis.com",
+      "services.googleapis.cn": ["services.googleapis.com"],
       // 屏蔽哔哩哔哩 PCDN，解决访问视频/直播卡顿问题
-      "+.mcdn.bilivideo.com": "0.0.0.0",
-      "+.mcdn.bilivideo.cn": "0.0.0.0",
-      "+.edge.mountaintoys.cn": "0.0.0.0",
-      "+.h2.smtcdns.net": "0.0.0.0",
+      "+.mcdn.bilivideo.com": ["0.0.0.0"],
+      "+.mcdn.bilivideo.cn": ["0.0.0.0"],
+      "+.edge.mountaintoys.cn": ["0.0.0.0"],
+      "+.h2.smtcdns.net": ["0.0.0.0"],
     }
   };
 }
 
-// ===== 节点过滤（复用 mihomoScript.js 的双重过滤 + 去重）=====
+// ===== 节点过滤（复用 mihomoScript.js 的双重过滤 + 国旗标准化 + 去重）=====
 function filterAndNormalizeProxies(allProxies) {
+  regionMatchCache.clear(); // 清缓存，防上次运行残留旧名称
   // 分离噪音节点（Info 组保留，flclash v4.0 合并）与正常节点
   const info = []; const normal = [];
   for (const p of (allProxies || [])) {
     const n = typeof p === "string" ? p : p.name;
     (INVALID_PROXY_RE.test(n) || (ruleOptionsEnable["过滤非地区节点"] && excludeFilter.test(n)) ? info : normal).push(p);
   }
-  // 去重（保留首个同名）
+  // 国旗标准化（补国旗/折叠空格）+ 去重（保留首个同名，参考配置 normalizeProxyName）
   const seen = new Set(); const out = [];
   for (const p of normal) {
-    if (!seen.has(p.name)) { seen.add(p.name); out.push(p); }
+    const normalized = normalizeProxyName(p);
+    if (!seen.has(normalized.name)) { seen.add(normalized.name); out.push(normalized); }
   }
   if (out.length === 0) throw new Error("配置文件中未找到任何代理节点，请检查订阅");
   return { filtered: out, info };
@@ -395,15 +467,15 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v2.7 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v2.8 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
     const infoNames = info.map(p => p.name);
     log(`📦 有效节点 ${allProxyNames.length}/${(config.proxies||[]).length}（Info ${infoNames.length}）`);
 
-    // 1. 构建策略组（动态地域：仅生成活跃组）并做防御性空组清理（解决 Go: use or proxies missing）
-    let proxyGroups = buildProxyGroups(allProxyNames, infoNames);
+    // 1. 构建策略组（数据驱动：组+规则+规则集三联动；动态地域仅生成活跃组）并做防御性空组清理（解决 Go: use or proxies missing）
+    let { groups: proxyGroups, serviceRules, serviceProviders } = buildProxyGroups(allProxyNames, infoNames);
     const empty = new Set(proxyGroups.filter(g => !g.proxies || g.proxies.length===0).map(g=>g.name));
     if (empty.size>0) {
       log(`⚠️ 剔除空地域组: ${[...empty].join("、")}`);
@@ -442,33 +514,10 @@ function main(config) {
     // info 节点保留在 proxies（Info 组引用），但不进任何常规代理路径
     newConfig["proxies"] = [...DIRECT_PROXIES, ...info, ...filteredProxies];
     newConfig["proxy-groups"] = proxyGroups;
-    const providers = { ...RULE_PROVIDERS };
-    // 开关联动：关闭的服务组不下发对应规则集
-    const PROVIDER_BY_SWITCH = {
-      AI: ["openai_domain","anthropic_domain","google-gemini_domain"],
-      Media: ["youtube_domain","netflix_domain","netflix_ip","disney_domain","appletv_domain"],
-      Telegram: ["telegram_domain","telegram_ip"],
-      Google: ["google_domain","google_ip","github_domain","speedtest_domain"],
-      金融: ["paypal_domain"],
-      Apple: ["apple_domain","apple_ip"],
-      Microsoft: ["onedrive_domain","microsoft_domain"],
-    };
-    for (const [sw, list] of Object.entries(PROVIDER_BY_SWITCH)) {
-      if (!ruleOptionsEnable[sw]) for (const p of list) delete providers[p];
-    }
-    // 子开关（并入 通信/流媒体）：false 时移除对应规则集；所属主开关关闭时一并移除
-    const SUB_SWITCH = {
-      Twitter: ["twitter_domain","twitter_ip"],
-      TikTok: ["tiktok_domain"],
-      Spotify: ["spotify_domain"],
-    };
-    for (const [sw, list] of Object.entries(SUB_SWITCH)) {
-      const parent = sw === "Twitter" ? "Telegram" : "Media";
-      if (!ruleOptionsEnable[sw] || !ruleOptionsEnable[parent]) for (const p of list) delete providers[p];
-    }
+    const providers = { ...RULE_PROVIDERS_BASE, ...serviceProviders };
     if (!ruleOptionsEnable.AdBlock) delete providers.adblock; // 默认关闭时不下发 adblock 规则集
     newConfig["rule-providers"] = OPTIONS.OVERRIDE_RULES ? providers : { ...(config["rule-providers"]||{}), ...providers };
-    newConfig["rules"] = OPTIONS.OVERRIDE_RULES ? buildRules() : [...buildRules(), ...(config.rules||[])];
+    newConfig["rules"] = OPTIONS.OVERRIDE_RULES ? buildRules(serviceRules) : [...buildRules(serviceRules), ...(config.rules||[])];
     newConfig["dns"] = dns;
     newConfig["hosts"] = hosts;
     newConfig["ntp"] = { enable: true, "write-to-system": false, server: "ntp.aliyun.com", port: 123, interval: 60 };
