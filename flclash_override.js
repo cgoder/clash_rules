@@ -1,6 +1,6 @@
 // ============================================================
 // 🔧 clashmi → FlClash/BettBox 覆写 v4.0
-// ⏰ 更新时间: 2026-08-25 11:24:31 CST
+// ⏰ 更新时间: 2026-08-25 11:26:01 CST
 // 基于 clashmi.yml 1:1 + 例份最佳实践重构（BettBox 兼容）
 // - 吸收：normalizeName/buildRegex/uniq/makeProxyNamesUnique/splitInfo/classify/Info组/AI排除HK/工厂模式/Fallback双组/applyDns合并
 // - 保留：25+ 策略组（10×LB/UT + 4×大洲手动）、33 rule-providers、32 rules、gh-proxy 加速、图标体系
@@ -152,7 +152,7 @@ function main(config) {
     github_domain: mrsDN("geosite/github.mrs"),
     speedtest_domain: mrsDN("geosite/ookla-speedtest.mrs"),
     paypal_domain: mrsDN("geosite/paypal.mrs"),
-    "geolocation-!cn": mrsDN("geosite/geolocation-!cn.mrs"), // keep quoted due to !
+    geolocation_not_cn: mrsDN("geosite/geolocation-!cn.mrs"), // keep quoted due to !
     apple_domain: mrsDN("geosite/apple.mrs"),
     apple_ip: { type:"http", interval:86400, behavior:"ipcidr", format:"mrs", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs", path:"./ruleset/geo-lite/geoip/apple.mrs" },
     onedrive_domain: mrsDN("geosite/onedrive.mrs"),
