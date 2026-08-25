@@ -1,6 +1,6 @@
 // ============================================================
 // 🔧 clashmi → FlClash/BettBox 覆写 v4.0
-// ⏰ 更新时间: 2026-08-25 11:37:27 CST
+// ⏰ 更新时间: 2026-08-25 11:49:02 CST
 // 基于 clashmi.yml 1:1 + 例份最佳实践重构（BettBox 兼容）
 // - 吸收：normalizeName/buildRegex/uniq/makeProxyNamesUnique/splitInfo/classify/Info组/AI排除HK/工厂模式/Fallback双组/applyDns合并
 // - 保留：25+ 策略组（10×LB/UT + 4×大洲手动）、33 rule-providers、32 rules、gh-proxy 加速、图标体系
@@ -44,24 +44,18 @@ function main(config) {
 
   // ==================== 2. 工具 ====================
   const uniq = (arr=[]) => [...new Set(arr.filter(Boolean))];
-  const escapeRegex = (s="") => String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-  const normalizeName = (name="") => String(name).replace(/(IEPL|IPLC|BGP|RELAY|PRO|V\d+)/ig," $1 ").replace(/[【】\[\]（）()|_\-.,/:~]/g," ").replace(/🇭🇰/g," HK ").replace(/🇹🇼/g," TW ").replace(/🇸🇬/g," SG ").replace(/🇯🇵/g," JP ").replace(/🇰🇷/g," KR ").replace(/🇺🇸/g," US ").replace(/🇻🇳|🇹🇭|🇲🇾|🇮🇩|🇵🇭|🇩🇪|🇬🇧|🇫🇷|🇨🇦|🇲🇽|🇧🇷|🇦🇷|🇨🇱|🇷🇺|🇹🇷/g," ").toUpperCase().replace(/\s+/g," ").trim();
-  const buildRegex = (arr=[]) => {
-    const pats = arr.map(raw=>{const t=String(raw).trim().toUpperCase(); const e=escapeRegex(t); return /^[A-Z]{2,3}$/.test(t) ? `(?:^|[^A-Z])${e}(?:[^A-Z]|$)` : e;});
-    return new RegExp(pats.join("|"),"i");
-  };
-  // 参照 clashmi.yml Anchors 1:1，含全部旗帜/中英/代码/别称，避免漏命中（如仅剩印度）
+  // 严格对齐 clashmi.yml Anchors 的正则（?i + (?=.*(...)) 结构，含旗帜/中英/别称/\b 代码），避免自建 buildRegex 遗漏导致仅剩印度/加拿大
   const buildRegions = () => ([
-    { name:"HK", pattern:["香港","🇭🇰","HK","HKG","Hong","HONGKONG","HONG KONG"], icon:"HK.png" },
-    { name:"TW", pattern:["台湾","台灣","台北","新北","🇹🇼","TW","TWN","TAIWAN","TAIPEI"], icon:"TW.png" },
-    { name:"SG", pattern:["新加坡","狮城","🇸🇬","SG","SGP","SINGAPORE","SIN"], icon:"SG.png" },
-    { name:"JP", pattern:["日本","🇯🇵","东京","大阪","JP","JPN","JAPAN","TOKYO","OSAKA"], icon:"JP.png" },
-    { name:"US", pattern:["美国","美國","纽约","洛杉矶","旧金山","🇺🇸","US","USA","AMERICA","UNITED STATES"], icon:"US.png" },
-    { name:"AS", pattern:["韩国","韓國","印度","印度尼西亚","泰国","泰國","马来西亚","馬來西亞","菲律宾","菲律賓","越南","印尼","🇰🇷","🇮🇳","🇹🇭","🇲🇾","🇵🇭","🇻🇳","🇮🇩","KR","KOR","KOREA","IN","TH","MY","PH","VN","ID","VIETNAM","THAILAND","MALAYSIA","PHILIPPINES","INDONESIA"], icon:"AS.png" },
-    { name:"EU", pattern:["德国","德國","英国","英國","法国","法國","荷兰","荷蘭","瑞士","意大利","義大利","西班牙","芬兰","芬蘭","瑞典","挪威","丹麦","比利时","奥地利","波兰","罗马尼亚","羅馬尼亞","捷克","葡萄牙","希腊","匈牙利","爱尔兰","俄罗斯","俄羅斯","土耳其","🇩🇪","🇬🇧","🇫🇷","🇳🇱","🇨🇭","🇮🇹","🇪🇸","🇫🇮","🇸🇪","🇳🇴","🇩🇰","🇧🇪","🇦🇹","🇵🇱","🇷🇴","🇨🇿","🇵🇹","🇬🇷","🇭🇺","🇮🇪","🇷🇺","🇹🇷","DE","UK","GB","FR","NL","CH","IT","ES","FI","SE","NO","DK","BE","AT","PL","RO","CZ","PT","GR","HU","IE","RU","TR","GERMANY","BRITAIN","FRANCE","NETHERLANDS","SWITZERLAND","ITALY","SPAIN","FINLAND","SWEDEN","NORWAY","DENMARK","BELGIUM","AUSTRIA","POLAND","ROMANIA","CZECH","PORTUGAL","GREECE","HUNGARY","IRELAND","RUSSIA","TURKEY"], icon:"EU.png" },
-    { name:"AM", pattern:["美国","美國","加拿大","墨西哥","巴西","阿根廷","智利","🇺🇸","🇨🇦","🇲🇽","🇧🇷","🇦🇷","🇨🇱","US","USA","CA","MX","BR","AR","CL","AMERICA","UNITED STATES","CANADA","MEXICO","BRAZIL","ARGENTINA","CHILE"], icon:"AM.png" },
-    { name:"OT", pattern:[], icon:"OT.png" },
-  ]).map(r=> ({...r, regex: r.name==="OT" ? null : buildRegex(r.pattern)}));
+    { name:"HK", regex: /(?=.*(香港|🇭🇰|\bHK\b|\bHKG\b|Hong))/i, icon:"HK.png" },
+    { name:"TW", regex: /(?=.*(台湾|台灣|🇹🇼|\bTW\b|Taiwan))/i, icon:"TW.png" },
+    { name:"SG", regex: /(?=.*(新加坡|🇸🇬|\bSG\b|\bSGP\b|Singapore))/i, icon:"SG.png" },
+    { name:"JP", regex: /(?=.*(日本|🇯🇵|\bJP\b|\bJPN\b|Japan))/i, icon:"JP.png" },
+    { name:"US", regex: /(?=.*(美国|美國|🇺🇸|\bUS\b|\bUSA\b|America|United States))/i, icon:"US.png" },
+    { name:"AS", regex: /(?=.*(香港|台湾|台灣|新加坡|日本|韩国|韓國|印度|泰国|泰國|马来西亚|馬來西亞|菲律宾|菲律賓|越南|印尼|印度尼西亚|🇭🇰|🇹🇼|🇸🇬|🇯🇵|🇰🇷|🇮🇳|🇹🇭|🇲🇾|🇵🇭|🇻🇳|🇮🇩|\bHK\b|\bHKG\b|\bTW\b|\bSG\b|\bSGP\b|\bJP\b|\bJPN\b|\bKR\b|\bKOR\b|\bIN\b|\bTH\b|\bMY\b|\bPH\b|\bVN\b|\bID\b|Hong|Taiwan|Singapore|Japan|Korea|India|Thailand|Malaysia|Philippines|Vietnam|Indonesia))/i, icon:"AS.png" },
+    { name:"EU", regex: /(?=.*(德国|德國|英国|英國|法国|法國|荷兰|荷蘭|瑞士|意大利|義大利|西班牙|芬兰|芬蘭|瑞典|挪威|丹麦|比利时|奥地利|波兰|罗马尼亚|羅馬尼亞|捷克|葡萄牙|希腊|匈牙利|爱尔兰|俄罗斯|俄羅斯|土耳其|🇩🇪|🇬🇧|🇫🇷|🇳🇱|🇨🇭|🇮🇹|🇪🇸|🇫🇮|🇸🇪|🇳🇴|🇩🇰|🇧🇪|🇦🇹|🇵🇱|🇷🇴|🇨🇿|🇵🇹|🇬🇷|🇭🇺|🇮🇪|🇷🇺|🇹🇷|\bDE\b|\bUK\b|\bGB\b|\bFR\b|\bNL\b|\bCH\b|\bIT\b|\bES\b|\bFI\b|\bSE\b|\bNO\b|\bDK\b|\bBE\b|\bAT\b|\bPL\b|\bRO\b|\bCZ\b|\bPT\b|\bGR\b|\bHU\b|\bIE\b|\bRU\b|\bTR\b|Germany|Britain|France|Netherlands|Switzerland|Italy|Spain|Finland|Sweden|Norway|Denmark|Belgium|Austria|Poland|Romania|Czech|Portugal|Greece|Hungary|Ireland|Russia|Turkey))/i, icon:"EU.png" },
+    { name:"AM", regex: /(?=.*(美国|美國|加拿大|墨西哥|巴西|阿根廷|智利|🇺🇸|🇨🇦|🇲🇽|🇧🇷|🇦🇷|🇨🇱|\bUS\b|\bUSA\b|\bCA\b|\bMX\b|\bBR\b|\bAR\b|\bCL\b|America|United States|Canada|Mexico|Brazil|Argentina|Chile))/i, icon:"AM.png" },
+    { name:"OT", regex: null, icon:"OT.png" },
+  ]);
 
   const REGIONS = buildRegions();
   const ensureConfigObject = (o) => (o && typeof o==="object" ? o : {});
@@ -86,8 +80,7 @@ function main(config) {
     const map=new Map(datas.map(r=>[r.name,r])), seen=new Map(datas.map(r=>[r.name,new Set()]));
     const other=[], otherSeen=new Set();
     normalProxies.forEach(proxy=>{
-      const norm=normalizeName(proxy.name);
-      const hit=datas.find(r=>r.regex.test(norm));
+      const hit=datas.find(r=>r.regex.test(proxy.name));
       if(hit){ const s=seen.get(hit.name); if(!s.has(proxy.name)){ map.get(hit.name).proxies.push(proxy.name); s.add(proxy.name);} }
       else if(!otherSeen.has(proxy.name)){ other.push(proxy.name); otherSeen.add(proxy.name); }
     });
