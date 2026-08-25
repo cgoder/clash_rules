@@ -152,7 +152,7 @@ function main(config) {
     github_domain: mrsDN("geosite/github.mrs"),
     speedtest_domain: mrsDN("geosite/ookla-speedtest.mrs"),
     paypal_domain: mrsDN("geosite/paypal.mrs"),
-    "geolocation-!cn": mrsDN("geosite/geolocation-!cn.mrs"),
+    geolocation-!cn: mrsDN("geosite/geolocation-!cn.mrs"),
     apple_domain: mrsDN("geosite/apple.mrs"),
     apple_ip: { type:"http", interval:86400, behavior:"ipcidr", format:"mrs", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs" },
     onedrive_domain: mrsDN("geosite/onedrive.mrs"),
