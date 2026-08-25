@@ -1,6 +1,6 @@
 // ============================================================
 // 🔧 clashmi → FlClash/BettBox 覆写 v4.0
-// ⏰ 更新时间: 2026-08-25 10:33:39 CST
+// ⏰ 更新时间: 2026-08-25 11:20:35 CST
 // 基于 clashmi.yml 1:1 + 例份最佳实践重构（BettBox 兼容）
 // - 吸收：normalizeName/buildRegex/uniq/makeProxyNamesUnique/splitInfo/classify/Info组/AI排除HK/工厂模式/Fallback双组/applyDns合并
 // - 保留：25+ 策略组（10×LB/UT + 4×大洲手动）、33 rule-providers、32 rules、gh-proxy 加速、图标体系
@@ -126,9 +126,9 @@ function main(config) {
   };
 
   // ==================== 4. 规则 ====================
-  // 1:1 对齐 clashmi.yml：domain/ipcidr 均为 mrs，classical 为 text；URL 均经 gh-proxy
-  const mrsDN = (file)=>({ type:"http", interval:86400, behavior:"domain", format:"mrs", url:`https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/${file}` });
-  const mrsIP = (file)=>({ type:"http", interval:86400, behavior:"ipcidr", format:"mrs", url:`https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/${file}` });
+  // 1:1 对齐 clashmi.yml：domain/ipcidr 均为 mrs，classical 为 text；URL 均经 gh-proxy；补 path 避免 BettBox 缓存 404
+  const mrsDN = (file)=>({ type:"http", interval:86400, behavior:"domain", format:"mrs", url:`https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/${file}`, path:`./ruleset/${file}` });
+  const mrsIP = (file)=>({ type:"http", interval:86400, behavior:"ipcidr", format:"mrs", url:`https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/${file}`, path:`./ruleset/${file}` });
   const buildRuleProviders = ()=>({
     private_domain: mrsDN("geosite/private.mrs"),
     private_ip: mrsIP("geoip/private.mrs"),
@@ -154,7 +154,7 @@ function main(config) {
     paypal_domain: mrsDN("geosite/paypal.mrs"),
     "geolocation-!cn": mrsDN("geosite/geolocation-!cn.mrs"),
     apple_domain: mrsDN("geosite/apple.mrs"),
-    apple_ip: { type:"http", interval:86400, behavior:"ipcidr", format:"mrs", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs" },
+    apple_ip: { type:"http", interval:86400, behavior:"ipcidr", format:"mrs", url:"https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs", path:"./ruleset/geo-lite/geoip/apple.mrs" },
     onedrive_domain: mrsDN("geosite/onedrive.mrs"),
     microsoft_domain: mrsDN("geosite/microsoft.mrs"),
     cn_domain: mrsDN("geosite/cn.mrs"),
