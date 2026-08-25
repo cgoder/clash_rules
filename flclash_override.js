@@ -1,5 +1,6 @@
 // ============================================================
 // 🔧 clashmi → FlClash/BettBox 覆写 v4.0
+// ⏰ 更新时间: 2026-08-25 10:33:39 CST
 // 基于 clashmi.yml 1:1 + 例份最佳实践重构（BettBox 兼容）
 // - 吸收：normalizeName/buildRegex/uniq/makeProxyNamesUnique/splitInfo/classify/Info组/AI排除HK/工厂模式/Fallback双组/applyDns合并
 // - 保留：25+ 策略组（10×LB/UT + 4×大洲手动）、33 rule-providers、32 rules、gh-proxy 加速、图标体系
