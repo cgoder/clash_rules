@@ -1,6 +1,13 @@
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v2.4  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-08-25 12:40:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v2.5  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-08-25 13:10:00 CST
+//
+// v2.5 变更（修复 ruleOptionsEnable 开关全部失效的问题）：
+// - 服务组开关 AI/Media/Telegram/Google/Microsoft/Apple/金融 真正驱动 组+规则+规则集
+// - 负载均衡/自动选择/手动选择 控制地区组生成；生成地区自动选择组 与 自动选择 同义
+// - 隐藏地区手动选择组 / 分流组添加所有节点 / 过滤非地区节点 / 屏蔽国外QUIC 生效
+// - Twitter/TikTok/Spotify 作为子开关控制对应规则是否进入 通信/流媒体 组
+// - 新增"金融"开关（paypal）；FCM/Steam 等 clashmi 无对应结构的键保留为兼容无效
 //
 // v2.4 变更（合并 mihomoScript.js 参考源的国内直连加速）：
 // - games_cn/epicgames/nvidia_cn/apple_cn/microsoft_cn 规则集 + fsend.cn/nvidia下载/hdslb.com 直连
@@ -54,36 +61,34 @@ const OPTIONS = {
   STORE_SELECTED: false,
 };
 
+// 用户可调开关（真正驱动组/规则/规则集的生成；键名保持 mihomoScript.js 兼容）
 const ruleOptionsEnable = {
-  手动选择: true,
-  自动选择: true,
-  负载均衡: true,
-  AI: true,
-  Media: true,
-  FCM: false,
-  Google: true,
-  Microsoft: true,
-  Apple: true,
-  Telegram: true,
-  Steam: false,
-  TikTok: true,
-  Twitter: true,
-  Emby: false,
-  PikPak: false,
-  Spotify: true,
-  Crypto: false,
-  EHentai: false,
-  AdBlock: false,
-  生成地区自动选择组: true,
-  隐藏地区手动选择组: false,
-  生成倍率组: false,
-  分流组添加所有节点: false,
-  过滤高倍率节点: false,
-  过滤非地区节点: true,
-  屏蔽国外QUIC: false,
-  代理IPV4优先: false,
-  代理IPV6优先: false,
-  链式代理: false,
+  // === 核心出站结构 ===
+  手动选择: true,   // 大洲手动组（亚洲/欧洲/美洲/其他手动）；false 时核心"手动选择"组退化为国内直连
+  自动选择: true,   // 地区"XX速度优先"（url-test）组
+  负载均衡: true,   // 地区"XX负载均衡"（load-balance）组
+  生成地区自动选择组: true, // mihomoScript 兼容键：与"自动选择"同义
+  隐藏地区手动选择组: false, // true 时大洲手动组 hidden
+  分流组添加所有节点: false, // true 时服务组直接引用全部节点而非组引用
+  // === 服务组（联动 组+规则+规则集）===
+  AI: true,        // ChatGPT/Claude/Gemini
+  Media: true,     // 流媒体（youtube/netflix/tiktok/disney/spotify/appletv）
+  Telegram: true,  // 通信（telegram + twitter，twitter 由 Twitter 子开关控制）
+  Google: true,    // 云服务（google/github/speedtest）
+  Microsoft: true, // Microsoft/OneDrive
+  Apple: true,     // Apple
+  金融: true,      // 金融（paypal）
+  // === 子开关（并入对应组，false 时仅移除对应规则）===
+  Twitter: true,   // 通信组是否含 twitter 规则
+  TikTok: true,    // 流媒体组是否含 tiktok 规则
+  Spotify: true,   // 流媒体组是否含 spotify 规则
+  // === 功能开关 ===
+  AdBlock: false,  // 广告拦截（adblock 规则集 + REJECT 置顶）
+  过滤非地区节点: true, // 过滤无地区标识的节点（进 Info 组）
+  屏蔽国外QUIC: false, // 屏蔽国外 QUIC（UDP 443 非国内 REJECT）
+  // === clashmi 结构不支持的 mihomoScript 开关（改 true 无效，保留兼容）===
+  FCM: false, Steam: false, Emby: false, PikPak: false, Crypto: false, EHentai: false,
+  生成倍率组: false, 过滤高倍率节点: false, 代理IPV4优先: false, 代理IPV6优先: false, 链式代理: false,
 };
 
 // 图标
@@ -164,87 +169,109 @@ const DIRECT_PROXIES = [
   { name: "🇨🇳 直连 | 仅IPv6", type: "direct", "ip-version": "ipv6" },
 ];
 
-// 动态生成策略组（flclash v4.0 合并）：仅生成有节点的活跃地域组；服务组引用动态出站列表
+// 动态生成策略组（flclash v4.0 合并 + 开关联动）：仅生成有节点的活跃地域组；服务组按 ruleOptionsEnable 生成
 function buildProxyGroups(allProxyNames, infoNames) {
   const filterBy = (re) => allProxyNames.filter((n) => re.test(n));
+  const genUt = ruleOptionsEnable["自动选择"] || ruleOptionsEnable["生成地区自动选择组"];
 
-  // 1. 活跃地区/大洲组（无节点则不生成）
+  // 1. 活跃地区组（无节点不生成；LB/UT 分别受 负载均衡/自动选择 开关控制）
   const regionGroups = [];
   const lbNames = [], utNames = [], manualNames = [];
   for (const [name, re, icon] of REGION_ORDER) {
     const nodes = filterBy(re);
     if (nodes.length === 0) continue;
-    regionGroups.push({ name: `${name}负载均衡`, ...LB_BASE, proxies: nodes, icon });
-    regionGroups.push({ name: `${name}速度优先`, ...UT_BASE, proxies: [...nodes, FALLBACK_GROUP_NAME], icon });
-    lbNames.push(`${name}负载均衡`); utNames.push(`${name}速度优先`);
+    if (ruleOptionsEnable["负载均衡"]) { regionGroups.push({ name: `${name}负载均衡`, ...LB_BASE, proxies: nodes, icon }); lbNames.push(`${name}负载均衡`); }
+    if (genUt) { regionGroups.push({ name: `${name}速度优先`, ...UT_BASE, proxies: [...nodes, FALLBACK_GROUP_NAME], icon }); utNames.push(`${name}速度优先`); }
   }
-  for (const [name, re, icon] of CONTINENT_ORDER) {
-    const nodes = filterBy(re);
-    if (nodes.length === 0) continue;
-    regionGroups.push({ name: `${name}手动`, type: "select", proxies: nodes, icon });
-    manualNames.push(`${name}手动`);
-  }
-  const otherNodes = allProxyNames.filter((n) => isOtherRegion(n));
-  if (otherNodes.length > 0) {
-    regionGroups.push({ name: "其他手动", type: "select", proxies: otherNodes, icon: ICON.OT });
-    manualNames.push("其他手动");
+  // 2. 大洲手动组（受 手动选择 开关控制；隐藏地区手动选择组 控制 hidden）
+  if (ruleOptionsEnable["手动选择"]) {
+    const hidden = ruleOptionsEnable["隐藏地区手动选择组"];
+    for (const [name, re, icon] of CONTINENT_ORDER) {
+      const nodes = filterBy(re);
+      if (nodes.length === 0) continue;
+      regionGroups.push({ name: `${name}手动`, type: "select", proxies: nodes, icon, ...(hidden ? { hidden: true } : {}) });
+      manualNames.push(`${name}手动`);
+    }
+    const otherNodes = allProxyNames.filter((n) => isOtherRegion(n));
+    if (otherNodes.length > 0) {
+      regionGroups.push({ name: "其他手动", type: "select", proxies: otherNodes, icon: ICON.OT, ...(hidden ? { hidden: true } : {}) });
+      manualNames.push("其他手动");
+    }
   }
 
-  // 2. 动态出站列表（对齐原 PROXIES_PG/OP/LD 语义）
+  // 3. 动态出站列表
   const pg = [...lbNames, ...utNames, ...manualNames];
   const op = ["一键代理", "手动选择", "国内直连", ...lbNames, ...utNames, ...manualNames];
   const ld = ["国内直连", "一键代理", "手动选择", ...lbNames];
-  // AI 排除香港（flclash v4.0 合并）：避免 AI 服务默认落香港节点
-  const ai = op.filter((n) => !n.startsWith("香港"));
+  const ai = op.filter((n) => !n.startsWith("香港")); // AI 排除香港（flclash v4.0 合并）
+  const svcProxies = ruleOptionsEnable["分流组添加所有节点"] ? allProxyNames : op;
 
-  return [
-    { name: "一键代理", type: "select", proxies: pg, icon: ICON.Rocket },
-    { name: "手动选择", type: "select", proxies: manualNames, icon: ICON.Rocket },
-    { name: "国内直连", type: "select", proxies: DIRECT_PROXIES.map(p=>p.name), icon: ICON.China, hidden: true },
-    ...regionGroups,
+  // 4. 服务组（按开关生成）
+  const services = [];
+  if (ruleOptionsEnable.AI) services.push(
     { name: "ChatGPT", type: "select", proxies: ai, icon: ICON.ChatGPT },
     { name: "Claude", type: "select", proxies: ai, icon: ICON.Claude },
-    { name: "Gemini", type: "select", proxies: ai, icon: ICON.Gemini },
-    { name: "流媒体", type: "select", proxies: op, icon: ICON.Netflix },
-    { name: "通信", type: "select", proxies: op, icon: ICON.Telegram },
-    { name: "云服务", type: "select", proxies: op, icon: ICON.GitHub },
-    { name: "金融", type: "select", proxies: op, icon: ICON.PayPal },
+    { name: "Gemini", type: "select", proxies: ai, icon: ICON.Gemini });
+  if (ruleOptionsEnable.Media) services.push({ name: "流媒体", type: "select", proxies: svcProxies, icon: ICON.Netflix });
+  if (ruleOptionsEnable.Telegram) services.push({ name: "通信", type: "select", proxies: svcProxies, icon: ICON.Telegram });
+  if (ruleOptionsEnable.Google) services.push({ name: "云服务", type: "select", proxies: svcProxies, icon: ICON.GitHub });
+  if (ruleOptionsEnable["金融"]) services.push({ name: "金融", type: "select", proxies: svcProxies, icon: ICON.PayPal });
+  if (ruleOptionsEnable.Microsoft) services.push(
     { name: "Microsoft", type: "select", proxies: ld, icon: ICON.Microsoft },
-    { name: "OneDrive", type: "select", proxies: ld, icon: ICON.OneDrive },
-    { name: "Apple", type: "select", proxies: ld, icon: ICON.Apple },
+    { name: "OneDrive", type: "select", proxies: ld, icon: ICON.OneDrive });
+  if (ruleOptionsEnable.Apple) services.push({ name: "Apple", type: "select", proxies: ld, icon: ICON.Apple });
+
+  // 5. 组装（核心三组始终生成；空列表兜底防止空组）
+  const groups = [
+    { name: "一键代理", type: "select", proxies: pg.length ? pg : ["国内直连"], icon: ICON.Rocket },
+    { name: "手动选择", type: "select", proxies: manualNames.length ? manualNames : ["国内直连"], icon: ICON.Rocket },
+    { name: "国内直连", type: "select", proxies: DIRECT_PROXIES.map(p=>p.name), icon: ICON.China, hidden: true },
+    ...regionGroups,
+    ...services,
     { name: "漏网之鱼", type: "select", proxies: op, icon: ICON.MATCH },
     // Info 组（flclash v4.0 合并）：被过滤节点保留在单独组，不丢弃
     ...(infoNames.length > 0 ? [{ name: "Info", type: "select", proxies: infoNames, icon: ICON.Available }] : []),
-    // 兜底自动选择（顺序故障转移）：作为各"XX速度优先"组最后一个成员，地区全挂时自动切到任意活节点
-    { name: FALLBACK_GROUP_NAME, ...FALLBACK_BASE, proxies: allProxyNames },
   ];
+  // 兜底自动选择（顺序故障转移）：仅当存在"XX速度优先"组时生成，作为其最后一个成员
+  if (genUt) groups.push({ name: FALLBACK_GROUP_NAME, ...FALLBACK_BASE, proxies: allProxyNames });
+  return groups;
 }
 
-// 规则（与 clashmi.yml 1:1）
-const RULES_BASE = [
-  "RULE-SET,private_ip,国内直连,no-resolve","RULE-SET,private_domain,国内直连","RULE-SET,ntp_domain,国内直连",
-  // 国内直连加速（mihomoScript.js 参考源）：游戏/Apple/MS 国内段直连
-  "RULE-SET,games_cn,国内直连","RULE-SET,epicgames,国内直连","RULE-SET,nvidia_cn,国内直连","RULE-SET,apple_cn,国内直连","RULE-SET,microsoft_cn,国内直连",
-  "DOMAIN,fsend.cn,国内直连","DOMAIN,international-gfe.download.nvidia.com,国内直连","DOMAIN-SUFFIX,hdslb.com,国内直连",
-  "RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直连",
-  "RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google-gemini_domain,Gemini",
-  "RULE-SET,youtube_domain,流媒体","RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve","RULE-SET,tiktok_domain,流媒体","RULE-SET,disney_domain,流媒体","RULE-SET,spotify_domain,流媒体","RULE-SET,appletv_domain,流媒体",
-  "RULE-SET,telegram_domain,通信","RULE-SET,telegram_ip,通信,no-resolve","RULE-SET,twitter_domain,通信","RULE-SET,twitter_ip,通信,no-resolve",
-  "RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,github_domain,云服务","RULE-SET,speedtest_domain,云服务",
-  "RULE-SET,paypal_domain,金融",
-  "RULE-SET,apple_domain,Apple","RULE-SET,apple_ip,Apple,no-resolve",
-  "RULE-SET,onedrive_domain,OneDrive","RULE-SET,microsoft_domain,Microsoft",
-  "RULE-SET,ResourceSite,国内直连","RULE-SET,PanVod,国内直连","RULE-SET,add_direct_domain,国内直连","RULE-SET,cn_domain,国内直连","RULE-SET,cn_ip,国内直连,no-resolve",
-  // gfw 兜底：未命中业务规则的被墙域名走代理（mihomoScript.js 设计）
-  "RULE-SET,gfw,一键代理",
-  "MATCH,漏网之鱼",
-];
+// 规则块（与 clashmi.yml 1:1；按 ruleOptionsEnable 开关过滤，避免关闭组时悬空引用）
+const RULES_PRIVATE = ["RULE-SET,private_ip,国内直连,no-resolve","RULE-SET,private_domain,国内直连","RULE-SET,ntp_domain,国内直连"];
+// 国内直连加速（mihomoScript.js 参考源）：游戏/Apple/MS 国内段直连
+const RULES_CN_FAST = ["RULE-SET,games_cn,国内直连","RULE-SET,epicgames,国内直连","RULE-SET,nvidia_cn,国内直连","RULE-SET,apple_cn,国内直连","RULE-SET,microsoft_cn,国内直连","DOMAIN,fsend.cn,国内直连","DOMAIN,international-gfe.download.nvidia.com,国内直连","DOMAIN-SUFFIX,hdslb.com,国内直连"];
+const RULES_MY = ["RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直连"];
+const RULES_AI = ["RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google-gemini_domain,Gemini"];
+const RULES_MEDIA = ["RULE-SET,youtube_domain,流媒体","RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve",...(ruleOptionsEnable.TikTok?["RULE-SET,tiktok_domain,流媒体"]:[]),"RULE-SET,disney_domain,流媒体",...(ruleOptionsEnable.Spotify?["RULE-SET,spotify_domain,流媒体"]:[]),"RULE-SET,appletv_domain,流媒体"];
+const RULES_TELEGRAM = ["RULE-SET,telegram_domain,通信","RULE-SET,telegram_ip,通信,no-resolve",...(ruleOptionsEnable.Twitter?["RULE-SET,twitter_domain,通信","RULE-SET,twitter_ip,通信,no-resolve"]:[])];
+const RULES_GOOGLE = ["RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,github_domain,云服务","RULE-SET,speedtest_domain,云服务"];
+const RULES_PAYPAL = ["RULE-SET,paypal_domain,金融"];
+const RULES_APPLE = ["RULE-SET,apple_domain,Apple","RULE-SET,apple_ip,Apple,no-resolve"];
+const RULES_MS = ["RULE-SET,onedrive_domain,OneDrive","RULE-SET,microsoft_domain,Microsoft"];
+const RULES_CN_TAIL = ["RULE-SET,ResourceSite,国内直连","RULE-SET,PanVod,国内直连","RULE-SET,add_direct_domain,国内直连","RULE-SET,cn_domain,国内直连","RULE-SET,cn_ip,国内直连,no-resolve"];
+// 屏蔽国外QUIC：国内 IP 放行，其余 UDP 443 REJECT（mihomoScript.js 规则简化版）
+const RULES_QUIC = ["AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((RULE-SET,cn_ip,no-resolve)))),REJECT"];
 
-// 组装规则：AdBlock 置顶，避免广告域名被业务分流抢先匹配（ruleOptionsEnable.AdBlock 默认关）
+// 组装规则：按开关过滤服务块；AdBlock 置顶避免广告域名被业务分流抢先匹配
 function buildRules() {
   return [
     ...(ruleOptionsEnable.AdBlock ? ["RULE-SET,adblock,REJECT"] : []),
-    ...RULES_BASE,
+    ...RULES_PRIVATE,
+    ...RULES_CN_FAST,
+    ...RULES_MY,
+    ...(ruleOptionsEnable.AI ? RULES_AI : []),
+    ...(ruleOptionsEnable.Media ? RULES_MEDIA : []),
+    ...(ruleOptionsEnable.Telegram ? RULES_TELEGRAM : []),
+    ...(ruleOptionsEnable.Google ? RULES_GOOGLE : []),
+    ...(ruleOptionsEnable["金融"] ? RULES_PAYPAL : []),
+    ...(ruleOptionsEnable.Apple ? RULES_APPLE : []),
+    ...(ruleOptionsEnable.Microsoft ? RULES_MS : []),
+    ...RULES_CN_TAIL,
+    ...(ruleOptionsEnable["屏蔽国外QUIC"] ? RULES_QUIC : []),
+    // gfw 兜底：未命中业务规则的被墙域名走代理（mihomoScript.js 设计）
+    "RULE-SET,gfw,一键代理",
+    "MATCH,漏网之鱼",
   ];
 }
 const RULE_PROVIDERS = {
@@ -337,7 +364,7 @@ function filterAndNormalizeProxies(allProxies) {
   const info = []; const normal = [];
   for (const p of (allProxies || [])) {
     const n = typeof p === "string" ? p : p.name;
-    (INVALID_PROXY_RE.test(n) || excludeFilter.test(n) ? info : normal).push(p);
+    (INVALID_PROXY_RE.test(n) || (ruleOptionsEnable["过滤非地区节点"] && excludeFilter.test(n)) ? info : normal).push(p);
   }
   // 去重（保留首个同名）
   const seen = new Set(); const out = [];
@@ -351,7 +378,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v2.3 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v2.5 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
@@ -399,6 +426,29 @@ function main(config) {
     newConfig["proxies"] = [...DIRECT_PROXIES, ...info, ...filteredProxies];
     newConfig["proxy-groups"] = proxyGroups;
     const providers = { ...RULE_PROVIDERS };
+    // 开关联动：关闭的服务组不下发对应规则集
+    const PROVIDER_BY_SWITCH = {
+      AI: ["openai_domain","anthropic_domain","google-gemini_domain"],
+      Media: ["youtube_domain","netflix_domain","netflix_ip","disney_domain","appletv_domain"],
+      Telegram: ["telegram_domain","telegram_ip"],
+      Google: ["google_domain","google_ip","github_domain","speedtest_domain"],
+      金融: ["paypal_domain"],
+      Apple: ["apple_domain","apple_ip"],
+      Microsoft: ["onedrive_domain","microsoft_domain"],
+    };
+    for (const [sw, list] of Object.entries(PROVIDER_BY_SWITCH)) {
+      if (!ruleOptionsEnable[sw]) for (const p of list) delete providers[p];
+    }
+    // 子开关（并入 通信/流媒体）：false 时移除对应规则集；所属主开关关闭时一并移除
+    const SUB_SWITCH = {
+      Twitter: ["twitter_domain","twitter_ip"],
+      TikTok: ["tiktok_domain"],
+      Spotify: ["spotify_domain"],
+    };
+    for (const [sw, list] of Object.entries(SUB_SWITCH)) {
+      const parent = sw === "Twitter" ? "Telegram" : "Media";
+      if (!ruleOptionsEnable[sw] || !ruleOptionsEnable[parent]) for (const p of list) delete providers[p];
+    }
     if (!ruleOptionsEnable.AdBlock) delete providers.adblock; // 默认关闭时不下发 adblock 规则集
     newConfig["rule-providers"] = OPTIONS.OVERRIDE_RULES ? providers : { ...(config["rule-providers"]||{}), ...providers };
     newConfig["rules"] = OPTIONS.OVERRIDE_RULES ? buildRules() : [...buildRules(), ...(config.rules||[])];
