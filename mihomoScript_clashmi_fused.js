@@ -402,13 +402,13 @@ const clashmiExtraRulesDirect = [
 ];
 const clashmiExtraRulesProxy = ['RULE-SET,my_proxy,默认代理'];
 
-// 策略组公共配置
+// 策略组公共配置（健康检查调优：interval 300s 常驻 + timeout 2000ms 快速失败 + max-failed-times 2 快速剔除死节点）
 const groupBaseOption = {
-  interval: 600,
-  timeout: 3000,
+  interval: 300,
+  timeout: 2000,
   url: 'https://g.cn/generate_204',
-  lazy: true,
-  'max-failed-times': 3,
+  lazy: false,
+  'max-failed-times': 2,
   'empty-fallback': 'REJECT',
 };
 
@@ -437,6 +437,16 @@ const loadBalanceBaseOption = {
   icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Round_Robin.png',
   hidden: true,
 };
+
+// fallback策略组通用配置（顺序故障转移：按 proxies 顺序选第一个可用节点，地区全挂时兜底）
+const fallbackBaseOption = {
+  ...groupBaseOption,
+  type: 'fallback',
+  icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Bypass.png',
+  hidden: true,
+};
+// 兜底自动选择组名（作为所有地区“XX-自动选择”组的最后一个成员）
+const FALLBACK_GROUP_NAME = '兜底-自动选择';
 
 // 定义基础策略组
 const baseGroups = [
@@ -1008,7 +1018,8 @@ function createRegionGroup(name, icon, proxies) {
       {
         ...urlTestBaseOption,
         name: urlTestName,
-        proxies,
+        // 末尾追加兜底组：地区节点全挂时自动切到任意活节点，避免 url-test 粘死
+        proxies: [...proxies, FALLBACK_GROUP_NAME],
       },
       {
         ...selectBaseOption,
@@ -1095,6 +1106,13 @@ function buildRegionGroups(filteredProxies, customProxies) {
       generatedRegionGroups.push(...createRegionGroup(otherDef.name, otherDef.icon, otherContinentProxies));
     }
   }
+
+  // 兜底自动选择组：全量节点顺序故障转移（作为各“XX-自动选择”组的最后一个成员）
+  generatedRegionGroups.push({
+    name: FALLBACK_GROUP_NAME,
+    ...fallbackBaseOption,
+    proxies: [...filteredProxies, ...customProxies].map((p) => p.name),
+  });
 
   return generatedRegionGroups;
 }
@@ -1308,7 +1326,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
       ...functionalGroups.map((g) => g.name),
       ...(chainGroup ? [chainGroup.name] : []),
       directProxiesGroup.name,
-      ...generatedRegionGroups.map((g) => g.name),
+      ...generatedRegionGroups.filter((g) => g.name !== FALLBACK_GROUP_NAME).map((g) => g.name),
     ],
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Global.png',
   };
