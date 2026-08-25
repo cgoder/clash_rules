@@ -5,8 +5,15 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v2.9  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-08-25 15:10:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v3.0  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-08-25 17:50:00 CST
+//
+// v3.0 变更（修复地区速度优先组"低延迟叛逃"，同 clashmi_lite.js v1.5）：
+// - 根因：XX速度优先（url-test）成员里直接挂了全局兜底组，url-test 选"最快候选"
+//   不区分地区——兜底组当前节点（如日本）更快或本地区节点稍慢时，美国流量叛逃日本
+// - 修复：XX速度优先-auto（hidden url-test）= 纯本地区节点；
+//   XX速度优先（hidden fallback）= [XX速度优先-auto, 兜底自动选择]，本地区有活节点
+//   走本地区最快，全挂才切全局兜底；聚合列表（一键代理等）引用名不变
 //
 // v2.9 变更（修复 GitHub 被 microsoft_domain 规则集截走导致直连）：
 // - 根因：MetaCubeX geosite/microsoft 分类 include 了全部 github 域名（v2fly
@@ -245,7 +252,14 @@ function buildProxyGroups(allProxyNames, infoNames) {
     const nodes = byRegion.get(name) || [];
     if (nodes.length === 0) continue;
     if (ruleOptionsEnable["负载均衡"]) { regionGroups.push({ name: `${name}负载均衡`, ...LB_BASE, proxies: nodes, icon }); lbNames.push(`${name}负载均衡`); }
-    if (genUt) { regionGroups.push({ name: `${name}速度优先`, ...UT_BASE, proxies: [...nodes, FALLBACK_GROUP_NAME], icon }); utNames.push(`${name}速度优先`); }
+    if (genUt) {
+      // url-test 只含本地区节点：兜底组直接入列会被 url-test 当"最快候选"选中（低延迟叛逃，v3.0 修复）
+      const autoName = `${name}速度优先-auto`;
+      regionGroups.push({ name: autoName, ...UT_BASE, proxies: [...nodes] });
+      // 地区兜底（fallback 顺序故障转移）：本地区有活节点→走本地区最快；全挂→才切全局兜底
+      regionGroups.push({ name: `${name}速度优先`, type: "fallback", ...groupBaseOption, hidden: true, proxies: [autoName, FALLBACK_GROUP_NAME], icon });
+      utNames.push(`${name}速度优先`);
+    }
   }
   // 3. 大洲手动组（受 手动选择 开关控制；隐藏地区手动选择组 控制 hidden）
   if (ruleOptionsEnable["手动选择"]) {
@@ -482,7 +496,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v2.9 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v3.0 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);

@@ -5,10 +5,18 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi_lite.js v1.4 — 简版覆写脚本
+// 🔧 clashmi_lite.js v1.5 — 简版覆写脚本
 // 设计：Script.js（AIsouler/MyClash 精简版）骨架 × clashmi.yml 优势融合
 // 参考：https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/Script.js
-// ⏰ 更新时间: 2026-08-25 15:10:00 CST
+// ⏰ 更新时间: 2026-08-25 17:45:00 CST
+//
+// v1.5 变更（修复地区自动选择组"低延迟叛逃"：美国流量打到日本节点）：
+// - 根因：XX-自动选择（url-test）成员里直接挂了全局兜底组，url-test 语义是"选最快
+//   候选"，不区分候选是否本地区——只要兜底组当前节点（如日本）延迟更低或本地区
+//   节点稍慢，美国组流量就叛逃到日本（本地 mihomo 实证复现）
+// - 修复：XX-自动选择只含本地区节点；新增隐藏 XX-兜底（fallback 顺序故障转移）=
+//   [XX-自动选择, 兜底自动选择]——本地区有活节点走本地区最快，本地区全挂才切全局
+//   兜底；地区 select 组默认选中 XX-兜底
 //
 // v1.4 变更（修复 GitHub 被 microsoft_domain 规则集截走导致直连，同 clashmi_flclash.js v2.9）：
 // - 根因：MetaCubeX geosite/microsoft 分类 include 全部 github 域名（v2fly 数据源
@@ -157,6 +165,7 @@ const GROUP_NAMES = new Set([
   "默认代理", "手动选择", "国内直连",
   "香港", "日本", "台湾", "新加坡", "美国", "其他节点",
   "香港-自动选择", "日本-自动选择", "台湾-自动选择", "新加坡-自动选择", "美国-自动选择",
+  "香港-兜底", "日本-兜底", "台湾-兜底", "新加坡-兜底", "美国-兜底",
   "AI", "Google", "OneDrive", "Microsoft", "Apple", "漏网之鱼", "兜底自动选择",
 ]);
 // 冲突节点重命名：标准化后仍与组同名的（无地区标识的），加"节点"后缀
@@ -213,9 +222,15 @@ function buildProxyGroups(allProxyNames) {
     const autoName = `${name}-自动选择`;
     const selectProxies = [];
     if (genAuto) {
-      // 自动子组末尾挂兜底：本地区节点全挂时顺序切到任意活节点
-      groups.push({ name: autoName, ...UT_BASE, proxies: [...nodes, FALLBACK_GROUP_NAME], icon });
-      selectProxies.push(autoName); // 放第一位 → 默认选中"自动选择"
+      // url-test 只含本地区节点：兜底组直接入列会被 url-test 当"最快候选"选中
+      // （低延迟叛逃：美国流量打到日本节点的根因，v1.5 修复）
+      groups.push({ name: autoName, ...UT_BASE, proxies: [...nodes], icon });
+      // 地区兜底（fallback 顺序故障转移）：本地区有活节点→走本地区最快；
+      // 本地区全挂→才切全局兜底。fallback 是"选第一个健康的"而非"选最快"，
+      // 保证地区优先、不叛逃
+      const fbName = `${name}-兜底`;
+      groups.push({ name: fbName, type: "fallback", ...groupBaseOption, hidden: true, proxies: [autoName, FALLBACK_GROUP_NAME] });
+      selectProxies.push(fbName); // 放第一位 → 默认选中"自动（带地区兜底）"
     }
     selectProxies.push(...nodes);
     groups.push({ name, type: "select", ...groupBaseOption, proxies: selectProxies, icon, ...(hideManual ? { hidden: true } : {}) });
@@ -410,7 +425,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_lite.js v1.4（Script.js × clashmi.yml 融合简版）");
+  log("🚀 clashmi_lite.js v1.5（Script.js × clashmi.yml 融合简版）");
   try {
     const filteredProxies = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
