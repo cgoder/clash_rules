@@ -1,6 +1,17 @@
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v2.2  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-08-25 12:10:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v2.4  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-08-25 12:40:00 CST
+//
+// v2.4 变更（合并 mihomoScript.js 参考源的国内直连加速）：
+// - games_cn/epicgames/nvidia_cn/apple_cn/microsoft_cn 规则集 + fsend.cn/nvidia下载/hdslb.com 直连
+// - 依据：这些在参考源 mihomoScript.js 中存在 → 合并；sharepoint 直连、MS/Apple DoH 直连
+//   DNS 在参考源中不存在 → 不合并（clashmi 的 OneDrive/MS 组本就 LD 直连优先，已覆盖 sharepoint）
+//
+// v2.3 变更（合并 flclash_override.js v4.0 亮点）：
+// - 动态地域组：仅生成有节点的活跃地区/大洲组，避免空组与引用悬空
+// - Info 组：被过滤的噪音节点保留在单独组，不丢弃（可手动选用）
+// - AI 排除香港：ChatGPT/Claude/Gemini 出站列表剔除香港组
+// - store-selected 开关（OPTIONS.STORE_SELECTED，默认 false 避免记住死节点）
 //
 // v2.2 变更（自动选择组故障转移优化）：
 // - 健康检查调优：interval 300s 常驻（lazy: false）+ timeout 2000ms + max-failed-times 2
@@ -39,6 +50,8 @@ const OPTIONS = {
   OVERRIDE_TUN: true,
   OVERRIDE_SNIFFER: true,
   LOG_VERBOSE: true,
+  // flclash v4.0 合并：false 避免记住死节点（BettBox 推荐）
+  STORE_SELECTED: false,
 };
 
 const ruleOptionsEnable = {
@@ -98,6 +111,7 @@ const ICON = {
   EU: `${ICON_BASE}/EU.png`,
   AM: `${ICON_BASE}/AM.png`,
   OT: `${ICON_BASE}/OT.png`,
+  Available: `${ICON_BASE}/Available.png`,
 };
 
 // 无效节点正则（等价 Anchor_PR filter + mihomoScript.js 的 excludeFilter）
@@ -132,9 +146,14 @@ const UT_BASE = { type: "url-test", tolerance: 100, ...groupBaseOption, hidden: 
 const FALLBACK_GROUP_NAME = "兜底自动选择";
 const FALLBACK_BASE = { type: "fallback", ...groupBaseOption, hidden: true };
 
-const PROXIES_PG = ["香港负载均衡","台湾负载均衡","新加坡负载均衡","日本负载均衡","美国负载均衡","香港速度优先","台湾速度优先","新加坡速度优先","日本速度优先","美国速度优先","亚洲手动","欧洲手动","美洲手动","其他手动"];
-const PROXIES_OP = ["一键代理","手动选择","国内直连","香港负载均衡","台湾负载均衡","新加坡负载均衡","日本负载均衡","美国负载均衡","香港速度优先","台湾速度优先","新加坡速度优先","日本速度优先","美国速度优先","亚洲手动","欧洲手动","美洲手动","其他手动"];
-const PROXIES_LD = ["国内直连","一键代理","手动选择","香港负载均衡","台湾负载均衡","新加坡负载均衡","日本负载均衡","美国负载均衡"];
+// 地区/大洲定义（顺序即生成顺序，动态地域组用）
+const REGION_ORDER = [
+  ["香港", RE.HK, ICON.HK], ["台湾", RE.TW, ICON.TW], ["新加坡", RE.SG, ICON.SG],
+  ["日本", RE.JP, ICON.JP], ["美国", RE.US, ICON.US],
+];
+const CONTINENT_ORDER = [
+  ["亚洲", RE.AS, ICON.AS], ["欧洲", RE.EU, ICON.EU], ["美洲", RE.AM, ICON.AM],
+];
 
 // 多版本直连节点（mihomoScript.js 设计）：国内直连 组提供 双栈/IPv4优先/IPv6优先/仅IPv4/仅IPv6
 const DIRECT_PROXIES = [
@@ -145,34 +164,57 @@ const DIRECT_PROXIES = [
   { name: "🇨🇳 直连 | 仅IPv6", type: "direct", "ip-version": "ipv6" },
 ];
 
-function buildProxyGroups(allProxyNames) {
+// 动态生成策略组（flclash v4.0 合并）：仅生成有节点的活跃地域组；服务组引用动态出站列表
+function buildProxyGroups(allProxyNames, infoNames) {
   const filterBy = (re) => allProxyNames.filter((n) => re.test(n));
-  const filterOther = () => allProxyNames.filter((n) => isOtherRegion(n));
-  const lb = (name, re, icon) => ({ name, ...LB_BASE, proxies: filterBy(re), icon });
-  const ut = (name, re, icon) => ({ name, ...UT_BASE, proxies: [...filterBy(re), FALLBACK_GROUP_NAME], icon });
-  const manual = (name, reOrFn, icon) => ({ name, type: "select", proxies: typeof reOrFn === "function" ? reOrFn() : filterBy(reOrFn), icon });
+
+  // 1. 活跃地区/大洲组（无节点则不生成）
+  const regionGroups = [];
+  const lbNames = [], utNames = [], manualNames = [];
+  for (const [name, re, icon] of REGION_ORDER) {
+    const nodes = filterBy(re);
+    if (nodes.length === 0) continue;
+    regionGroups.push({ name: `${name}负载均衡`, ...LB_BASE, proxies: nodes, icon });
+    regionGroups.push({ name: `${name}速度优先`, ...UT_BASE, proxies: [...nodes, FALLBACK_GROUP_NAME], icon });
+    lbNames.push(`${name}负载均衡`); utNames.push(`${name}速度优先`);
+  }
+  for (const [name, re, icon] of CONTINENT_ORDER) {
+    const nodes = filterBy(re);
+    if (nodes.length === 0) continue;
+    regionGroups.push({ name: `${name}手动`, type: "select", proxies: nodes, icon });
+    manualNames.push(`${name}手动`);
+  }
+  const otherNodes = allProxyNames.filter((n) => isOtherRegion(n));
+  if (otherNodes.length > 0) {
+    regionGroups.push({ name: "其他手动", type: "select", proxies: otherNodes, icon: ICON.OT });
+    manualNames.push("其他手动");
+  }
+
+  // 2. 动态出站列表（对齐原 PROXIES_PG/OP/LD 语义）
+  const pg = [...lbNames, ...utNames, ...manualNames];
+  const op = ["一键代理", "手动选择", "国内直连", ...lbNames, ...utNames, ...manualNames];
+  const ld = ["国内直连", "一键代理", "手动选择", ...lbNames];
+  // AI 排除香港（flclash v4.0 合并）：避免 AI 服务默认落香港节点
+  const ai = op.filter((n) => !n.startsWith("香港"));
+
   return [
-    { name: "一键代理", type: "select", proxies: PROXIES_PG, icon: ICON.Rocket },
-    { name: "手动选择", type: "select", proxies: ["亚洲手动","欧洲手动","美洲手动","其他手动"], icon: ICON.Rocket },
+    { name: "一键代理", type: "select", proxies: pg, icon: ICON.Rocket },
+    { name: "手动选择", type: "select", proxies: manualNames, icon: ICON.Rocket },
     { name: "国内直连", type: "select", proxies: DIRECT_PROXIES.map(p=>p.name), icon: ICON.China, hidden: true },
-    lb("香港负载均衡", RE.HK, ICON.HK), ut("香港速度优先", RE.HK, ICON.HK),
-    lb("台湾负载均衡", RE.TW, ICON.TW), ut("台湾速度优先", RE.TW, ICON.TW),
-    lb("新加坡负载均衡", RE.SG, ICON.SG), ut("新加坡速度优先", RE.SG, ICON.SG),
-    lb("日本负载均衡", RE.JP, ICON.JP), ut("日本速度优先", RE.JP, ICON.JP),
-    lb("美国负载均衡", RE.US, ICON.US), ut("美国速度优先", RE.US, ICON.US),
-    { name: "ChatGPT", type: "select", proxies: PROXIES_OP, icon: ICON.ChatGPT },
-    { name: "Claude", type: "select", proxies: PROXIES_OP, icon: ICON.Claude },
-    { name: "Gemini", type: "select", proxies: PROXIES_OP, icon: ICON.Gemini },
-    { name: "流媒体", type: "select", proxies: PROXIES_OP, icon: ICON.Netflix },
-    { name: "通信", type: "select", proxies: PROXIES_OP, icon: ICON.Telegram },
-    { name: "云服务", type: "select", proxies: PROXIES_OP, icon: ICON.GitHub },
-    { name: "金融", type: "select", proxies: PROXIES_OP, icon: ICON.PayPal },
-    { name: "Microsoft", type: "select", proxies: PROXIES_LD, icon: ICON.Microsoft },
-    { name: "OneDrive", type: "select", proxies: PROXIES_LD, icon: ICON.OneDrive },
-    { name: "Apple", type: "select", proxies: PROXIES_LD, icon: ICON.Apple },
-    { name: "漏网之鱼", type: "select", proxies: PROXIES_OP, icon: ICON.MATCH },
-    manual("亚洲手动", RE.AS, ICON.AS), manual("欧洲手动", RE.EU, ICON.EU),
-    manual("美洲手动", RE.AM, ICON.AM), manual("其他手动", filterOther, ICON.OT),
+    ...regionGroups,
+    { name: "ChatGPT", type: "select", proxies: ai, icon: ICON.ChatGPT },
+    { name: "Claude", type: "select", proxies: ai, icon: ICON.Claude },
+    { name: "Gemini", type: "select", proxies: ai, icon: ICON.Gemini },
+    { name: "流媒体", type: "select", proxies: op, icon: ICON.Netflix },
+    { name: "通信", type: "select", proxies: op, icon: ICON.Telegram },
+    { name: "云服务", type: "select", proxies: op, icon: ICON.GitHub },
+    { name: "金融", type: "select", proxies: op, icon: ICON.PayPal },
+    { name: "Microsoft", type: "select", proxies: ld, icon: ICON.Microsoft },
+    { name: "OneDrive", type: "select", proxies: ld, icon: ICON.OneDrive },
+    { name: "Apple", type: "select", proxies: ld, icon: ICON.Apple },
+    { name: "漏网之鱼", type: "select", proxies: op, icon: ICON.MATCH },
+    // Info 组（flclash v4.0 合并）：被过滤节点保留在单独组，不丢弃
+    ...(infoNames.length > 0 ? [{ name: "Info", type: "select", proxies: infoNames, icon: ICON.Available }] : []),
     // 兜底自动选择（顺序故障转移）：作为各"XX速度优先"组最后一个成员，地区全挂时自动切到任意活节点
     { name: FALLBACK_GROUP_NAME, ...FALLBACK_BASE, proxies: allProxyNames },
   ];
@@ -181,6 +223,9 @@ function buildProxyGroups(allProxyNames) {
 // 规则（与 clashmi.yml 1:1）
 const RULES_BASE = [
   "RULE-SET,private_ip,国内直连,no-resolve","RULE-SET,private_domain,国内直连","RULE-SET,ntp_domain,国内直连",
+  // 国内直连加速（mihomoScript.js 参考源）：游戏/Apple/MS 国内段直连
+  "RULE-SET,games_cn,国内直连","RULE-SET,epicgames,国内直连","RULE-SET,nvidia_cn,国内直连","RULE-SET,apple_cn,国内直连","RULE-SET,microsoft_cn,国内直连",
+  "DOMAIN,fsend.cn,国内直连","DOMAIN,international-gfe.download.nvidia.com,国内直连","DOMAIN-SUFFIX,hdslb.com,国内直连",
   "RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直连",
   "RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google-gemini_domain,Gemini",
   "RULE-SET,youtube_domain,流媒体","RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve","RULE-SET,tiktok_domain,流媒体","RULE-SET,disney_domain,流媒体","RULE-SET,spotify_domain,流媒体","RULE-SET,appletv_domain,流媒体",
@@ -206,6 +251,12 @@ const RULE_PROVIDERS = {
   ResourceSite: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/ResourceSite.list" },
   PanVod: { type: "http", interval: 86400, behavior: "classical", format: "text", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/eulac-dev/Proxy/refs/heads/main/Shadowrocket/Rules/PanVod.list" },
   ntp_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ntp.mrs" },
+  // 国内直连加速（mihomoScript.js 参考源）
+  games_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-games@cn.mrs" },
+  epicgames: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.mrs" },
+  nvidia_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nvidia@cn.mrs" },
+  apple_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple@cn.mrs" },
+  microsoft_cn: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft@cn.mrs" },
   private_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs" },
   speedtest_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs" },
   openai_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs" },
@@ -282,32 +333,34 @@ function buildDnsAndHosts(filteredProxies) {
 
 // ===== 节点过滤（复用 mihomoScript.js 的双重过滤 + 去重）=====
 function filterAndNormalizeProxies(allProxies) {
-  const list = (allProxies || []).filter(p => {
+  // 分离噪音节点（Info 组保留，flclash v4.0 合并）与正常节点
+  const info = []; const normal = [];
+  for (const p of (allProxies || [])) {
     const n = typeof p === "string" ? p : p.name;
-    return !INVALID_PROXY_RE.test(n) && !excludeFilter.test(n);
-  });
+    (INVALID_PROXY_RE.test(n) || excludeFilter.test(n) ? info : normal).push(p);
+  }
+  // 去重（保留首个同名）
   const seen = new Set(); const out = [];
-  for (const p of list) {
-    const name = p.name;
-    if (!seen.has(name)) { seen.add(name); out.push(p); }
+  for (const p of normal) {
+    if (!seen.has(p.name)) { seen.add(p.name); out.push(p); }
   }
   if (out.length === 0) throw new Error("配置文件中未找到任何代理节点，请检查订阅");
-  return out;
+  return { filtered: out, info };
 }
 
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v2.0 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v2.3 基于 mihomoScript.js 重构");
   try {
-    const filteredProxies = filterAndNormalizeProxies(config.proxies);
+    const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
-    log(`📦 有效节点 ${allProxyNames.length}/${(config.proxies||[]).length}`);
+    const infoNames = info.map(p => p.name);
+    log(`📦 有效节点 ${allProxyNames.length}/${(config.proxies||[]).length}（Info ${infoNames.length}）`);
 
-    // 1. 构建策略组并剔除空地域组（解决 Go: use or proxies missing）
-    let proxyGroups = buildProxyGroups(allProxyNames);
-    const regional = ["香港负载均衡","台湾负载均衡","新加坡负载均衡","日本负载均衡","美国负载均衡","香港速度优先","台湾速度优先","新加坡速度优先","日本速度优先","美国速度优先","亚洲手动","欧洲手动","美洲手动","其他手动"];
-    const empty = new Set(proxyGroups.filter(g => regional.includes(g.name) && (!g.proxies || g.proxies.length===0)).map(g=>g.name));
+    // 1. 构建策略组（动态地域：仅生成活跃组）并做防御性空组清理（解决 Go: use or proxies missing）
+    let proxyGroups = buildProxyGroups(allProxyNames, infoNames);
+    const empty = new Set(proxyGroups.filter(g => !g.proxies || g.proxies.length===0).map(g=>g.name));
     if (empty.size>0) {
       log(`⚠️ 剔除空地域组: ${[...empty].join("、")}`);
       proxyGroups = proxyGroups.filter(g => !empty.has(g.name));
@@ -338,11 +391,12 @@ function main(config) {
     newConfig["external-controller"] = "127.0.0.1:9090";
     newConfig["external-ui"] = "ui";
     newConfig["external-ui-url"] = "https://v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip";
-    newConfig["profile"] = { "store-selected": true, "store-fake-ip": true };
+    newConfig["profile"] = { "store-selected": OPTIONS.STORE_SELECTED, "store-fake-ip": true };
     if (OPTIONS.OVERRIDE_TUN) newConfig["tun"] = { enable: true, stack: "system", mtu: 1300, "auto-route": true, "strict-route": true, "auto-redirect": true, "auto-detect-interface": true, "endpoint-independent-nat": true, "route-exclude-cidr": ["192.168.0.0/16","10.0.0.0/8","172.16.0.0/12","100.64.0.0/10","169.254.0.0/16","fc00::/7","fe80::/10"], "loopback-address": ["10.7.0.1"], "dns-hijack": ["any:53","tcp://any:53"] };
     // sniffer（clashmi.yml 全量）：override-destination + force/skip-domain；结构已按 mihomo 标准 schema，规避此前的 _Map 类型问题
     if (OPTIONS.OVERRIDE_SNIFFER) newConfig["sniffer"] = { enable: true, "override-destination": true, "parse-pure-ip": true, "force-dns-mapping": true, sniff: { QUIC: { ports: [443, 8443] }, TLS: { ports: [443, 8443] }, HTTP: { ports: [80, "8080-8880"], "override-destination": true } }, "force-domain": ["+.netflix.com","+.nflxvideo.net","+.googlevideo.com","+.youtube.com","+.telegram.org","+.t.me","+.twitter.com","+.twimg.com","+.tiktok.com","+.amazonaws.com"], "skip-domain": ["+.apple.com","Mijia Cloud","dlg.io.mi.com","+.oray.com","+.sunlogin.net"] };
-    newConfig["proxies"] = [...DIRECT_PROXIES, ...filteredProxies];
+    // info 节点保留在 proxies（Info 组引用），但不进任何常规代理路径
+    newConfig["proxies"] = [...DIRECT_PROXIES, ...info, ...filteredProxies];
     newConfig["proxy-groups"] = proxyGroups;
     const providers = { ...RULE_PROVIDERS };
     if (!ruleOptionsEnable.AdBlock) delete providers.adblock; // 默认关闭时不下发 adblock 规则集
