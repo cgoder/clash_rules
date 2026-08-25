@@ -135,7 +135,7 @@ function main(config) {
     ntp_domain: mrsDN("geosite/category-ntp.mrs"),
     openai_domain: mrsDN("geosite/openai.mrs"),
     anthropic_domain: mrsDN("geosite/anthropic.mrs"),
-    "google-gemini_domain": mrsDN("geosite/google-gemini.mrs"),
+    google-gemini_domain: mrsDN("geosite/google-gemini.mrs"),
     youtube_domain: mrsDN("geosite/youtube.mrs"),
     netflix_domain: mrsDN("geosite/netflix.mrs"),
     netflix_ip: mrsIP("geoip/netflix.mrs"),
