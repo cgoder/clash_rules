@@ -5,10 +5,20 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi_lite.js v1.5 — 简版覆写脚本
+// 🔧 clashmi_lite.js v1.6 — 简版覆写脚本
 // 设计：Script.js（AIsouler/MyClash 精简版）骨架 × clashmi.yml 优势融合
 // 参考：https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/Script.js
-// ⏰ 更新时间: 2026-08-25 17:45:00 CST
+// ⏰ 更新时间: 2026-08-25 18:30:00 CST
+//
+// v1.6 变更（地区分组锁死：全挂宁断不叛逃，兜底仅手动）：
+// - 根因：健康检测实验（本地 mihomo + 波动 mock）证明——lazy:false 持续检查时
+//   节点检查失败即判死（max-failed-times 只影响补测，不影响判死），地区节点经历
+//   共同链路波动时全部判死，v1.5 的 XX-兜底 fallback 层会切到全局兜底 → 美国流量
+//   打到日本；且 fallback 引用 url-test 组的判定行为本身不可靠（mihomo #2452）
+// - 修复：删除 XX-兜底 fallback 包装；地区 select 组 = [XX-自动选择(纯节点url-test),
+//   ...地区节点, 兜底自动选择(手动选项垫底)]。地区全挂 → 连接失败（宁断不叛逃），
+//   节点恢复后 url-test 自动切回；兜底自动选择 仅在用户手动选择时生效
+// - 健康参数：timeout 2000→5000（减少链路波动误判，社区建议值）
 //
 // v1.5 变更（修复地区自动选择组"低延迟叛逃"：美国流量打到日本节点）：
 // - 根因：XX-自动选择（url-test）成员里直接挂了全局兜底组，url-test 语义是"选最快
@@ -165,7 +175,6 @@ const GROUP_NAMES = new Set([
   "默认代理", "手动选择", "国内直连",
   "香港", "日本", "台湾", "新加坡", "美国", "其他节点",
   "香港-自动选择", "日本-自动选择", "台湾-自动选择", "新加坡-自动选择", "美国-自动选择",
-  "香港-兜底", "日本-兜底", "台湾-兜底", "新加坡-兜底", "美国-兜底",
   "AI", "Google", "OneDrive", "Microsoft", "Apple", "漏网之鱼", "兜底自动选择",
 ]);
 // 冲突节点重命名：标准化后仍与组同名的（无地区标识的），加"节点"后缀
@@ -175,7 +184,7 @@ function renameIfGroupNameCollision(name) {
 
 // 策略组公共配置（v2.2 健康检查调优：常驻检测 + 快速失败 + 快速剔除死节点）
 const groupBaseOption = {
-  interval: 300, timeout: 2000, url: "https://www.g.cn/generate_204",
+  interval: 300, timeout: 5000, url: "https://www.g.cn/generate_204",
   lazy: false, "max-failed-times": 2, "empty-fallback": "DIRECT",
 };
 const UT_BASE = { type: "url-test", tolerance: 100, ...groupBaseOption, hidden: true, "exclude-type": "DIRECT" };
@@ -222,17 +231,12 @@ function buildProxyGroups(allProxyNames) {
     const autoName = `${name}-自动选择`;
     const selectProxies = [];
     if (genAuto) {
-      // url-test 只含本地区节点：兜底组直接入列会被 url-test 当"最快候选"选中
-      // （低延迟叛逃：美国流量打到日本节点的根因，v1.5 修复）
+      // url-test 纯本地区节点：v1.6 起不再用 fallback 包装（实验证明 fallback 引用
+      // url-test 组判定不可靠且会叛逃），地区全挂时连接失败（宁断不叛逃），恢复自动切回
       groups.push({ name: autoName, ...UT_BASE, proxies: [...nodes], icon });
-      // 地区兜底（fallback 顺序故障转移）：本地区有活节点→走本地区最快；
-      // 本地区全挂→才切全局兜底。fallback 是"选第一个健康的"而非"选最快"，
-      // 保证地区优先、不叛逃
-      const fbName = `${name}-兜底`;
-      groups.push({ name: fbName, type: "fallback", ...groupBaseOption, hidden: true, proxies: [autoName, FALLBACK_GROUP_NAME] });
-      selectProxies.push(fbName); // 放第一位 → 默认选中"自动（带地区兜底）"
+      selectProxies.push(autoName); // 放第一位 → 默认选中"自动选择"
     }
-    selectProxies.push(...nodes);
+    selectProxies.push(...nodes, FALLBACK_GROUP_NAME); // 兜底自动选择 仅作手动选项垫底
     groups.push({ name, type: "select", ...groupBaseOption, proxies: selectProxies, icon, ...(hideManual ? { hidden: true } : {}) });
     regionNames.push(name);
   }
@@ -425,7 +429,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_lite.js v1.5（Script.js × clashmi.yml 融合简版）");
+  log("🚀 clashmi_lite.js v1.6（Script.js × clashmi.yml 融合简版）");
   try {
     const filteredProxies = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);

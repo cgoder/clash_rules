@@ -5,8 +5,18 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v3.0  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-08-25 17:50:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v3.1  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-08-25 18:35:00 CST
+//
+// v3.1 变更（地区分组锁死：全挂宁断不叛逃，兜底仅手动，同 clashmi_lite.js v1.6）：
+// - 根因：健康检测实验（本地 mihomo + 波动 mock）证明——lazy:false 持续检查时节点
+//   检查失败即判死（max-failed-times 只影响补测，不影响判死），地区节点经历共同链路
+//   波动时全部判死，v3.0 的 fallback 包装层切到全局兜底 → 美国流量打到日本；
+//   且 fallback 引用 url-test 组的判定行为本身不可靠（mihomo #2452）
+// - 修复：删除 XX速度优先-auto + fallback 包装，XX速度优先 回归纯节点 url-test；
+//   兜底自动选择 加入 op 聚合列表（手动选项）；地区全挂 → 连接失败（宁断不叛逃），
+//   恢复后自动切回；兜底组改为无条件生成（被 op/漏网之鱼引用，不再依赖 genUt）
+// - 健康参数：timeout 2000→5000（减少链路波动误判，社区建议值）
 //
 // v3.0 变更（修复地区速度优先组"低延迟叛逃"，同 clashmi_lite.js v1.5）：
 // - 根因：XX速度优先（url-test）成员里直接挂了全局兜底组，url-test 选"最快候选"
@@ -178,7 +188,7 @@ const RE = {
 // 策略组模板（与 mihomoScript.js 的 groupBaseOption 语义一致）
 // 健康检查调优：interval 300s 常驻 + timeout 2000ms 快速失败 + max-failed-times 2 快速剔除死节点
 const groupBaseOption = {
-  interval: 300, timeout: 2000, url: "https://www.g.cn/generate_204",
+  interval: 300, timeout: 5000, url: "https://www.g.cn/generate_204",
   lazy: false, "max-failed-times": 2, "empty-fallback": "DIRECT",
 };
 const LB_BASE = { type: "load-balance", strategy: "consistent-hashing", ...groupBaseOption, hidden: true, "exclude-type": "DIRECT" };
@@ -253,11 +263,9 @@ function buildProxyGroups(allProxyNames, infoNames) {
     if (nodes.length === 0) continue;
     if (ruleOptionsEnable["负载均衡"]) { regionGroups.push({ name: `${name}负载均衡`, ...LB_BASE, proxies: nodes, icon }); lbNames.push(`${name}负载均衡`); }
     if (genUt) {
-      // url-test 只含本地区节点：兜底组直接入列会被 url-test 当"最快候选"选中（低延迟叛逃，v3.0 修复）
-      const autoName = `${name}速度优先-auto`;
-      regionGroups.push({ name: autoName, ...UT_BASE, proxies: [...nodes] });
-      // 地区兜底（fallback 顺序故障转移）：本地区有活节点→走本地区最快；全挂→才切全局兜底
-      regionGroups.push({ name: `${name}速度优先`, type: "fallback", ...groupBaseOption, hidden: true, proxies: [autoName, FALLBACK_GROUP_NAME], icon });
+      // url-test 纯本地区节点：v3.1 起不再用 fallback 包装（实验证明 fallback 引用
+      // url-test 组判定不可靠且会叛逃），地区全挂时连接失败（宁断不叛逃），恢复自动切回
+      regionGroups.push({ name: `${name}速度优先`, ...UT_BASE, proxies: [...nodes], icon });
       utNames.push(`${name}速度优先`);
     }
   }
@@ -278,7 +286,7 @@ function buildProxyGroups(allProxyNames, infoNames) {
 
   // 4. 动态出站列表
   const pg = [...lbNames, ...utNames, ...manualNames];
-  const op = ["一键代理", "手动选择", "国内直连", ...lbNames, ...utNames, ...manualNames];
+  const op = ["一键代理", "手动选择", "国内直连", ...lbNames, ...utNames, ...manualNames, FALLBACK_GROUP_NAME]; // 兜底自动选择：手动选项垫底（v3.1）
   const ld = ["国内直连", "一键代理", "手动选择", ...lbNames];
   const ai = op.filter((n) => !n.startsWith("香港")); // AI 排除香港（flclash v4.0 合并）
   const proxyLists = { op, ld, ai, svc: addAll ? allProxyNames : op };
@@ -305,8 +313,8 @@ function buildProxyGroups(allProxyNames, infoNames) {
     // Info 组（flclash v4.0 合并）：被过滤节点保留在单独组，不丢弃
     ...(infoNames.length > 0 ? [{ name: "Info", type: "select", proxies: infoNames, icon: ICON.Available }] : []),
   ];
-  // 兜底自动选择（顺序故障转移）：仅当存在"XX速度优先"组时生成，作为其最后一个成员
-  if (genUt) groups.push({ name: FALLBACK_GROUP_NAME, ...FALLBACK_BASE, proxies: allProxyNames });
+  // 兜底自动选择（顺序故障转移，手动选项）：被 op/漏网之鱼引用，无条件生成（v3.1）
+  groups.push({ name: FALLBACK_GROUP_NAME, ...FALLBACK_BASE, proxies: allProxyNames });
   // GLOBAL 全量聚合组（参考配置主入口；BettBox 面板首位）
   const globalProxies = groups.map(g => g.name);
   groups.unshift({ name: "GLOBAL", type: "select", ...groupBaseOption, proxies: globalProxies, icon: ICON.Rocket });
@@ -496,7 +504,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v3.0 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v3.1 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
