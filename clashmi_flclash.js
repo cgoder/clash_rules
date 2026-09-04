@@ -5,8 +5,19 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v3.1  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-08-25 18:35:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v3.2  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-09-04 15:00:00 CST
+//
+// v3.2 变更（修复 url-test 误判"服务器不可用"的 DNS 放大器，同 clashmi_lite.js v1.7）：
+// - 根因：测速 URL 域名由节点远端解析（mihomo URLTest 用 SetRemoteAddress 透传域名），
+//   本地 DNS 不影响测速 URL 本身；但节点服务器域名由 proxy-server-nameserver 本地解析，
+//   仅配单条 Ali DoH（单点）时，DoH 瞬断/网络切换重建失败导致全量域名节点 dial 失败，
+//   而 mihomo 单次检查失败即判死（adapter/adapter.go: p.alive.Store），
+//   lazy:false 常驻探测下地区组集体判死 → App 显示"服务器不可用"
+// - 修复1：proxy-server-nameserver 冗余化（双 DoH 并发取最快 + 明文 UDP 兜底；
+//   mihomo #2543 维护者结论：必须保证至少一条可直连且能回复的解析器）
+// - 修复2：测速 URL 换 mihomo 默认 https://www.gstatic.com/generate_204（全球
+//   anycast，出口可达性最稳）；原 www.g.cn 依附 Google China 前端，部分出口不稳
 //
 // v3.1 变更（地区分组锁死：全挂宁断不叛逃，兜底仅手动，同 clashmi_lite.js v1.6）：
 // - 根因：健康检测实验（本地 mihomo + 波动 mock）证明——lazy:false 持续检查时节点
@@ -186,9 +197,10 @@ const RE = {
   AM: /(美国|美國|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|圣地亚哥|加拿大|墨西哥|巴西|阿根廷|智利|🇺🇸|🇨🇦|🇲🇽|🇧🇷|🇦🇷|🇨🇱|(?<![A-Za-z])USA?(?![A-Za-z])|(?<![A-Za-z])CA(?![A-Za-z])|(?<![A-Za-z])MX(?![A-Za-z])|(?<![A-Za-z])BR(?![A-Za-z])|(?<![A-Za-z])AR(?![A-Za-z])|(?<![A-Za-z])CL(?![A-Za-z])|america|united\s*states|canada|mexico|brazil|argentina|chile)/i,
 };
 // 策略组模板（与 mihomoScript.js 的 groupBaseOption 语义一致）
-// 健康检查调优：interval 300s 常驻 + timeout 2000ms 快速失败 + max-failed-times 2 快速剔除死节点
+// 健康检查调优（v3.2）：测速 URL 用 mihomo 默认 gstatic generate_204，全球 anycast；
+// interval 300s 常驻 + timeout 5000ms + max-failed-times 2（max-failed-times 只影响补测不影响判死）
 const groupBaseOption = {
-  interval: 300, timeout: 5000, url: "https://www.g.cn/generate_204",
+  interval: 300, timeout: 5000, url: "https://www.gstatic.com/generate_204",
   lazy: false, "max-failed-times": 2, "empty-fallback": "DIRECT",
 };
 const LB_BASE = { type: "load-balance", strategy: "consistent-hashing", ...groupBaseOption, hidden: true, "exclude-type": "DIRECT" };
@@ -454,7 +466,9 @@ function buildDnsAndHosts(filteredProxies) {
       // 规则集级 fake-ip-filter（参考配置）：私有/中国大陆/常见无需 fake-ip 的域名走真实 IP
       "fake-ip-filter": ["rule-set:private_domain","rule-set:fakeip_filter","rule-set:cn_domain","+.orb.local","localhost","*.home.arpa","time.*.com","ntp.*.com","+.ntp.org","+.pool.ntp.org","captive.apple.com","connectivitycheck.gstatic.com","+.msftconnecttest.com","+.msftncsi.com","stun.*.*","+.stun.playstation.net","+.xboxlive.com","+.speedtest.net"],
       "default-nameserver": chinaDNS,
-      "proxy-server-nameserver": chinaDoh,
+      // v3.2 冗余化：双 DoH 并发取最快 + 明文 UDP 兜底，防单条 DoH 瞬断导致
+      // 全量域名节点 dial 失败判死（mihomo #2543：至少一条可直连解析器必须始终可用）
+      "proxy-server-nameserver": [...chinaDoh, "https://doh.pub/dns-query#DIRECT", "223.5.5.5", "119.29.29.29"],
       nameserver: foreignDNS,
       // DIRECT 流量走国内 DNS（参考配置 direct-nameserver）
       "direct-nameserver": ["system", ...chinaDNS],
@@ -504,7 +518,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v3.1 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v3.2 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);

@@ -402,11 +402,14 @@ const clashmiExtraRulesDirect = [
 ];
 const clashmiExtraRulesProxy = ['RULE-SET,my_proxy,默认代理'];
 
-// 策略组公共配置（健康检查调优：interval 300s 常驻 + timeout 2000ms 快速失败 + max-failed-times 2 快速剔除死节点）
+// 策略组公共配置（健康检查调优，2026-09 对齐 clashmi_lite.js v1.7：
+// 测速 URL 用 mihomo 默认 gstatic generate_204 全球 anycast（原 g.cn 依附 Google China
+// 前端，部分出口不稳）；interval 300s 常驻 + timeout 5000ms（原 2000ms 链路波动易误判）；
+// max-failed-times 只影响补测不影响判死（adapter/adapter.go 单次失败即 p.alive=false））
 const groupBaseOption = {
   interval: 300,
-  timeout: 2000,
-  url: 'https://g.cn/generate_204',
+  timeout: 5000,
+  url: 'https://www.gstatic.com/generate_204',
   lazy: false,
   'max-failed-times': 2,
   'empty-fallback': 'REJECT',
@@ -1401,7 +1404,9 @@ const commonDnsRegex = new RegExp(
 
 // 国内外 DNS 定义
 const chinaDNS = ['223.5.5.5', '119.29.29.29'];
-const chinaDohDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
+// 节点域名解析冗余化（对齐 clashmi_lite.js v1.7）：双 DoH 并发取最快 + 明文 UDP 兜底，
+// 防单条 DoH 瞬断导致全量域名节点 dial 失败判死（mihomo #2543）
+const chinaDohDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://1.12.12.12/dns-query#DIRECT', ...chinaDNS];
 const foreignDNS = ['https://cloudflare-dns.com/dns-query#默认代理', 'https://dns.google/dns-query#默认代理'];
 
 /**
