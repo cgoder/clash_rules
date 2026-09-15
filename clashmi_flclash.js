@@ -346,6 +346,7 @@ function buildProxyGroups(allProxyNames, infoNames) {
 // 规则块（与 clashmi.yml 1:1；按 ruleOptionsEnable 开关过滤，避免关闭组时悬空引用）
 const RULES_PRIVATE = ["RULE-SET,private_ip,国内直连,no-resolve","RULE-SET,private_domain,国内直连","RULE-SET,ntp_domain,国内直连"];
 // 国内直连加速（mihomoScript.js 参考源）：游戏/Apple/MS 国内段直连
+// 注意：必须晚于 RULES_MY，否则 gsa.apple.com 等 Apple 认证域名会被 apple_cn 判成直连而无法续签
 const RULES_CN_FAST = ["RULE-SET,games_cn,国内直连","RULE-SET,epicgames,国内直连","RULE-SET,nvidia_cn,国内直连","RULE-SET,apple_cn,国内直连","RULE-SET,microsoft_cn,国内直连","DOMAIN,fsend.cn,国内直连","DOMAIN,international-gfe.download.nvidia.com,国内直连","DOMAIN-SUFFIX,hdslb.com,国内直连"];
 const RULES_MY = ["RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直连"];
 const RULES_AI = ["RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google-gemini_domain,Gemini"];
@@ -427,8 +428,8 @@ function buildRules(serviceRules) {
   return [
     ...(ruleOptionsEnable.AdBlock ? ["RULE-SET,adblock,REJECT"] : []),
     ...RULES_PRIVATE,
+    ...RULES_MY, // 自定义本地规则（my_proxy 含 SideStore 续签域名）优先于国内直连快路径，与 clashmi.yml 一致
     ...RULES_CN_FAST,
-    ...RULES_MY,
     ...serviceRules,
     ...RULES_CN_TAIL,
     ...(ruleOptionsEnable["屏蔽国外QUIC"] ? RULES_QUIC : []),
@@ -573,7 +574,10 @@ function main(config) {
     newConfig["external-ui"] = "ui";
     newConfig["external-ui-url"] = "https://v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip";
     newConfig["profile"] = { "store-selected": OPTIONS.STORE_SELECTED, "store-fake-ip": true };
-    if (OPTIONS.OVERRIDE_TUN) newConfig["tun"] = { enable: true, stack: "system", mtu: 1300, "auto-route": true, "strict-route": true, "auto-redirect": true, "auto-detect-interface": true, "endpoint-independent-nat": true, "route-exclude-cidr": ["192.168.0.0/16","10.0.0.0/8","172.16.0.0/12","100.64.0.0/10","169.254.0.0/16","fc00::/7","fe80::/10"], "loopback-address": ["10.7.0.1"], "dns-hijack": ["any:53","tcp://any:53"] };
+    // TUN：loopback-address 10.7.0.1 为 SideStore/LiveContainer 本机续签（免电脑、免 LocalDevVPN）必需，勿删；
+    // stack: gvisor + strict-route: false 对齐上游可用配置 tom-snow/Sidestore-ClashMi。
+    // 详见 README「SideStore / LiveContainer 续签依赖」。
+    if (OPTIONS.OVERRIDE_TUN) newConfig["tun"] = { enable: true, stack: "gvisor", mtu: 1300, "auto-route": true, "strict-route": false, "auto-redirect": true, "auto-detect-interface": true, "endpoint-independent-nat": true, "route-exclude-cidr": ["192.168.0.0/16","10.0.0.0/8","172.16.0.0/12","100.64.0.0/10","169.254.0.0/16","fc00::/7","fe80::/10"], "loopback-address": ["10.7.0.1"], "dns-hijack": ["any:53","tcp://any:53"] };
     // sniffer（clashmi.yml 全量）：override-destination + force/skip-domain；结构已按 mihomo 标准 schema，规避此前的 _Map 类型问题
     if (OPTIONS.OVERRIDE_SNIFFER) newConfig["sniffer"] = { enable: true, "override-destination": true, "parse-pure-ip": true, "force-dns-mapping": true, sniff: { QUIC: { ports: [443, 8443] }, TLS: { ports: [443, 8443] }, HTTP: { ports: [80, "8080-8880"], "override-destination": true } }, "force-domain": ["+.netflix.com","+.nflxvideo.net","+.googlevideo.com","+.youtube.com","+.telegram.org","+.t.me","+.twitter.com","+.twimg.com","+.tiktok.com","+.amazonaws.com"], "skip-domain": ["+.apple.com","Mijia Cloud","dlg.io.mi.com","+.oray.com","+.sunlogin.net"] };
     // info 节点保留在 proxies（Info 组引用），但不进任何常规代理路径

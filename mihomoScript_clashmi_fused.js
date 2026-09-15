@@ -68,12 +68,13 @@ const ruleOptionsEnable = {
   启用自定义本地规则: true, // 是否启用 my_direct/my_proxy/ResourceSite/PanVod/add_direct_domain/ntp_domain
 };
 
-// 定义前置规则
-const prefixRules = [
-  // 私有网络直连
+// 定义前置规则（拆成两段，便于把自定义本地规则 my_proxy/my_direct 插在中间，与 clashmi.yml 优先级一致）
+// 第一段：私有网络直连（最高优先级）
+const prefixRulesPrivate = [
   'RULE-SET,private,直连',
-
-  // 国内直连
+];
+// 第二段：国内直连快路径（必须晚于 RULES_MY，否则 gsa.apple.com 等 Apple 认证域名会被 apple_cn 截成直连）
+const prefixRulesCnDirect = [
   'RULE-SET,games_cn,直连', // 已包含 steam 下载域名
   'RULE-SET,epicgames,直连',
   'RULE-SET,nvidia_cn,直连',
@@ -394,16 +395,20 @@ const clashmiExtraProviders = {
     path: './ruleset/add_direct_domain.mrs',
   },
 };
-// clashmi 自定义规则（注入到 functionalRules，顺序与 clashmi.yml 一致）
-const clashmiExtraRulesDirect = [
+// clashmi 自定义规则（在 main 的规则总装里插入到 prefixRulesPrivate 与 prefixRulesCnDirect 之间，顺序与 clashmi.yml 一致）
+// 第一优先级补充：内网域名 / NTP
+const clashmiExtraRulesPrivate = [
   'RULE-SET,private_domain,直连',
   'RULE-SET,ntp_domain,直连',
+];
+// 第二优先级：自定义代理规则（含 SideStore 续签所需的 Apple 认证域名）先于自定义直连规则
+const clashmiExtraRulesProxy = ['RULE-SET,my_proxy,默认代理'];
+const clashmiExtraRulesDirect = [
   'RULE-SET,my_direct,直连',
   'RULE-SET,ResourceSite,直连',
   'RULE-SET,PanVod,直连',
   'RULE-SET,add_direct_domain,直连',
 ];
-const clashmiExtraRulesProxy = ['RULE-SET,my_proxy,默认代理'];
 
 // 策略组公共配置（健康检查调优，2026-09 对齐 clashmi_lite.js v1.7：
 // 测速 URL 用 mihomo 默认 gstatic generate_204 全球 anycast（原 g.cn 依附 Google China
@@ -1256,10 +1261,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
     ...serviceConfigs.filter((svc) => svc.name === 'AdBlock'),
     ...serviceConfigs.filter((svc) => svc.name !== 'AdBlock'),
   ];
-  // clashmi 注入：自定义本地规则优先于其他分流（my_proxy/my_direct 最早命中）
-  if (enableClashmiLocal) {
-    functionalRules.push(...clashmiExtraRulesProxy, ...clashmiExtraRulesDirect);
-  }
+  // clashmi 自定义本地规则不再注入此处：已在 main 里插入到国内直连快路径之前（见 prefixRulesPrivate）
   for (const svc of orderedServiceConfigs) {
     if (!isServiceEnabled(svc.name)) continue;
 
@@ -1756,13 +1758,20 @@ function main(config) {
     interval: 60,
   };
 
+  // TUN：loopback-address 10.7.0.1 为 SideStore/LiveContainer 本机续签（免电脑、免 LocalDevVPN）必需，勿删；
+  // stack: gvisor + strict-route: false 对齐上游可用配置 tom-snow/Sidestore-ClashMi。
+  // 详见 README「SideStore / LiveContainer 续签依赖」。
   newConfig['tun'] = {
     enable: true,
-    stack: 'system',
+    stack: 'gvisor',
+    mtu: 1300,
     'auto-route': true,
-    'strict-route': true,
+    'strict-route': false,
     'auto-redirect': true,
     'auto-detect-interface': true,
+    'endpoint-independent-nat': true,
+    'route-exclude-cidr': ['192.168.0.0/16', '10.0.0.0/8', '172.16.0.0/12', '100.64.0.0/10', '169.254.0.0/16', 'fc00::/7', 'fe80::/10'],
+    'loopback-address': ['10.7.0.1'],
     'dns-hijack': ['any:53', 'tcp://any:53'],
   };
 
@@ -1777,7 +1786,10 @@ function main(config) {
   newConfig['rule-providers'] = finalRuleProviders;
 
   newConfig['rules'] = [
-    ...prefixRules,
+    ...prefixRulesPrivate,
+    // clashmi 注入：自定义本地代理规则先于国内直连快路径（SideStore 续签域名不能被 apple_cn 截走）
+    ...(ruleOptionsEnable.启用自定义本地规则 ? [...clashmiExtraRulesPrivate, ...clashmiExtraRulesProxy, ...clashmiExtraRulesDirect] : []),
+    ...prefixRulesCnDirect,
     ...(ruleOptionsEnable.屏蔽国外QUIC ? blockForeignQuic : []),
     ...functionalRules,
 

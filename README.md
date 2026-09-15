@@ -167,6 +167,40 @@ DOMAIN-SUFFIX,blocked-site.com
 DOMAIN-KEYWORD,google
 ```
 
+> 注意：该文件同时承载 SideStore/LiveContainer 续签所需的 Apple 认证域名，
+> 详见[SideStore / LiveContainer 续签依赖](#-sidestore--livecontainer-续签依赖勿删项)。
+
+---
+
+## 📱 SideStore / LiveContainer 续签依赖（勿删项）
+
+iPhone 上免电脑续签/安装（SideStore、LiveContainer、LiveContainer+SideStore 二合一）依赖 mihomo TUN
+把 `10.7.0.1` 当回环地址，让 SideStore 的本地 lockdown 通道在设备内部自环，从而无需 LocalDevVPN。
+上游参考实现：[tom-snow/Sidestore-ClashMi](https://github.com/tom-snow/Sidestore-ClashMi)（其
+`profile_overwrite_min.yaml` 全文就三行：`tun.loopback-address: [10.7.0.1]`）。
+
+以下各项在 `clashmi.yml`、`clashmi_lite.js`、`clashmi_flclash.js`、`mihomoScript_clashmi_fused.js`
+四份配置中必须同时存在，任何新生成器都不得省略：
+
+| 项 | 值 | 作用 |
+|---|---|---|
+| `tun.loopback-address` | `10.7.0.1` | SideStore 连本机 10.7.0.1 时被 TUN 环回，minimuxer 才能取到 UDID |
+| `tun.stack` | `gvisor` | 对齐上游可用配置 |
+| `tun.strict-route` | `false` | 对齐上游；开启严格路由会强制劫持本地/内网流量，易导致自环失败 |
+| `rules/my_proxy.list` | `gsa.apple.com`、`developerservices2.apple.com`、`gspe1-ssl.ls.apple.com` | Apple ID 认证/安装服务域名必须走代理（国内直连不通） |
+| 规则优先级 | private → **my_proxy** → my_direct → 国内直连快路径（`apple_cn` 等）→ 业务组 | 若 `apple_cn` 先命中，续签域名会被判为国内直连而失败 |
+
+手机端配合项：SideStore → Settings → VPN Configuration → **Device IP 填 `10.7.0.1`**；
+改完覆写配置后需**断开 VPN 再重连**。若报
+`SideStore could not determine this device's UDID (#1006)`，先升级到 LiveContainer/SideStore
+nightly（LiveContainer 3.8.0 + SideStore 0.6.4 存在 loopback 续签回归，见 LiveContainer issue #1478）。
+
+⚠️ 已知遗留（未修，慎改）：`tun.route-exclude-cidr` 并非 mihomo 关键字（正确名为
+`route-exclude-address`；已用 mihomo 1.19.29 实测：写错名的非法值会被静默忽略，正确名的非法值会报错）。
+因此列表里的 `10.0.0.0/8` 实际从未生效——这也解释了为何 `loopback-address` 一直可用。
+**若只把键名改对，`10.7.0.1` 会被排除出 TUN，续签会失效**；要真正排除内网，必须同时把
+`10.7.0.0/24`（或 `10.7.0.1/32`）从排除段里挖出。
+
 ---
 
 ## 🛠️ 工具脚本

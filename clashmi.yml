@@ -130,13 +130,13 @@ external-ui-url: https://v4.gh-proxy.org/https://github.com/Zephyruso/zashboard/
 # TUN配置
 tun:
   enable: true
-  stack: mixed
+  stack: gvisor            # 对齐上游 tom-snow/Sidestore-ClashMi 的 SideStore 可用配置（原 mixed）
   mtu: 1300
   dns-hijack: ['any:53', 'tcp://any:53']
   auto-detect-interface: true
   auto-route: true
   auto-redirect: true
-  strict-route: true
+  strict-route: false      # 对齐上游 tom-snow/Sidestore-ClashMi 的 SideStore 可用配置（原 true）
   endpoint-independent-nat: true
   route-exclude-cidr:
     - 192.168.0.0/16
@@ -146,7 +146,7 @@ tun:
     - 169.254.0.0/16
     - fc00::/7
     - fe80::/10
-  loopback-address:
+  loopback-address:        # 环回地址 for sidestore/livecontainer 免电脑续签（勿删）
     - 10.7.0.1
 
 # 嗅探功能

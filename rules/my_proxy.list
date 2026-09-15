@@ -1,5 +1,9 @@
 # for sidestore
+# SideStore/LiveContainer 免电脑续签必需的 Apple 认证端点
+# （iOS 26.4+ 续签除 gsa 外还会请求下面两个域名，缺失会导致刷新/安装失败）
 DOMAIN,gsa.apple.com
+DOMAIN,developerservices2.apple.com
+DOMAIN,gspe1-ssl.ls.apple.com
 # STUN
 DOMAIN,stun.voip.blackberry.com
 
