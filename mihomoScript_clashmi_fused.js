@@ -7,6 +7,7 @@
  *   2) 自定义本地规则：my_direct / my_proxy / ResourceSite / PanVod / add_direct_domain / ntp
  *   3) 大陆分组：亚洲 / 欧洲 / 美洲 / 其他地区（Korea/IN/TH/MY... 全量）
  *   4) 图标：clashmi 的 v4.gh-proxy 图床兜底 + 原 Qure 图标
+ *   5) GitHub 独立分组：github 规则集从 Microsoft 服务拆出，与 Apple/Microsoft 同级可单独调整
  * 使用：直接替换原 mihomoScript.js 链接，或在 BettBox/Clash 中引用本文件
  * 友情推荐：https://github.com/appshubcc/Bettbox
  */
@@ -37,6 +38,8 @@ const ruleOptionsEnable = {
   Google: true, // Google服务
   Microsoft: true, // Microsoft服务
   Apple: true, // Apple服务
+  GitHub: true, // clashmi 注入：GitHub 独立分组（默认走默认代理）
+                  // false 时不下发组/规则/规则集，github 域名会被 microsoft 规则集截走而直连
   Telegram: true, // Telegram通讯软件
   Steam: true, // Steam游戏平台
   TikTok: true, // TikTok视频平台
@@ -639,7 +642,9 @@ const serviceConfigs = [
     rules: ['RULE-SET,google,Google', 'RULE-SET,google_ip,Google,no-resolve'],
   },
   {
-    name: 'Microsoft',
+    // ⚠️ GitHub 必须排在 Microsoft 之前：geosite/microsoft include github，而 Microsoft 服务
+    //    为直连优先（direct: true），规则顺序颠倒会导致 GitHub 被截走直连而无法访问
+    name: 'GitHub',
     baseOption: selectBaseOption,
     direct: true,
     providers: {
@@ -649,6 +654,15 @@ const serviceConfigs = [
         path: './ruleset/github.mrs',
         'path-in-bundle': 'geo/geosite/github.mrs',
       },
+    },
+    icon: `${ICON_BASE_CLASHMI}/GitHub.png`,
+    rules: ['RULE-SET,github,GitHub'],
+  },
+  {
+    name: 'Microsoft',
+    baseOption: selectBaseOption,
+    direct: true,
+    providers: {
       microsoft: {
         ...ruleProviderCommonDomain,
         url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs',
@@ -657,7 +671,7 @@ const serviceConfigs = [
       },
     },
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Microsoft.png',
-    rules: ['RULE-SET,github,默认代理', 'RULE-SET,microsoft,Microsoft'],
+    rules: ['RULE-SET,microsoft,Microsoft'],
   },
   {
     name: 'Apple',

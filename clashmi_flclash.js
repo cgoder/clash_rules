@@ -5,8 +5,17 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v3.2  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-09-04 15:00:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v3.3  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-09-15 18:40:00 CST
+//
+// v3.3 变更（GitHub 独立策略组：与 Apple/Microsoft 同级，面板可单独调整，同 lite v1.8）：
+// - GitHub 从「硬编码规则 → 一键代理」升级为数据驱动服务组：serviceConfigs 单点定义
+//   组 + 规则 + 规则集，面板 GitHub 开关独立控制，组内可手动指定出口
+// - 组默认出口仍是一键代理（svc 列表首位），与 v2.9 行为一致
+// - 规则仍必须排在 Microsoft 之前（geosite/microsoft include github）
+//   → GitHub 定义固定放在 serviceConfigs 中 Microsoft 条目之前，勿随意调序
+// - 关闭 GitHub 开关 = 不下发该组/规则/规则集，github 域名回落被 microsoft_domain 截走
+//   （即 v2.9 修复前的行为，会导致 GitHub 直连失败），除非明确要合并处理否则保持开启
 //
 // v3.2 变更（修复 url-test 误判"服务器不可用"的 DNS 放大器，同 clashmi_lite.js v1.7）：
 // - 根因：测速 URL 域名由节点远端解析（mihomo URLTest 用 SetRemoteAddress 透传域名），
@@ -132,7 +141,8 @@ const ruleOptionsEnable = {
   AI: true,        // ChatGPT/Claude/Gemini
   Media: true,     // 流媒体（youtube/netflix/tiktok/disney/spotify/appletv）
   Telegram: true,  // 通信（telegram + twitter，twitter 由 Twitter 子开关控制）
-  Google: true,    // 云服务（google/github/speedtest）
+  Google: true,    // 云服务（google/speedtest）
+  GitHub: true,    // GitHub 独立组（默认随一键代理）；false → github 域名被 Microsoft 截走直连
   Microsoft: true, // Microsoft/OneDrive
   Apple: true,     // Apple
   金融: true,      // 金融（paypal）
@@ -344,6 +354,7 @@ const RULES_TELEGRAM = ["RULE-SET,telegram_domain,通信","RULE-SET,telegram_ip,
 const RULES_GOOGLE = ["RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,speedtest_domain,云服务"];
 const RULES_PAYPAL = ["RULE-SET,paypal_domain,金融"];
 const RULES_APPLE = ["RULE-SET,apple_domain,Apple","RULE-SET,apple_ip,Apple,no-resolve"];
+const RULES_GITHUB = ["RULE-SET,github_domain,GitHub"];
 const RULES_MS = ["RULE-SET,onedrive_domain,OneDrive","RULE-SET,microsoft_domain,Microsoft"];
 const RULES_CN_TAIL = ["RULE-SET,ResourceSite,国内直连","RULE-SET,PanVod,国内直连","RULE-SET,add_direct_domain,国内直连","RULE-SET,cn_domain,国内直连","RULE-SET,cn_ip,国内直连,no-resolve"];
 // 屏蔽国外QUIC：国内 IP 放行，其余 UDP 443 REJECT（mihomoScript.js 规则简化版）
@@ -382,6 +393,14 @@ const serviceConfigs = [
     rules: RULES_GOOGLE,
     providers: { google_domain: M("google"), google_ip: MI("google"), speedtest_domain: M("ookla-speedtest") },
   },
+  // ⚠️ GitHub 必须排在 Microsoft 之前：geosite/microsoft include github，Microsoft 组
+  //    为直连优先（proxiesKey ld），规则顺序颠倒会导致 GitHub 无法访问（v2.9 修复）
+  {
+    sw: "GitHub", proxiesKey: "svc",
+    groups: [{ name: "GitHub", icon: ICON.GitHub }],
+    rules: RULES_GITHUB,
+    providers: { github_domain: M("github") },
+  },
   {
     sw: "金融", proxiesKey: "svc",
     groups: [{ name: "金融", icon: ICON.PayPal }],
@@ -402,17 +421,14 @@ const serviceConfigs = [
   },
 ];
 
-// 组装规则：前置基础规则 + github 独立代理规则（必须在 microsoft 规则之前，否则被
-// microsoft_domain 规则集截走——该规则集含全部 github 域名）+ 数据驱动服务规则 + 尾部兜底
+// 组装规则：前置基础规则 + 数据驱动服务规则（含 v2.9 的 github 规则：serviceConfigs 中
+// GitHub 排在 Microsoft 之前，必须先命中，否则被 microsoft_domain 规则集截走直连）+ 尾部兜底
 function buildRules(serviceRules) {
   return [
     ...(ruleOptionsEnable.AdBlock ? ["RULE-SET,adblock,REJECT"] : []),
     ...RULES_PRIVATE,
     ...RULES_CN_FAST,
     ...RULES_MY,
-    // github 走代理（mihomoScript.js 设计）：microsoft_domain 规则集 include 了 github，
-    // 必须先于 RULES_MS 命中，否则 github 会被 Microsoft 组（默认国内直连）截走
-    "RULE-SET,github_domain,一键代理",
     ...serviceRules,
     ...RULES_CN_TAIL,
     ...(ruleOptionsEnable["屏蔽国外QUIC"] ? RULES_QUIC : []),
@@ -437,8 +453,6 @@ const RULE_PROVIDERS_BASE = {
   private_ip: MI("private"),
   "geolocation_not_cn": M("geolocation-!cn"),
   gfw: M("gfw"),
-  // github 独立代理规则集（v2.9：从 Google 服务移入常驻；microsoft.mrs 含 github 域名，规则必须前置）
-  github_domain: M("github"),
   // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules，分支 release 用 / 不用 @）
   fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs" },
   add_direct_domain: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/Seven1echo/Yaml/refs/heads/main/rules/Seven1_Direct_Domain.mrs" },
@@ -518,7 +532,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v3.2 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v3.3 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);

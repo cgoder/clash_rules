@@ -69,7 +69,8 @@ cd clash_rules
 ### 📺 场景化服务分组
 - **流媒体**：YouTube/Netflix/Disney/Spotify/TikTok/AppleTV
 - **通信**：Telegram/Twitter
-- **云服务**：Google/GitHub/Speedtest
+- **云服务**：Google/Speedtest
+- **GitHub**：独立分组（默认走代理，可单独指定出口；与 Microsoft 解耦，不再被其规则集截走）
 - **金融**：PayPal
 
 ### 🌐 DNS 防污染/防泄漏

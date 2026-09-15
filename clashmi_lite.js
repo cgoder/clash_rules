@@ -5,10 +5,19 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi_lite.js v1.7 — 简版覆写脚本
+// 🔧 clashmi_lite.js v1.8 — 简版覆写脚本
 // 设计：Script.js（AIsouler/MyClash 精简版）骨架 × clashmi.yml 优势融合
 // 参考：https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/Script.js
-// ⏰ 更新时间: 2026-09-04 14:30:00 CST
+// ⏰ 更新时间: 2026-09-15 18:30:00 CST
+//
+// v1.8 变更（GitHub 独立策略组：与 Apple 同级，面板可单独调整）：
+// - GitHub 从「硬编码规则 → 默认代理」升级为数据驱动场景组：serviceConfigs 单点定义
+//   组 + 规则 + 规则集，BettBox 面板 GitHub 开关独立控制，组内可手动指定出口
+// - 默认选中「默认代理」（与 v1.4 行为一致，五地区+兜底聚合入口）
+// - 规则仍必须排在 Microsoft 之前（geosite/microsoft include github，微软组默认直连）
+//   → GitHub 定义固定放在 serviceConfigs 中 Microsoft 条目之前，勿随意调序
+// - 关闭 GitHub 开关 = 不下发该组/规则/规则集，github 域名回落被 microsoft_domain 截走
+//   （即 v1.4 修复前的行为，会导致 GitHub 直连失败），除非明确要合并处理否则保持开启
 //
 // v1.7 变更（修复 url-test 误判"服务器不可用"的 DNS 放大器）：
 // - 根因：健康检查测速 URL 域名由节点远端解析（mihomo URLTest 用 SetRemoteAddress
@@ -73,7 +82,8 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 //   地区组：香港/日本/台湾/新加坡/美国 —— 手动 select + 隐藏 url-test 双模式，
 //           默认选中"XX-自动选择"（速度优先），可展开手动指定节点
 //   场景组：AI（GPT/Claude/Gemini，默认美国）、Google（默认美国）、
-//           OneDrive（默认"默认代理"，国内段规则直连）、Microsoft/Apple（默认国内直连）
+//           OneDrive/GitHub（默认"默认代理"，GitHub 独立组防 microsoft 规则集截走）、
+//           Microsoft/Apple（默认国内直连）
 //   默认代理：聚合入口（5 地区 + 其他节点 + 兜底），未细分的特殊服务都走它
 //   漏网之鱼：默认代理/手动选择/国内直连/兜底
 // 保留 clashmi.yml 优势：
@@ -116,6 +126,7 @@ const ruleOptionsEnable = {
   OneDrive: true,           // 特例：国内段规则直连，国外段走组（默认"默认代理"）
   Microsoft: true,          // 默认国内直连（LD 直连优先）
   Apple: true,              // 默认国内直连（LD 直连优先）
+  GitHub: true,             // 独立组，默认"默认代理"；false → github 域名被 Microsoft 截走直连
   // === 功能开关 ===
   AdBlock: false,           // 广告拦截（adblock 规则集 + REJECT 置顶）
 };
@@ -139,6 +150,7 @@ const ICON = {
   OneDrive: `${ICON_BASE}/OneDrive.png`,
   Microsoft: `${ICON_BASE}/Microsoft.png`,
   Apple: `${ICON_BASE}/Apple.png`,
+  GitHub: `${ICON_BASE}/GitHub.png`,
   MATCH: `${ICON_BASE}/MATCH.png`,
 };
 
@@ -186,7 +198,7 @@ const GROUP_NAMES = new Set([
   "默认代理", "手动选择", "国内直连",
   "香港", "日本", "台湾", "新加坡", "美国", "其他节点",
   "香港-自动选择", "日本-自动选择", "台湾-自动选择", "新加坡-自动选择", "美国-自动选择",
-  "AI", "Google", "OneDrive", "Microsoft", "Apple", "漏网之鱼", "兜底自动选择",
+  "AI", "Google", "OneDrive", "Microsoft", "Apple", "GitHub", "漏网之鱼", "兜底自动选择",
 ]);
 // 冲突节点重命名：标准化后仍与组同名的（无地区标识的），加"节点"后缀
 function renameIfGroupNameCollision(name) {
@@ -307,6 +319,7 @@ const RULES_GOOGLE = ["RULE-SET,google_domain,Google","RULE-SET,google_ip,Google
 const RULES_ONEDRIVE = ["RULE-SET,onedrive_domain,OneDrive"];
 const RULES_MS = ["RULE-SET,microsoft_domain,Microsoft"];
 const RULES_APPLE = ["RULE-SET,apple_domain,Apple","RULE-SET,apple_ip,Apple,no-resolve"];
+const RULES_GITHUB = ["RULE-SET,github_domain,GitHub"];
 // 国内直连收尾（clashmi.yml 第十层）
 const RULES_CN_TAIL = ["RULE-SET,ResourceSite,国内直连","RULE-SET,PanVod,国内直连","RULE-SET,add_direct_domain,国内直连","RULE-SET,cn_domain,国内直连","RULE-SET,cn_ip,国内直连,no-resolve"];
 // 屏蔽国外QUIC：国内 IP 放行，其余 UDP 443 REJECT
@@ -318,8 +331,8 @@ function buildRules(serviceRules) {
     ...RULES_PRIVATE,
     ...RULES_CN_FAST,
     ...RULES_MY,
-    // github 走默认代理（v1.4：microsoft_domain 规则集含 github 域名，必须先于 Microsoft 规则命中）
-    "RULE-SET,github_domain,默认代理",
+    // 场景组规则（含 v1.4 的 github 规则：serviceConfigs 中 GitHub 排在 Microsoft 之前，
+    // 必须先于 Microsoft 规则命中，否则被 microsoft_domain 规则集截走直连）
     ...serviceRules,
     ...RULES_CN_TAIL,
     ...(ruleOptionsEnable["屏蔽国外QUIC"] ? RULES_QUIC : []),
@@ -340,6 +353,9 @@ const serviceConfigs = [
   { sw: "AI", proxiesKey: "svc", groups: [{ name: "AI", icon: ICON.AI, def: "us" }], rules: RULES_AI, providers: { openai_domain: M("openai"), anthropic_domain: M("anthropic"), "google-gemini_domain": M("google-gemini") } },
   { sw: "Google", proxiesKey: "svc", groups: [{ name: "Google", icon: ICON.Google, def: "us" }], rules: RULES_GOOGLE, providers: { google_domain: M("google"), google_ip: MI("google") } },
   { sw: "OneDrive", proxiesKey: "svc", groups: [{ name: "OneDrive", icon: ICON.OneDrive, def: "default" }], rules: RULES_ONEDRIVE, providers: { onedrive_domain: M("onedrive") } },
+  // ⚠️ GitHub 必须排在 Microsoft 之前：geosite/microsoft include github，
+  //    Microsoft 组默认国内直连，规则顺序颠倒会导致 GitHub 无法访问（v1.4 修复）
+  { sw: "GitHub", proxiesKey: "svc", groups: [{ name: "GitHub", icon: ICON.GitHub, def: "default" }], rules: RULES_GITHUB, providers: { github_domain: M("github") } },
   { sw: "Microsoft", proxiesKey: "svc", groups: [{ name: "Microsoft", icon: ICON.Microsoft, def: "国内直连" }], rules: RULES_MS, providers: { microsoft_domain: M("microsoft") } },
   { sw: "Apple", proxiesKey: "svc", groups: [{ name: "Apple", icon: ICON.Apple, def: "国内直连" }], rules: RULES_APPLE, providers: { apple_domain: M("apple"), apple_ip: MIG("apple") } },
 ];
@@ -367,8 +383,6 @@ const RULE_PROVIDERS_BASE = {
   private_ip: MI("private"),
   "geolocation_not_cn": M("geolocation-!cn"),
   gfw: M("gfw"),
-  // github 独立代理规则集（v1.4：microsoft.mrs 含 github 域名，规则必须前置）
-  github_domain: M("github"),
   // fake-ip-filter 配套规则集（mihomoScript.js 参考源 wwqgtxx/clash-rules，分支 release 用 / 不用 @）
   fakeip_filter: { type: "http", interval: 86400, behavior: "domain", format: "mrs", url: "https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs" },
   // AdBlock（仅 ruleOptionsEnable.AdBlock 开启时下发，默认不下载）
@@ -443,7 +457,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_lite.js v1.7（Script.js × clashmi.yml 融合简版）");
+  log("🚀 clashmi_lite.js v1.8（Script.js × clashmi.yml 融合简版）");
   try {
     const filteredProxies = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);
