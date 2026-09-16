@@ -8,6 +8,7 @@
  *   3) 大陆分组：亚洲 / 欧洲 / 美洲 / 其他地区（Korea/IN/TH/MY... 全量）
  *   4) 图标：clashmi 的 v4.gh-proxy 图床兜底 + 原 Qure 图标
  *   5) GitHub 独立分组：github 规则集从 Microsoft 服务拆出，与 Apple/Microsoft 同级可单独调整
+ *   6) YouTube 独立分组：youtube 规则集从 Media 拆出，避免被 geosite/google（include:youtube）接走
  * 使用：直接替换原 mihomoScript.js 链接，或在 BettBox/Clash 中引用本文件
  * 友情推荐：https://github.com/appshubcc/Bettbox
  */
@@ -34,6 +35,8 @@ const ruleOptionsEnable = {
   Claude: true, // clashmi 注入：Anthropic Claude
   Gemini: true, // clashmi 注入：Google Gemini
   Media: true, // 国外视频平台
+  YouTube: true, // clashmi 注入：YouTube 独立分组（默认走默认代理）
+                 // false 时不下发组/规则/规则集，youtube 域名会被 google 规则集接走（geosite/google include:youtube）
   FCM: true, // GoogleFCM服务
   Google: true, // Google服务
   Microsoft: true, // Microsoft服务
@@ -535,12 +538,6 @@ const serviceConfigs = [
     baseOption: selectBaseOption,
     defaultSelected: '日本',
     providers: {
-      youtube: {
-        ...ruleProviderCommonDomain,
-        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs',
-        path: './ruleset/youtube.mrs',
-        'path-in-bundle': 'geo/geosite/youtube.mrs',
-      },
       instagram: {
         ...ruleProviderCommonDomain,
         url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/instagram.mrs',
@@ -598,7 +595,6 @@ const serviceConfigs = [
     },
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ForeignMedia.png',
     rules: [
-      'RULE-SET,youtube,Media',
       'RULE-SET,instagram,Media',
       'RULE-SET,netflix,Media',
       'RULE-SET,netflix_ip,Media,no-resolve',
@@ -625,6 +621,22 @@ const serviceConfigs = [
     },
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MiToverG422/Qure/master/IconSet/Color/fcm.png',
     rules: ['RULE-SET,googlefcm,FCM'],
+  },
+  {
+    // ⚠️ YouTube 必须排在 Google 之前：上游 geosite/google 分类 include:youtube（已用本地
+    //    geosite.dat 实证，见文件头注入内容 6），规则顺序颠倒会让 YouTube 被 Google 组接走
+    name: 'YouTube',
+    baseOption: selectBaseOption,
+    providers: {
+      youtube: {
+        ...ruleProviderCommonDomain,
+        url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs',
+        path: './ruleset/youtube.mrs',
+        'path-in-bundle': 'geo/geosite/youtube.mrs',
+      },
+    },
+    icon: `${ICON_BASE_CLASHMI}/YouTube.png`,
+    rules: ['RULE-SET,youtube,YouTube'],
   },
   {
     name: 'Google',

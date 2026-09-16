@@ -5,8 +5,18 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi.yml → BettBox JS Override  v3.3  (基于 mihomoScript.js 重构)
-// ⏰ 更新时间: 2026-09-15 18:40:00 CST
+// 🔧 clashmi.yml → BettBox JS Override  v3.4  (基于 mihomoScript.js 重构)
+// ⏰ 更新时间: 2026-09-16 11:20:00 CST
+//
+// v3.4 变更（YouTube 独立策略组：与流媒体/云服务同级，同 lite v1.9）：
+// - YouTube 从「流媒体组」升级为数据驱动服务组：serviceConfigs 单点定义
+//   组 + 规则 + 规则集，面板 YouTube 开关独立控制，可单独指定出口（不影响其它流媒体）
+// - 组默认出口仍是一键代理（svc 列表首位）；原流媒体组默认也是一键代理，出口不变
+// - 规则必须排在 Google（云服务组）之前：上游 v2fly domain-list-community 的 google 分类
+//   带 include:youtube（data/google 第 18 行，已用本地 geosite.dat 实证），顺序颠倒会让
+//   YouTube 被云服务组接走
+//   → YouTube 定义固定放在 serviceConfigs 中 Google 条目之前，勿随意调序
+// - 关闭 YouTube 开关 = 不下发该组/规则/规则集，youtube 域名回落被 google_domain 接进云服务组
 //
 // v3.3 变更（GitHub 独立策略组：与 Apple/Microsoft 同级，面板可单独调整，同 lite v1.8）：
 // - GitHub 从「硬编码规则 → 一键代理」升级为数据驱动服务组：serviceConfigs 单点定义
@@ -139,7 +149,8 @@ const ruleOptionsEnable = {
   分流组添加所有节点: false, // true 时服务组直接引用全部节点而非组引用
   // === 服务组（联动 组+规则+规则集）===
   AI: true,        // ChatGPT/Claude/Gemini
-  Media: true,     // 流媒体（youtube/netflix/tiktok/disney/spotify/appletv）
+  Media: true,     // 流媒体（netflix/tiktok/disney/spotify/appletv）
+  YouTube: true,   // YouTube 独立组（默认随一键代理）；false → youtube 域名被 google 规则集（include:youtube）接进云服务组
   Telegram: true,  // 通信（telegram + twitter，twitter 由 Twitter 子开关控制）
   Google: true,    // 云服务（google/speedtest）
   GitHub: true,    // GitHub 独立组（默认随一键代理）；false → github 域名被 Microsoft 截走直连
@@ -175,6 +186,7 @@ const ICON = {
   Claude: `${ICON_BASE}/Claude.png`,
   Gemini: `${ICON_BASE}/Gemini.png`,
   Netflix: `${ICON_BASE}/Netflix.png`,
+  YouTube: `${ICON_BASE}/YouTube.png`,
   Telegram: `${ICON_BASE}/Telegram.png`,
   GitHub: `${ICON_BASE}/GitHub.png`,
   PayPal: `${ICON_BASE}/PayPal.png`,
@@ -350,7 +362,9 @@ const RULES_PRIVATE = ["RULE-SET,private_ip,国内直连,no-resolve","RULE-SET,p
 const RULES_CN_FAST = ["RULE-SET,games_cn,国内直连","RULE-SET,epicgames,国内直连","RULE-SET,nvidia_cn,国内直连","RULE-SET,apple_cn,国内直连","RULE-SET,microsoft_cn,国内直连","DOMAIN,fsend.cn,国内直连","DOMAIN,international-gfe.download.nvidia.com,国内直连","DOMAIN-SUFFIX,hdslb.com,国内直连"];
 const RULES_MY = ["RULE-SET,my_proxy,一键代理","RULE-SET,my_direct,国内直连"];
 const RULES_AI = ["RULE-SET,openai_domain,ChatGPT","RULE-SET,anthropic_domain,Claude","RULE-SET,google-gemini_domain,Gemini"];
-const RULES_MEDIA = ["RULE-SET,youtube_domain,流媒体","RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve",...(ruleOptionsEnable.TikTok?["RULE-SET,tiktok_domain,流媒体"]:[]),"RULE-SET,disney_domain,流媒体",...(ruleOptionsEnable.Spotify?["RULE-SET,spotify_domain,流媒体"]:[]),"RULE-SET,appletv_domain,流媒体"];
+const RULES_MEDIA = ["RULE-SET,netflix_domain,流媒体","RULE-SET,netflix_ip,流媒体,no-resolve",...(ruleOptionsEnable.TikTok?["RULE-SET,tiktok_domain,流媒体"]:[]),"RULE-SET,disney_domain,流媒体",...(ruleOptionsEnable.Spotify?["RULE-SET,spotify_domain,流媒体"]:[]),"RULE-SET,appletv_domain,流媒体"];
+// v3.4：YouTube 独立组（上游 geosite/google include:youtube，规则必须早于 google_domain，否则被云服务组接走）
+const RULES_YOUTUBE = ["RULE-SET,youtube_domain,YouTube"];
 const RULES_TELEGRAM = ["RULE-SET,telegram_domain,通信","RULE-SET,telegram_ip,通信,no-resolve",...(ruleOptionsEnable.Twitter?["RULE-SET,twitter_domain,通信","RULE-SET,twitter_ip,通信,no-resolve"]:[])];
 const RULES_GOOGLE = ["RULE-SET,google_domain,云服务","RULE-SET,google_ip,云服务,no-resolve","RULE-SET,speedtest_domain,云服务"];
 const RULES_PAYPAL = ["RULE-SET,paypal_domain,金融"];
@@ -380,13 +394,21 @@ const serviceConfigs = [
     sw: "Media", proxiesKey: "svc",
     groups: [{ name: "流媒体", icon: ICON.Netflix }],
     rules: RULES_MEDIA,
-    providers: { youtube_domain: M("youtube"), netflix_domain: M("netflix"), netflix_ip: MI("netflix"), disney_domain: M("disney"), appletv_domain: M("apple-tvplus"), ...(ruleOptionsEnable.TikTok ? { tiktok_domain: M("tiktok") } : {}), ...(ruleOptionsEnable.Spotify ? { spotify_domain: M("spotify") } : {}) },
+    providers: { netflix_domain: M("netflix"), netflix_ip: MI("netflix"), disney_domain: M("disney"), appletv_domain: M("apple-tvplus"), ...(ruleOptionsEnable.TikTok ? { tiktok_domain: M("tiktok") } : {}), ...(ruleOptionsEnable.Spotify ? { spotify_domain: M("spotify") } : {}) },
   },
   {
     sw: "Telegram", proxiesKey: "svc",
     groups: [{ name: "通信", icon: ICON.Telegram }],
     rules: RULES_TELEGRAM,
     providers: { telegram_domain: M("telegram"), telegram_ip: MI("telegram"), ...(ruleOptionsEnable.Twitter ? { twitter_domain: M("twitter"), twitter_ip: MI("twitter") } : {}) },
+  },
+  // ⚠️ YouTube 必须排在 Google（云服务）之前：geosite/google include:youtube，而 google_domain
+  //    规则在后面的云服务组里，顺序颠倒会导致 YouTube 被云服务组接走（v3.4）
+  {
+    sw: "YouTube", proxiesKey: "svc",
+    groups: [{ name: "YouTube", icon: ICON.YouTube }],
+    rules: RULES_YOUTUBE,
+    providers: { youtube_domain: M("youtube") },
   },
   {
     sw: "Google", proxiesKey: "svc",
@@ -423,7 +445,8 @@ const serviceConfigs = [
 ];
 
 // 组装规则：前置基础规则 + 数据驱动服务规则（含 v2.9 的 github 规则：serviceConfigs 中
-// GitHub 排在 Microsoft 之前，必须先命中，否则被 microsoft_domain 规则集截走直连）+ 尾部兜底
+// GitHub 排在 Microsoft 之前、v3.4 的 YouTube 排在 Google 之前，两组 geosite 分类存在
+// include 包含关系，必须先命中，否则被 microsoft_domain / google_domain 规则集截走）+ 尾部兜底
 function buildRules(serviceRules) {
   return [
     ...(ruleOptionsEnable.AdBlock ? ["RULE-SET,adblock,REJECT"] : []),
@@ -533,7 +556,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：必须返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_bettbox.js v3.3 基于 mihomoScript.js 重构");
+  log("🚀 clashmi_bettbox.js v3.4 基于 mihomoScript.js 重构");
   try {
     const { filtered: filteredProxies, info } = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);

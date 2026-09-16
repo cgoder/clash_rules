@@ -5,10 +5,20 @@
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 // ============================================================
-// 🔧 clashmi_lite.js v1.8 — 简版覆写脚本
+// 🔧 clashmi_lite.js v1.9 — 简版覆写脚本
 // 设计：Script.js（AIsouler/MyClash 精简版）骨架 × clashmi.yml 优势融合
 // 参考：https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/Script.js
-// ⏰ 更新时间: 2026-09-15 18:30:00 CST
+// ⏰ 更新时间: 2026-09-16 11:10:00 CST
+//
+// v1.9 变更（YouTube 独立策略组：从 geosite/google 的 include:youtube 里抢回来）：
+// - 此前 lite 无流媒体组，youtube 域名由 google_domain 规则集接走（上游 v2fly DLC
+//   data/google 第 18 行 include:youtube，已用本地 geosite.dat 实证）→ 跟着 Google 组走美国
+// - 新增数据驱动场景组：serviceConfigs 单点定义 组 + 规则 + 规则集，面板 YouTube 开关独立控制
+// - 默认选中「默认代理」（五地区+兜底聚合入口，与 GitHub/OneDrive 一致），组内可手调出口
+//   ※ 相对 v1.8 是出口变更：原走 Google 组（美国）的 youtube 流量改走默认代理
+// - 规则必须排在 Google 之前（geosite/google include youtube）→ YouTube 定义固定放在
+//   serviceConfigs 中 Google 条目之前，勿随意调序
+// - 关闭 YouTube 开关 = 不下发组/规则/规则集，youtube 域名回落被 google_domain 接走进 Google 组
 //
 // v1.8 变更（GitHub 独立策略组：与 Apple 同级，面板可单独调整）：
 // - GitHub 从「硬编码规则 → 默认代理」升级为数据驱动场景组：serviceConfigs 单点定义
@@ -82,6 +92,7 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 //   地区组：香港/日本/台湾/新加坡/美国 —— 手动 select + 隐藏 url-test 双模式，
 //           默认选中"XX-自动选择"（速度优先），可展开手动指定节点
 //   场景组：AI（GPT/Claude/Gemini，默认美国）、Google（默认美国）、
+//           YouTube（默认"默认代理"，独立组防 geosite/google 的 include:youtube 截走）、
 //           OneDrive/GitHub（默认"默认代理"，GitHub 独立组防 microsoft 规则集截走）、
 //           Microsoft/Apple（默认国内直连）
 //   默认代理：聚合入口（5 地区 + 其他节点 + 兜底），未细分的特殊服务都走它
@@ -95,7 +106,7 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 //   - gh-proxy 图标与规则源（国内可达）
 // 保留 v2.2 优势：健康检查调优（interval 300 常驻/timeout 2000/max-failed-times 2）
 //   + 兜底自动选择 fallback 顺序故障转移（地区节点全挂自动切活节点）
-// 删除：大洲组、流媒体/通信/云服务/金融组、倍率组、链式代理、Info 组
+// 删除：大洲组、流媒体/通信/云服务/金融组（v1.9 例外：仅单列 YouTube）、倍率组、链式代理、Info 组
 // ============================================================
 
 // 运行时开关（BettBox 面板不显示；改文件默认值即可）
@@ -123,6 +134,7 @@ const ruleOptionsEnable = {
   // === 场景组（联动 组+规则+规则集）===
   AI: true,                 // GPT/Claude/Gemini，默认美国
   Google: true,             // 谷歌系（部分服务需美国 IP），默认美国
+  YouTube: true,            // YouTube 独立组，默认"默认代理"；false → youtube 域名被 google 规则集（include:youtube）接走进 Google 组
   OneDrive: true,           // 特例：国内段规则直连，国外段走组（默认"默认代理"）
   Microsoft: true,          // 默认国内直连（LD 直连优先）
   Apple: true,              // 默认国内直连（LD 直连优先）
@@ -146,6 +158,7 @@ const ICON = {
   US: `${ICON_BASE}/US.png`,
   Other: `${ICON_BASE}/OT.png`,
   AI: `${ICON_BASE}/ChatGPT.png`,
+  YouTube: `${ICON_BASE}/YouTube.png`,
   Google: `${ICON_BASE}/Google.png`,
   OneDrive: `${ICON_BASE}/OneDrive.png`,
   Microsoft: `${ICON_BASE}/Microsoft.png`,
@@ -198,7 +211,7 @@ const GROUP_NAMES = new Set([
   "默认代理", "手动选择", "国内直连",
   "香港", "日本", "台湾", "新加坡", "美国", "其他节点",
   "香港-自动选择", "日本-自动选择", "台湾-自动选择", "新加坡-自动选择", "美国-自动选择",
-  "AI", "Google", "OneDrive", "Microsoft", "Apple", "GitHub", "漏网之鱼", "兜底自动选择",
+  "AI", "Google", "YouTube", "OneDrive", "Microsoft", "Apple", "GitHub", "漏网之鱼", "兜底自动选择",
 ]);
 // 冲突节点重命名：标准化后仍与组同名的（无地区标识的），加"节点"后缀
 function renameIfGroupNameCollision(name) {
@@ -317,6 +330,8 @@ const RULES_MY = ["RULE-SET,my_proxy,默认代理","RULE-SET,my_direct,国内直
 // 场景组规则
 const RULES_AI = ["RULE-SET,openai_domain,AI","RULE-SET,anthropic_domain,AI","RULE-SET,google-gemini_domain,AI"];
 const RULES_GOOGLE = ["RULE-SET,google_domain,Google","RULE-SET,google_ip,Google,no-resolve"];
+// v1.9：YouTube 独立组（上游 geosite/google include:youtube，规则必须早于 google_domain，否则被 Google 组接走）
+const RULES_YOUTUBE = ["RULE-SET,youtube_domain,YouTube"];
 const RULES_ONEDRIVE = ["RULE-SET,onedrive_domain,OneDrive"];
 const RULES_MS = ["RULE-SET,microsoft_domain,Microsoft"];
 const RULES_APPLE = ["RULE-SET,apple_domain,Apple","RULE-SET,apple_ip,Apple,no-resolve"];
@@ -352,6 +367,9 @@ const MIG = (file) => ({ type: "http", interval: 86400, behavior: "ipcidr", form
 // def: 'us'=美国（无美国节点时省略默认值）/ 'default'=默认代理 / '国内直连'=字面量
 const serviceConfigs = [
   { sw: "AI", proxiesKey: "svc", groups: [{ name: "AI", icon: ICON.AI, def: "us" }], rules: RULES_AI, providers: { openai_domain: M("openai"), anthropic_domain: M("anthropic"), "google-gemini_domain": M("google-gemini") } },
+  // ⚠️ YouTube 必须排在 Google 之前：geosite/google include:youtube，顺序颠倒会让 YouTube 被
+  //    Google 组（默认美国）接走；默认出口"默认代理"（v1.9 前该流量正是由 Google 组接走）
+  { sw: "YouTube", proxiesKey: "svc", groups: [{ name: "YouTube", icon: ICON.YouTube, def: "default" }], rules: RULES_YOUTUBE, providers: { youtube_domain: M("youtube") } },
   { sw: "Google", proxiesKey: "svc", groups: [{ name: "Google", icon: ICON.Google, def: "us" }], rules: RULES_GOOGLE, providers: { google_domain: M("google"), google_ip: MI("google") } },
   { sw: "OneDrive", proxiesKey: "svc", groups: [{ name: "OneDrive", icon: ICON.OneDrive, def: "default" }], rules: RULES_ONEDRIVE, providers: { onedrive_domain: M("onedrive") } },
   // ⚠️ GitHub 必须排在 Microsoft 之前：geosite/microsoft include github，
@@ -458,7 +476,7 @@ function filterAndNormalizeProxies(allProxies) {
 // ===== 主函数（BettBox 入口：返回 newConfig 全量对象，切勿直接改 config）=====
 function main(config) {
   const log = (...args) => OPTIONS.LOG_VERBOSE && console.log(...args);
-  log("🚀 clashmi_lite.js v1.8（Script.js × clashmi.yml 融合简版）");
+  log("🚀 clashmi_lite.js v1.9（Script.js × clashmi.yml 融合简版）");
   try {
     const filteredProxies = filterAndNormalizeProxies(config.proxies);
     const allProxyNames = filteredProxies.map(p => p.name);

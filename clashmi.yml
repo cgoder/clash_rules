@@ -312,6 +312,10 @@ proxy-groups:
 
   # === 场景服务分组（13选项）===
   - {name: 流媒体, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Netflix.png'}
+  # YouTube 单列（与 lite v1.9 / flclash v3.4 / fused 注入内容 6 对齐）：上游 geosite/google 分类
+  # include:youtube，youtube_domain 规则必须早于 google_domain（否则被云服务组接走）；
+  # 默认出口取 Anchor_OP 首位「一键代理」，与拆组前的流媒体组一致
+  - {name: YouTube, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/YouTube.png'}
   - {name: 通信, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/Telegram.png'}
   - {name: 云服务, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/GitHub.png'}
   - {name: 金融, <<: *Anchor_OP, icon: 'https://v4.gh-proxy.org/https://github.com/cgoder/clash_rules/raw/main/icons/PayPal.png'}
@@ -362,8 +366,8 @@ rules:
   - RULE-SET,anthropic_domain,Claude
   - RULE-SET,google-gemini_domain,Gemini
 
-  # 第四优先级：流媒体服务
-  - RULE-SET,youtube_domain,流媒体
+  # 第四优先级：流媒体服务（YouTube 已单列，见上方 YouTube 组）
+  - RULE-SET,youtube_domain,YouTube
   - RULE-SET,netflix_domain,流媒体
   - RULE-SET,netflix_ip,流媒体,no-resolve
   - RULE-SET,tiktok_domain,流媒体

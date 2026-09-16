@@ -67,11 +67,17 @@ cd clash_rules
 - Gemini
 
 ### 📺 场景化服务分组
-- **流媒体**：YouTube/Netflix/Disney/Spotify/TikTok/AppleTV
+- **流媒体**：Netflix/Disney/Spotify/TikTok/AppleTV
+- **YouTube**：独立分组（默认走聚合入口）——上游 `geosite/google` 分类 `include:youtube`，
+  因此 `youtube_domain` 规则必须早于 `google_domain`，否则 YouTube 会被 Google/云服务组接走
 - **通信**：Telegram/Twitter
 - **云服务**：Google/Speedtest
 - **GitHub**：独立分组（默认走代理，可单独指定出口；与 Microsoft 解耦，不再被其规则集截走）
 - **金融**：PayPal
+
+> 上表四份配置（`clashmi.yml` 与三个覆写脚本）均已把 **YouTube** 与 **GitHub** 从易被截走的
+> 父组里单列；两者同属一个陷阱类型：geosite 分类之间存在 `include` 包含关系
+> （`google ⊃ youtube`、`microsoft ⊃ github`），规则顺序颠倒会造成流量走错组。
 
 ### 🌐 DNS 防污染/防泄漏
 - 国内域名走国内 DNS（速度快）
@@ -121,9 +127,10 @@ Claude   → 美国负载均衡
 Gemini   → 香港负载均衡 / 美国负载均衡
 ```
 
-### 流媒体
+### 流媒体 / YouTube
 ```
 流媒体 → 香港负载均衡 / 台湾负载均衡
+YouTube → 一键代理/默认代理（可单独换区，不受其它流媒体影响）
 ```
 
 ---
