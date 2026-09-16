@@ -1,7 +1,27 @@
-# my_direct.list — 自定义直连规则列表
-# 包含内网域名、企业私有服务与高频直连服务
+DOMAIN-SUFFIX,4d4y.com
+DOMAIN-SUFFIX,gh-proxy.org
+DOMAIN-SUFFIX,immersivetranslate.com
+DOMAIN-SUFFIX,unpkg.com
+DOMAIN-SUFFIX,deeplx.org
+DOMAIN-SUFFIX,arxiv.org
+DOMAIN-SUFFIX,hcaptcha.com
+DOMAIN-SUFFIX,warp.dev
+DOMAIN-SUFFIX,bestblogs.dev
+DOMAIN-SUFFIX,gdstudio.xyz
+DOMAIN-SUFFIX,sayqz.com
+DOMAIN-SUFFIX,oiapi.net
+DOMAIN-SUFFIX,rustdesk.com
+DOMAIN-SUFFIX,clashmi.app
+
+# OrbStack local domains
+DOMAIN-SUFFIX,orb.local
+
+# AI services
+DOMAIN-SUFFIX,zenapi.top
+DOMAIN-SUFFIX,lyclaude.site
+DOMAIN-SUFFIX,laxa.com
+DOMAIN-SUFFIX,imtintl.com
+DOMAIN-SUFFIX,exa.ai
 
 # 企业内网与私有服务（直连，不走代理）
 DOMAIN-SUFFIX,litta.cn
-
-# 常用直连加速
