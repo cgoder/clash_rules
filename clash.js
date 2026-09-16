@@ -157,13 +157,13 @@ function renameIfCollidesWithGroup(name) {
   return RESERVED_GROUP_NAMES.has(name) ? `${name}节点` : name;
 }
 
-// 策略组通用基础配置（遵循官方最佳实践：统一采用 gstatic 204 Anycast 测速）
+// 策略组通用基础配置（遵循官方最佳实践：统一采用 http gstatic 204 Anycast 测速，开启 lazy 规避并发风暴）
 const GROUP_BASE_OPTION = {
   interval: 300,
   timeout: 5000,
-  url: "https://www.gstatic.com/generate_204",
-  lazy: false,
-  "max-failed-times": 2,
+  url: "http://www.gstatic.com/generate_204",
+  lazy: true,
+  "max-failed-times": 3,
   "empty-fallback": "DIRECT",
 };
 
