@@ -25,3 +25,4 @@ DOMAIN-SUFFIX,exa.ai
 
 # 企业内网与私有服务（直连，不走代理）
 DOMAIN-SUFFIX,litta.cn
+DOMAIN-SUFFIX,litta.ai
