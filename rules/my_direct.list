@@ -22,6 +22,7 @@ DOMAIN-SUFFIX,lyclaude.site
 DOMAIN-SUFFIX,laxa.com
 DOMAIN-SUFFIX,imtintl.com
 DOMAIN-SUFFIX,exa.ai
+DOMAIN-SUFFIX,opencode.ai
 
 # 企业内网与私有服务（直连，不走代理）
 DOMAIN-SUFFIX,litta.cn
