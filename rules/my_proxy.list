@@ -5,6 +5,10 @@ DOMAIN,gspe1-ssl.ls.apple.com
 # STUN
 DOMAIN,stun.voip.blackberry.com
 
+# Cloudflare（国内解析常落在不可达前缀，统一走代理）
+DOMAIN-SUFFIX,cloudflare.com
+DOMAIN-SUFFIX,cloudflare-ai.com
+
 # proxy
 DOMAIN-SUFFIX,linux.do
 DOMAIN-SUFFIX,ldstatic.com

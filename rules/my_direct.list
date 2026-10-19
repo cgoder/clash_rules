@@ -16,11 +16,6 @@ DOMAIN-SUFFIX,clashmi.app
 # OrbStack local domains
 DOMAIN-SUFFIX,orb.local
 
-# Cloudflare
-DOMAIN-SUFFIX,cloudflare.com
-DOMAIN-SUFFIX,cloudflare-ai.com
-DOMAIN,challenges.cloudflare.com
-
 # AI services
 DOMAIN-SUFFIX,zenapi.top
 DOMAIN-SUFFIX,lyclaude.site
