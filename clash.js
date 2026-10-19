@@ -184,13 +184,9 @@ const FALLBACK_BASE = {
   hidden: true,
 };
 
-// 多版本直连节点（面向不同网络栈调优）
+// 直连节点仅使用 IPv4 网络栈
 const DIRECT_PROXIES = [
-  { name: "DIRECT | 双栈", type: "direct" },
-  { name: "DIRECT | IPv4优先", type: "direct", "ip-version": "ipv4-prefer" },
-  { name: "DIRECT | IPv6优先", type: "direct", "ip-version": "ipv6-prefer" },
   { name: "DIRECT | 仅IPv4", type: "direct", "ip-version": "ipv4" },
-  { name: "DIRECT | 仅IPv6", type: "direct", "ip-version": "ipv6" },
 ];
 
 // MetaCubeX MRS 规则集辅助生成器
@@ -556,19 +552,23 @@ function buildRules(serviceRules) {
     `IP-CIDR,17.57.144.0/22,${targetApns},no-resolve`,
     `IP-CIDR,17.188.128.0/18,${targetApns},no-resolve`,
     `IP-CIDR,17.188.20.0/23,${targetApns},no-resolve`,
-    `IP-CIDR6,2620:149:a44::/48,${targetApns},no-resolve`,
-    `IP-CIDR6,2403:300:a42::/48,${targetApns},no-resolve`,
-    `IP-CIDR6,2403:300:a51::/48,${targetApns},no-resolve`,
-    `IP-CIDR6,2a01:b740:a42::/48,${targetApns},no-resolve`,
   ];
 
-  // 3. 自定义规则优先（包含 SideStore 离线自续签端点，必须在 apple_cn 直连之前匹配）
+  // 3. Apple 登录/续签认证端点必须显式代理，不能只依赖远程 my_proxy 规则集
+  //    （规则集下载失败、缓存未更新或客户端不支持 classical provider 时，不能回落到直连）
+  const rulesAppleAuth = [
+    "DOMAIN,gsa.apple.com,默认代理",
+    "DOMAIN,developerservices2.apple.com,默认代理",
+    "DOMAIN,gspe1-ssl.ls.apple.com,默认代理",
+  ];
+
+  // 4. 自定义规则优先（包含 SideStore 离线自续签端点，必须在 apple_cn 直连之前匹配）
   const rulesMy = [
     "RULE-SET,my_proxy,默认代理",
     "RULE-SET,my_direct,国内直连",
   ];
 
-  // 4. 国内直连加速快路径
+  // 5. 国内直连加速快路径
   const rulesCnFast = [
     "RULE-SET,games_cn,国内直连",
     "RULE-SET,epicgames,国内直连",
@@ -597,6 +597,7 @@ function buildRules(serviceRules) {
   return [
     ...(ruleOptionsEnable.AdBlock ? ["RULE-SET,adblock,REJECT"] : []),
     ...rulesPrivate,
+    ...rulesAppleAuth,
     ...rulesApplePush,
     ...rulesMy,
     ...rulesCnFast,
@@ -693,8 +694,6 @@ function buildTunConfig() {
       "172.16.0.0/12",
       "100.64.0.0/10",
       "169.254.0.0/16",
-      "fc00::/7",
-      "fe80::/10",
     ],
     "loopback-address": ["10.7.0.1"],
     "dns-hijack": ["any:53", "tcp://any:53"],
