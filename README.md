@@ -255,6 +255,7 @@ cd scripts
 | select 组 | 去掉 `interval` | select 组带 interval 会让内核为它注册 HealthCheck，每个成员被重复拨号（实测 3 组 24 次/8s vs 6 次） |
 | `Apple Push` | `fallback` → `select` + 默认 `DIRECT` | mihomo 的 fallback 永远返回首个 alive 成员，而 `DIRECT` 恒 alive，原 `["DIRECT","APNs-Fallback"]` 等价于永久直连 |
 | `GLOBAL` | 加 `default-selected: 默认代理` | select 缺省取成员首个，原首位是 hidden 的「国内直连」，切全局模式会变成全局直连 |
+| `unified-delay` | 客户端未声明时补 `true` | https 测速的 TLS 握手计入延迟（URLTest 的计时起点在 DialContext 之前），实测 2231ms → 308ms；unified-delay 用同连接第二条请求计时剥离握手，兼得 https 防劫持与 http 低开销 |
 
 ### 节点来源更新
 - `override.yml` 不保存节点来源

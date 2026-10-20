@@ -42,6 +42,10 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 //    解决「节点域名解析失败 → Dial 超时」的大面积假超时，其余 DNS 仍尊重客户端。
 // 8. 节点名与 mihomo 内置保留名（DIRECT/REJECT/PASS/COMPATIBLE/GLOBAL）冲突时自动改名，
 //    否则内核直接报 proxy XXX is the duplicate name，整份配置加载失败。
+// 9. 客户端未声明时补 unified-delay: true（实测 https 测速 2231ms → 308ms）：
+//    https 测速的 TLS 握手会计入延迟（URLTest 的 start 在 DialContext 之前），
+//    这正是「https 灵敏度差」的根因；unified-delay 用同连接第二条请求计时剥离握手，
+//    兼得 https 的防劫持与 http 的低开销。
 // ============================================================
 
 // 运行时控制开关
@@ -57,6 +61,11 @@ const OPTIONS = {
   // 其余 dns 配置仍完全尊重客户端。网络波动导致的大面积"服务器超时"里，
   // 最常见的一条就是节点域名解析失败 → Dial 超时，而它与测速 URL 无关。
   OVERRIDE_PROXY_DNS: true,
+  // 客户端未显式声明 unified-delay 时补 true：测速改为「同连接第二条请求计时」，
+  // 把 TCP/TLS 握手从延迟里剥离。实测 https://www.gstatic.com/generate_204
+  // 2231ms → 308ms（与 http:// 的 286ms 持平），且保留 HTTPS 的防劫持能力。
+  // 客户端已声明该键时不动（尊重用户在 UI 里的选择）。
+  ENSURE_UNIFIED_DELAY: true,
   OVERRIDE_SNIFFER: false,
   LOG_VERBOSE: true,
   // false 避免记住死节点（BettBox / Mihomo 最佳实践）
@@ -185,9 +194,10 @@ function renameIfCollidesWithGroup(name) {
 }
 
 // 策略组通用基础配置
-// - url 用 HTTPS：mihomo 对明文 http 测速地址会在 unified-delay 二次请求失败时告警
-//   （"It is recommended to use HTTPS ... use HTTP may result in failed tests"），
-//   且 80 端口明文 204 易被运营商透明缓存/DPI 干扰。
+// - url 用 HTTPS：80 端口明文 204 易被运营商透明缓存/DPI 干扰造成误判；
+//   且 mihomo 的 unified-delay 二次请求在 http 下不可靠 —— 部分机场劫持测速地址、
+//   不兼容 HEAD 二次请求，内核对 http 测速地址有专门告警
+//   （adapter/adapter_entry.go：仅 unified-delay 开启时打印）。
 // - lazy: true：仅在「距上次 touch 超过 interval」时跳过一轮，几乎不牺牲新鲜度，
 //   却能避免长时间无人使用时仍常驻拨号（mihomo component/provider/healthcheck.go process 分支）。
 // - empty-fallback: REJECT：该字段仅在成员列表被 filter/include-all 过滤成空时生效
@@ -854,6 +864,11 @@ function main(config) {
     // 继承客户端自身的平台网络与系统设置（严守安全与平台管理边界）
     const newConfig = { ...config };
     newConfig["mode"] = "rule";
+
+    // 0. 顶层测量口径：unified-delay 只在客户端未声明时补齐（merge 语义，不覆盖 UI 选择）
+    if (OPTIONS.ENSURE_UNIFIED_DELAY && newConfig["unified-delay"] === undefined) {
+      newConfig["unified-delay"] = true;
+    }
 
     // 1. 节点过滤治理与去重归一化
     const filteredProxies = filterAndNormalizeProxies(config && config.proxies);
