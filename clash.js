@@ -23,6 +23,25 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 //    - 官方级 Apple Push（APNs）故障转移专线：直连优先 + APNs-Fallback，消息永不失联。
 //    - clashmi 经典增强规则集：my_proxy（含 SideStore 续签保护）、my_direct 及大厂加速。
 //    - 全链路国内加速：所有规则集（MRS）与图标统一通过 v4.gh-proxy.org 镜像加速。
+//
+// 2026-10 修订（全盘复核，逐项经 mihomo 1.19.29 实测确认）：
+// 1. UT_BASE.tolerance 50 → 150：跨境延迟天然抖动 30~80ms，50ms 会让组内出口高频乒乓，
+//    每次切换拆掉现有 TCP/TLS 会话并使出口 IP 跳变（触发风控、长连接断流）。
+// 2. GROUP_BASE_OPTION.url http → https：明文 80 端口 204 易被透明缓存/DPI 干扰；
+//    mihomo 在 unified-delay 二次请求失败时也会就 http 测速地址告警。
+// 3. empty-fallback DIRECT → REJECT：境外场景组回退直连 = 流量裸奔撞 GFW
+//    （该字段仅在成员被 filter/include-all 过滤为空时生效，见 groupbase.go）。
+// 4. select 组改用 SELECT_BASE_OPTION（不再带 interval）：select 组一旦声明 interval，
+//    内核会为它注册 CompatibleProvider + HealthCheck 定时器，每个成员被重复拨号。
+//    实测（3 组 × 2 节点 × 3s）：带 interval = 24 次/8s，不带 = 仅 url-test 组的 6 次。
+// 5. Apple Push 由 fallback 改 select + 默认 DIRECT：mihomo 的 fallback 永远返回首个 alive 成员，
+//    而 DIRECT 恒为 alive，原 ["DIRECT","APNs-Fallback"] 等价于「永久直连」，回退分支从未生效。
+// 6. GLOBAL 增加 default-selected=默认代理：select 缺省取成员列表首个，
+//    原顺序首位是 hidden 的「国内直连」，切到全局模式会变成全局直连裸奔。
+// 7. 新增 OPTIONS.OVERRIDE_PROXY_DNS：只补齐 dns.proxy-server-nameserver，
+//    解决「节点域名解析失败 → Dial 超时」的大面积假超时，其余 DNS 仍尊重客户端。
+// 8. 节点名与 mihomo 内置保留名（DIRECT/REJECT/PASS/COMPATIBLE/GLOBAL）冲突时自动改名，
+//    否则内核直接报 proxy XXX is the duplicate name，整份配置加载失败。
 // ============================================================
 
 // 运行时控制开关
@@ -34,6 +53,10 @@ const OPTIONS = {
   // - true: 强制使用脚本内置的高级底层参数（适合无 UI 的纯 CLI/网关环境）
   OVERRIDE_TUN: false,
   OVERRIDE_DNS: false,
+  // 仅注入「节点服务器域名解析」相关字段（proxy-server-nameserver / default-nameserver），
+  // 其余 dns 配置仍完全尊重客户端。网络波动导致的大面积"服务器超时"里，
+  // 最常见的一条就是节点域名解析失败 → Dial 超时，而它与测速 URL 无关。
+  OVERRIDE_PROXY_DNS: true,
   OVERRIDE_SNIFFER: false,
   LOG_VERBOSE: true,
   // false 避免记住死节点（BettBox / Mihomo 最佳实践）
@@ -145,32 +168,61 @@ function normalizeProxyName(proxy) {
 // 保留策略组名称清单（防 Loop detected 自环）
 const RESERVED_GROUP_NAMES = new Set([
   "GLOBAL", "默认代理", "手动选择", "国内直连", "漏网之鱼", "兜底自动选择", "其他节点",
-  "Apple Push", "APNs-Fallback",
+  "Apple Push",
   ...REGION_DEFINITIONS.map(r => r.name),
   ...REGION_DEFINITIONS.map(r => `${r.name}-自动选择`),
   "AI", "Google", "YouTube", "OneDrive", "GitHub", "Microsoft", "Apple",
   "DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE",
 ]);
 
+// mihomo 内置保留名：这些名字在内核里已存在，节点同名会直接 `proxy XXX is the duplicate name`
+// 导致整份配置加载失败（已用 mihomo 1.19.29 实测 DIRECT / REJECT 两种都会报错）
+const BUILTIN_RESERVED_NAMES = new Set(["DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"]);
+
 // 节点重命名防自环：节点名称不得与策略组同名，否则 Mihomo 将节点当作组引用引发自环崩溃
 function renameIfCollidesWithGroup(name) {
-  return RESERVED_GROUP_NAMES.has(name) ? `${name}节点` : name;
+  return (RESERVED_GROUP_NAMES.has(name) || BUILTIN_RESERVED_NAMES.has(name)) ? `${name}节点` : name;
 }
 
-// 策略组通用基础配置（遵循官方最佳实践：统一采用 http gstatic 204 Anycast 测速，开启 lazy 规避并发风暴）
+// 策略组通用基础配置
+// - url 用 HTTPS：mihomo 对明文 http 测速地址会在 unified-delay 二次请求失败时告警
+//   （"It is recommended to use HTTPS ... use HTTP may result in failed tests"），
+//   且 80 端口明文 204 易被运营商透明缓存/DPI 干扰。
+// - lazy: true：仅在「距上次 touch 超过 interval」时跳过一轮，几乎不牺牲新鲜度，
+//   却能避免长时间无人使用时仍常驻拨号（mihomo component/provider/healthcheck.go process 分支）。
+// - empty-fallback: REJECT：该字段仅在成员列表被 filter/include-all 过滤成空时生效
+//   （adapter/outboundgroup/groupbase.go GetProxies → len(proxies)==0）。
+//   填 DIRECT 会让「本应走代理的境外流量」在组内无节点时静默直连撞 GFW，因此一律 REJECT。
 const GROUP_BASE_OPTION = {
   interval: 300,
   timeout: 5000,
-  url: "http://www.gstatic.com/generate_204",
+  url: "https://www.gstatic.com/generate_204",
+  // 不设 expected-status（内核缺省 "*" = 任意状态码都算通）。
+  // 若设为 "204" 可以识别「机场劫持测速地址」，但也会把返回 200 的劫持型机场全部判死，
+  // 与「减少误判超时」的目标冲突，故保持默认。
   lazy: true,
   "max-failed-times": 3,
-  "empty-fallback": "DIRECT",
+  "empty-fallback": "REJECT",
+};
+
+// select 组专用基础参数：select 组不参与自动测速，但一旦带 url/interval，
+// mihomo 会为它注册 CompatibleProvider + HealthCheck 定时器
+// （adapter/outboundgroup/parser.go：type != select/relay 才补 interval 缺省值，
+//  但 url 非空时无条件 NewHealthCheck；interval 为 0 时该 provider 不会周期性 check），
+// 每个成员都会被独立拨号探测一遍 —— 修订前 35 个组、每轮约 164 次探测就是这么来的。
+// 实测对照（3 组 × 2 节点 × 3s）：带 interval = 24 次 / 8s；仅 url 无 interval = 6 次（只来自 url-test 组）。
+// 因此 select 组只保留「面板手动测速」用的 url，不声明 interval。
+const SELECT_BASE_OPTION = {
+  url: GROUP_BASE_OPTION.url,
+  timeout: GROUP_BASE_OPTION.timeout,
 };
 
 // 地区 url-test 基础参数：纯本地区节点测速，宁断不叛逃
+// tolerance 150：公网跨境延迟的天然抖动常达 30~80ms，50ms 会让组内出口高频乒乓，
+// 每次切换都会拆掉现有 TCP/TLS 会话并让出口 IP 跳变（触发风控）。150ms 覆盖正常抖动。
 const UT_BASE = {
   type: "url-test",
-  tolerance: 50,
+  tolerance: 150,
   ...GROUP_BASE_OPTION,
   hidden: true,
   "exclude-type": "DIRECT",
@@ -407,7 +459,7 @@ function buildProxyGroups(allProxyNames) {
     groups.push({
       name: reg.name,
       type: "select",
-      ...GROUP_BASE_OPTION,
+      ...SELECT_BASE_OPTION,
       proxies: selectProxies,
       icon: reg.icon,
       ...(hideManual ? { hidden: true } : {}),
@@ -420,7 +472,7 @@ function buildProxyGroups(allProxyNames) {
     groups.push({
       name: "其他节点",
       type: "select",
-      ...GROUP_BASE_OPTION,
+      ...SELECT_BASE_OPTION,
       proxies: otherNodes,
       icon: ICON.Other,
     });
@@ -432,47 +484,43 @@ function buildProxyGroups(allProxyNames) {
   groups.unshift({
     name: "默认代理",
     type: "select",
-    ...GROUP_BASE_OPTION,
+    ...SELECT_BASE_OPTION,
     proxies: [...activeRegionNames, FALLBACK_GROUP_NAME],
     icon: ICON.Proxy,
   });
   groups.unshift({
     name: "手动选择",
     type: "select",
-    ...GROUP_BASE_OPTION,
+    ...SELECT_BASE_OPTION,
     proxies: manualProxies.length ? manualProxies : ["国内直连"],
     icon: ICON.Manual,
   });
   groups.unshift({
     name: "国内直连",
     type: "select",
-    ...GROUP_BASE_OPTION,
+    ...SELECT_BASE_OPTION,
     proxies: DIRECT_PROXIES.map(p => p.name),
     icon: ICON.China,
     hidden: true,
   });
 
-  // 5. 对齐官方最佳实践：Apple Push（APNs）专线故障转移
+  // 5. Apple Push（APNs）专用链路
+  // 修正历史设计：原实现是「fallback + 顺序故障转移」，但 mihomo 的 fallback 永远返回
+  // 成员列表里第一个 alive 的成员（adapter/outboundgroup/fallback.go findAliveProxy），
+  // 而 DIRECT 在 mihomo 里恒为 alive（adapter/outboundgroup/groupbase.go onDialFailed
+  // 对 Direct/Reject/Compatible 直接 return，不会置 false）。
+  // 因此 ["DIRECT", "APNs-Fallback"] 的顺序实际等价于「永久 DIRECT」，代理回退分支从未生效。
+  // 改用 select + 默认 DIRECT：语义诚实，用户也能在面板上手动切到代理回退。
   if (ruleOptionsEnable["ApplePush专线保障"]) {
-    // 专用 APNs-Fallback 组：优先用各地区 Auto，无 Auto 用全节点
-    const apnsProxies = existingAutoNames.length ? existingAutoNames : allProxyNames;
-    groups.push({
-      name: "APNs-Fallback",
-      type: "fallback",
-      proxies: apnsProxies,
-      icon: ICON.ApplePush,
-      url: "http://captive.apple.com/hotspot-detect.html",
-      interval: 300,
-      hidden: true,
-    });
-    // Apple Push 主策略组：直连优先，代理故障转移作为后备选项，保证推送不掉线
     groups.push({
       name: "Apple Push",
-      type: "fallback",
+      type: "select",
+      ...SELECT_BASE_OPTION,
+      // captive.apple.com 走 Apple 自己的 anycast，测的是「这条路对 Apple 是否可用」
+      url: "https://captive.apple.com/hotspot-detect.html",
       icon: ICON.ApplePush,
-      proxies: ["DIRECT", "APNs-Fallback"],
-      url: "http://captive.apple.com/hotspot-detect.html",
-      interval: 300,
+      proxies: ["DIRECT", "默认代理", FALLBACK_GROUP_NAME],
+      "default-selected": "DIRECT",
     });
   }
 
@@ -492,7 +540,7 @@ function buildProxyGroups(allProxyNames) {
     services.push({
       name: g.name,
       type: "select",
-      ...GROUP_BASE_OPTION,
+      ...SELECT_BASE_OPTION,
       proxies: serviceProxies,
       icon: g.icon,
       ...(def ? { "default-selected": def } : {}),
@@ -508,7 +556,7 @@ function buildProxyGroups(allProxyNames) {
     {
       name: "漏网之鱼",
       type: "select",
-      ...GROUP_BASE_OPTION,
+      ...SELECT_BASE_OPTION,
       proxies: ["默认代理", "手动选择", "国内直连", FALLBACK_GROUP_NAME],
       icon: ICON.MATCH,
       "default-selected": "默认代理",
@@ -521,12 +569,16 @@ function buildProxyGroups(allProxyNames) {
   ];
 
   // 顶层全局聚合入口（置顶首位）
+  // ⚠️ select 组未指定 default-selected 时，mihomo 取成员列表第一个
+  // （adapter/outboundgroup/selector.go selectedProxy → proxies[0]）。
+  // 原实现把 hidden 的「国内直连」排在首位，客户端切到全局模式后会变成全局直连裸奔。
   allGroups.unshift({
     name: "GLOBAL",
     type: "select",
-    ...GROUP_BASE_OPTION,
-    proxies: allGroups.map(g => g.name),
+    ...SELECT_BASE_OPTION,
+    proxies: ["默认代理", ...allGroups.map(g => g.name).filter(n => n !== "默认代理")],
     icon: ICON.Proxy,
+    "default-selected": "默认代理",
   });
 
   return { groups: allGroups, serviceRules, serviceProviders };
@@ -607,6 +659,32 @@ function buildRules(serviceRules) {
     "RULE-SET,gfw,默认代理",
     "MATCH,漏网之鱼",
   ];
+}
+
+// 节点解析器补丁（OPTIONS.OVERRIDE_PROXY_DNS）
+// 背景：mihomo 用 proxy-server-nameserver 解析「节点服务器域名」，解析失败 → 该节点 Dial 超时，
+// 表现为"服务器不可用"，与测速 URL 是否可达无关。多数订阅源不带这个字段。
+// 社区与内核维护者共识（mihomo #2543）：至少要保证一条「可直连且能应答」的解析器始终可用，
+// 因此这里同时给 DoH 与明文 UDP，并保留 system 作为最后兜底。
+function buildProxyServerDnsPatch(clientDns) {
+  const base = { ...(clientDns || {}) };
+  if (base.enable !== true) return null; // DNS 未启用时该字段无效，交由 OVERRIDE_DNS 处理
+  const hasOwn = Array.isArray(base["proxy-server-nameserver"]) && base["proxy-server-nameserver"].length > 0;
+  if (hasOwn) return null; // 客户端/订阅已自带，不干预
+  // 去重：避免 base 里已存在同名字段时出现重复键（对象展开会被后者覆盖，语义等价但日志更清晰）
+  return {
+    ...base,
+    "proxy-server-nameserver": [
+      "https://223.5.5.5/dns-query#DIRECT",
+      "https://doh.pub/dns-query#DIRECT",
+      "223.5.5.5",
+      "119.29.29.29",
+      "system",
+    ],
+    "default-nameserver": Array.isArray(base["default-nameserver"]) && base["default-nameserver"].length
+      ? base["default-nameserver"]
+      : ["223.5.5.5", "119.29.29.29", "system"],
+  };
 }
 
 // 备用高级 DNS 与 Hosts（仅在 OPTIONS.OVERRIDE_DNS = true 时启用）
@@ -829,6 +907,16 @@ function main(config) {
       // 保持客户端原生 DNS；仅在原始完全未设时保持现状
       if (config && config.dns) newConfig["dns"] = config.dns;
       if (config && config.hosts) newConfig["hosts"] = config.hosts;
+      // 只补齐节点解析器：不覆盖客户端的 nameserver / fake-ip / nameserver-policy
+      if (OPTIONS.OVERRIDE_PROXY_DNS) {
+        const patch = buildProxyServerDnsPatch(config && config.dns);
+        if (patch) {
+          newConfig["dns"] = patch;
+          log("🔧 已补齐 dns.proxy-server-nameserver（双 DoH + UDP + system 兜底）");
+        } else if (!(config && config.dns && config.dns.enable)) {
+          log("⚠️ 客户端 DNS 未启用（dns.enable != true）：节点域名将走系统解析，波动时易出现 Dial 超时。请在客户端开启 DNS，或把 OVERRIDE_DNS 设为 true。");
+        }
+      }
     }
 
     // 7. Sniffer 嗅探（由客户端配置决定或按需覆盖）

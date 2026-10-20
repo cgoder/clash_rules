@@ -231,13 +231,30 @@ cd scripts
 
 ### DNS 配置
 - ✅ 国外域名走代理 DNS（防污染）
-- ✅ 节点域名走明文 DNS（避免死锁）
-- ⚠️ 不要将 `proxy-server-nameserver` 改为 DoH
+- ✅ 节点域名必须有一条「可直连且能应答」的解析器（避免死锁）
+- ✅ `clash.js` 新增 `OPTIONS.OVERRIDE_PROXY_DNS`（默认 `true`）：只补齐
+  `dns.proxy-server-nameserver` 与 `dns.default-nameserver`，其余 DNS 仍完全尊重客户端。
+  这是「大面积服务器超时」最常见的一条隐藏原因——节点域名解析失败会表现为 Dial 超时，
+  与测速 URL 是否可达无关。
+- ⚠️ 不要把 `proxy-server-nameserver` 配成「必须走代理才能解析」的地址（会形成解析死锁）；
+  双 DoH + 明文 UDP + `system` 兜底是社区与内核维护者共识的稳妥组合
 
 ### 负载均衡使用
 - ✅ 适合一般浏览、下载
 - ✅ 不稳定节点自动容错
 - ⚠️ 游戏/会议建议用"速度优先"
+
+### 健康检查与超时判定（clash.js，2026-10 修订）
+以下参数均已用 mihomo 1.19.29 逐项实测确认，改动理由写进脚本头部注释：
+
+| 项 | 修订 | 原因 |
+|---|---|---|
+| `url-test.tolerance` | `50` → `150` | 跨境延迟天然抖动 30~80ms，50ms 会让出口高频乒乓，每次切换拆掉 TCP/TLS 会话并让 IP 跳变 |
+| 测速 URL | `http://` → `https://` | 明文 80 端口 204 易被透明缓存/DPI 干扰；`unified-delay` 二次请求失败时内核也会就 http 测速地址告警 |
+| `empty-fallback` | `DIRECT` → `REJECT` | 境外组回退直连 = 流量裸奔撞 GFW（该字段仅在成员被过滤为空时生效） |
+| select 组 | 去掉 `interval` | select 组带 interval 会让内核为它注册 HealthCheck，每个成员被重复拨号（实测 3 组 24 次/8s vs 6 次） |
+| `Apple Push` | `fallback` → `select` + 默认 `DIRECT` | mihomo 的 fallback 永远返回首个 alive 成员，而 `DIRECT` 恒 alive，原 `["DIRECT","APNs-Fallback"]` 等价于永久直连 |
+| `GLOBAL` | 加 `default-selected: 默认代理` | select 缺省取成员首个，原首位是 hidden 的「国内直连」，切全局模式会变成全局直连 |
 
 ### 节点来源更新
 - `override.yml` 不保存节点来源
