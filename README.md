@@ -6,26 +6,28 @@
 
 ```
 clash_rules/
-├── clashmi.yml                  # 主配置文件（推荐使用）
-├── clashmi_LB.yml              # 负载均衡专用配置
-├── clashmi_optimized.yml       # 优化版配置
-├── override.yml                # 简化主配置（无订阅链接）
-├── docs/                       # 📚 文档目录
-│   ├── README.md              # 文档导航
-│   ├── guides/                # 使用指南
-│   │   ├── 负载均衡配置指南.md
-│   │   └── DNS配置说明.md
-│   ├── analysis/              # 技术分析
-│   │   └── 负载均衡vs故障转移对比.md
-│   └── archived/              # 已归档文档
-├── scripts/                    # 🛠️ 工具脚本
-│   ├── README.md
-│   └── validate_subscription.sh
-├── rules/                      # 自定义规则
+├── clash.js                       # 主配置（JS 覆写，逻辑的事实来源）
+├── clashmi.yml                    # 同一套逻辑的静态 YAML 版（由 clash.js 派生）
+├── clashmi_lite.js                # 简版覆写脚本
+├── clashmi_flclash.js             # FlClash/BettBox 覆写脚本
+├── mihomoScript_clashmi_fused.js  # 融合版覆写脚本
+├── scripts/
+│   ├── gen_clashmi.mjs            # 由 clash.js 生成 clashmi.yml
+│   ├── check_config_sync.mjs      # 校验两份配置逻辑一致
+│   └── test_clash_js.mjs          # clash.js 行为回归测试
+├── rules/                         # 自定义规则
 │   ├── my_direct.list
 │   └── my_proxy.list
-└── icons/                      # 策略组图标
+└── icons/                         # 策略组图标
 ```
+
+> **`clash.js` 与 `clashmi.yml` 是同一套路由逻辑的两种形态**，面向不同客户端：
+> 前者给支持 JS 覆写的客户端，后者给只能吃静态 YAML 的客户端。
+> 两者的组名、规则顺序、规则集、健康检查参数必须一致，
+> 由 `scripts/check_config_sync.mjs` 强制校验。修改任意一方后都要跑一次。
+
+> 三份 `clashmi_*.js` / `mihomoScript_*.js` 脚本由 `clashmi.yml` 与第三方底座派生，
+> 更新不如 `clash.js` 频繁，也不保证与它同步。改动前请先确认目标脚本的实际内容。
 
 ---
 
@@ -38,16 +40,21 @@ cd clash_rules
 ```
 
 ### 2. 选择配置文件
-- **clashmi.yml**：当前完整主配置，保留更细的区域和场景分组。
-- **override.yml**：`clashmi.yml` 的简化主配置版，不包含订阅链接或 `proxy-providers` 段。
+两份配置**路由逻辑完全相同**，按客户端能力二选一：
+
+- **clash.js**：推荐。以覆写脚本方式加载，自动完成节点归一化、过滤与策略组生成，
+  内置开关可裁剪地区组与场景组。适用于支持 JS 覆写的客户端。
+- **clashmi.yml**：同一套逻辑的静态 YAML 版，适合不支持 JS 覆写的客户端直接导入。
+  节点同样由客户端注入，文件内不含订阅链接。
 
 ### 3. 提供节点来源
-仓库不保存订阅链接或订阅占位。使用 `override.yml` 时，需要由客户端或订阅转换流程先把节点合并进配置，策略组会通过 `include-all` 从已合并节点中筛选。
+仓库不保存订阅链接、token 或节点凭据。节点由客户端或订阅转换流程提供，
+`clash.js` 从传入配置的 `proxies` 中读取并治理。
 
 ### 4. 导入配置
-- **Clash Verge Rev**: 导入配置文件
-- **FlClash**: 导入配置文件
-- **Clash Meta**: 使用配置文件路径
+- **Clash Verge Rev**：导入配置文件
+- **FlClash / BettBox**：以覆写脚本方式引用 `clash.js`
+- **Clash Meta**：使用配置文件路径
 
 ### 5. 重启应用
 重载配置，开始使用
@@ -56,82 +63,63 @@ cd clash_rules
 
 ## ✨ 核心特性
 
-### 🎯 负载均衡策略
-- **常用地区负载均衡**：HK/TW/SG/JP/US
-- **速度优先策略**：自动选择最快节点
-- **地理分组**：亚洲/欧洲/美洲/其他手动选择
+### 🎯 动态地区组
+- **按需建组**：自动识别港/日/台/新/美/韩/英/德/法/澳，没有节点的地区不生成空组
+- **区内测速**：`XX-自动选择` 是纯本地区 `url-test`，只在该地区内挑最快，不跨区"叛逃"
+- **单一归属**：同一节点只进一个地区组（国旗 > 无歧义国家码 > 定义顺序），
+  避免一个节点同时挂在多个地区组里重复测速
+- **其他节点组**：捕获 10 大地区之外的有效节点（土耳其、巴西等）
 
 ### 🤖 AI 服务独立分组
-- ChatGPT
-- Claude
-- Gemini
+- ChatGPT / Claude / Gemini 合并为「AI」组，默认优先美国
 
 ### 📺 场景化服务分组
-- **流媒体**：Netflix/Disney/Spotify/TikTok/AppleTV
-- **YouTube**：独立分组（默认走聚合入口）——上游 `geosite/google` 分类 `include:youtube`，
-  因此 `youtube_domain` 规则必须早于 `google_domain`，否则 YouTube 会被 Google/云服务组接走
-- **通信**：Telegram/Twitter
-- **云服务**：Google/Speedtest
+- **YouTube**：独立分组（默认走「默认代理」）——上游 `geosite/google` 分类 `include:youtube`，
+  因此 `youtube_domain` 规则必须早于 `google_domain`，否则 YouTube 会被 Google 组接走
+- **Google / OneDrive**：独立分组，默认走「默认代理」
 - **GitHub**：独立分组（默认走代理，可单独指定出口；与 Microsoft 解耦，不再被其规则集截走）
-- **金融**：PayPal
+- **Microsoft / Apple**：默认「国内直连」，国内段不过代理
+- **Apple Push（APNs）**：独立 `select` 组，默认 `DIRECT`，可手动切到代理回退
 
-> 上表四份配置（`clashmi.yml` 与三个覆写脚本）均已把 **YouTube** 与 **GitHub** 从易被截走的
-> 父组里单列；两者同属一个陷阱类型：geosite 分类之间存在 `include` 包含关系
-> （`google ⊃ youtube`、`microsoft ⊃ github`），规则顺序颠倒会造成流量走错组。
+> YouTube 与 GitHub 属于同一类陷阱：geosite 分类之间存在 `include` 包含关系
+> （`google ⊃ youtube`、`microsoft ⊃ github`），规则顺序颠倒会让流量走错组。
 
 ### 🌐 DNS 防污染/防泄漏
-- 国内域名走国内 DNS（速度快）
-- 国外域名走代理 DNS（防污染）
-- 节点域名专用 DNS（避免循环依赖）
+- 默认完全尊重客户端的 DNS 设置（`OPTIONS.OVERRIDE_DNS = false`）
+- 仅补齐 `dns.proxy-server-nameserver` 与 `default-nameserver`，解决「节点域名解析失败 → Dial 超时」
+- 国内域名走国内 DNS、国外域名走代理 DNS 的完整方案见 `buildDnsAndHosts()`（需手动开启）
 
 ### 🔧 自动过滤无效节点
 自动排除订阅中的信息行：
-- 剩余流量
-- 套餐到期
-- 跳转域名等
+- 剩余流量 / 套餐到期 / 跳转域名等硬噪音
+- 不含任何地区标识的营销节点（带国旗或地区名的节点一律保留）
 
 ---
 
-## 📖 使用文档
+## 📖 相关文档
 
-### 核心指南
-- [负载均衡配置指南](./docs/guides/负载均衡配置指南.md) - Load-Balance 策略详解
-- [DNS配置说明](./docs/guides/DNS配置说明.md) - DNS 防污染和防泄漏方案
-
-### 技术分析
-- [负载均衡vs故障转移对比](./docs/analysis/负载均衡vs故障转移对比.md) - 选择合适的代理策略
-
-### 工具脚本
-- [脚本使用说明](./scripts/README.md) - 订阅验证等工具
+- 本文件的[健康检查与超时判定](#健康检查与超时判定clashjs2026-10-修订)与
+  [节点治理与配置自洽](#节点治理与配置自洽clashjs-p0-修复)记录了
+  `clash.js` 各项参数与修复的实测依据。
+- 面向 AI/自动化协作者的仓库约定见 [AGENT.MD](./AGENT.MD)。
 
 ---
 
 ## 🎮 策略选择建议
 
-### 一般浏览/下载
-```
-一键代理 → 香港负载均衡
-```
-充分利用多节点，自动容错
+`clash.js` 生成的组都是 `select`（手动选择出口）或 `url-test`（组内自动选最快），
+没有负载均衡组。常改的入口是「默认代理」和 7 大场景组：
 
-### 游戏/视频会议
-```
-一键代理 → 香港速度优先
-```
-自动选择最快节点，延迟稳定
+| 场景 | 建议设置 | 说明 |
+|---|---|---|
+| 一般浏览、下载 | 「默认代理」→ 某个地区组，或直接选 `XX-自动选择` | 地区组内选 `-自动选择` 即可在该地区内自动容错 |
+| 游戏、视频会议 | 地区组 → `XX-自动选择`；必要时把 `OPTIONS` 里 `UT_BASE.tolerance` 调小 | 自动选择会在本地区内挑延迟最低的节点 |
+| AI 服务 | 「AI」→ 「美国」或「美国-自动选择」 | 默认已指向美国；地区内仍可再挑 |
+| YouTube | 「YouTube」→「默认代理」 | 单独成组，避免被 `geosite/google`（含 `include:youtube`）接走 |
+| 微软 / 苹果 | 「Microsoft」「Apple」默认「国内直连」 | 国内段直连更快；需要时再切到代理 |
 
-### AI 服务
-```
-ChatGPT → 美国负载均衡
-Claude   → 美国负载均衡
-Gemini   → 香港负载均衡 / 美国负载均衡
-```
-
-### 流媒体 / YouTube
-```
-流媒体 → 香港负载均衡 / 台湾负载均衡
-YouTube → 一键代理/默认代理（可单独换区，不受其它流媒体影响）
-```
+地域入口优先级：`GLOBAL`（全局模式）→「默认代理」→ 地区组 → 具体节点。
+`国内直连`、`兜底自动选择`、各 `-自动选择` 组默认隐藏，避免面板过载。
 
 ---
 
@@ -141,10 +129,15 @@ YouTube → 一键代理/默认代理（可单独换区，不受其它流媒体�
 
 | 配置文件 | 特点 | 适用场景 |
 |---------|------|---------|
-| **clashmi.yml** | 当前主配置 | ✅ 生产环境推荐 |
-| clashmi_LB.yml | 负载均衡专用 | 节点非常不稳定时 |
-| clashmi_optimized.yml | 优化版配置 | 替代方案 |
-| override.yml | 简化主配置，无订阅链接，使用短英文策略组 | 需要客户端或订阅转换流程提供节点时 |
+| **clash.js** | JS 覆写，动态生成组与规则，逻辑的事实来源 | ✅ 生产环境推荐 |
+| **clashmi.yml** | 同一套逻辑的静态 YAML，由 `scripts/gen_clashmi.mjs` 派生 | 不支持 JS 的客户端 |
+| clashmi_lite.js | 简版覆写脚本 | 轻量场景 |
+| clashmi_flclash.js | FlClash / BettBox 覆写脚本 | 对应客户端 |
+| mihomoScript_clashmi_fused.js | 融合版覆写脚本 | 需要与第三方底座合并时 |
+
+`clash.js` 的开关集中在文件顶部的 `OPTIONS` 与 `ruleOptionsEnable`：
+前者控制是否接管 TUN / DNS / 规则等底层参数，后者对应客户端面板上可勾选的
+地区组、场景组与过滤策略。
 
 ### 配置版本历史
 
@@ -212,18 +205,41 @@ nightly（LiveContainer 3.8.0 + SideStore 0.6.4 存在 loopback 续签回归，�
 
 ## 🛠️ 工具脚本
 
-### 验证订阅节点分组
+### clash.js 回归测试
+
 ```bash
-cd scripts
-./validate_subscription.sh "<订阅文件或URL>"
+node scripts/test_clash_js.mjs
 ```
 
-**功能**：
-- 检查所有节点是否正确分组
-- 统计各地区节点数量
-- 发现未匹配节点
+覆盖节点治理与策略组生成的关键约束：场景组默认出口、改名后的
+`dialer-proxy` 引用、地区节点过滤、注入代理重名、地区识别与单一归属。
 
-详见 [scripts/README.md](./scripts/README.md)
+加上 `MIHOMO=1` 还会用 mihomo 校验生成的配置：
+
+```bash
+MIHOMO=1 node scripts/test_clash_js.mjs
+```
+
+需要 PATH 中有 `mihomo`；未安装时该组用例会自动跳过。
+
+### 两份配置的一致性校验
+
+```bash
+node scripts/check_config_sync.mjs
+```
+
+比对策略组名称与顺序、组类型、`default-selected`、健康检查参数、
+规则顺序、规则集名称与 URL、注入代理、`unified-delay`，
+并检查「YouTube 早于 Google」「GitHub 早于 Microsoft」等顺序陷阱。
+任何一项漂移都会以非零退出码报出。
+
+### 重新生成 clashmi.yml
+
+`clashmi.yml` 的路由部分由 `clash.js` 的常量派生，不要手工改：
+
+```bash
+node scripts/gen_clashmi.mjs > clashmi.yml
+```
 
 ---
 
@@ -239,10 +255,10 @@ cd scripts
 - ⚠️ 不要把 `proxy-server-nameserver` 配成「必须走代理才能解析」的地址（会形成解析死锁）；
   双 DoH + 明文 UDP + `system` 兜底是社区与内核维护者共识的稳妥组合
 
-### 负载均衡使用
-- ✅ 适合一般浏览、下载
-- ✅ 不稳定节点自动容错
-- ⚠️ 游戏/会议建议用"速度优先"
+### 地区组与自动选择
+- ✅ 地区组内选 `XX-自动选择`：在本地区内自动挑最快，节点抖动时自动容错
+- ✅ 跨地区不自动切换：`-自动选择` 只含本地区节点，不会因延迟抖动"叛逃"到别的地区
+- ⚠️ 需要单一稳定出口（网银、游戏长连接）时直接选具体节点，避免自动切换拆掉会话
 
 ### 健康检查与超时判定（clash.js，2026-10 修订）
 以下参数均已用 mihomo 1.19.29 逐项实测确认，改动理由写进脚本头部注释：
@@ -259,7 +275,7 @@ cd scripts
 
 ### 节点治理与配置自洽（clash.js P0 修复）
 
-均附带可复现用例，见 `temp/scripts/test_p0.mjs`（`MIHOMO=1` 时额外跑 `mihomo -t`）：
+均附带可复现用例，见 `scripts/test_clash_js.mjs`（`MIHOMO=1` 时额外跑 `mihomo -t`）：
 
 | 缺陷 | 现象 | 修复 |
 |---|---|---|
@@ -270,22 +286,20 @@ cd scripts
 | 地区识别缺口与误判 | `KR01`/`SIN`/`ICN`/`LAX`/`NRT` 认不出；`FRA`（法兰克福）被算成法国；`🇺🇸 香港 01` 同时进香港组和美国组，各自重复测速 | 国家码改为显式列举（`KR\|KOR`、`FR` 不含 `FRA`），补齐常见机场三字码；`classifyNode` 改为**单一归属**（国旗 > 无歧义国家码 > 定义顺序） |
 
 ### 节点来源更新
-- `override.yml` 不保存节点来源
+- 仓库不保存任何订阅链接或节点凭据
 - 节点更新由客户端或订阅转换流程负责
-- 更新后建议运行验证脚本检查分组匹配
+- 更新后建议运行 `node scripts/test_clash_js.mjs` 检查分组匹配
 
 ---
 
-## 📊 性能提升
+## 📊 运行开销
 
-### vs Fallback 策略
+`clash.js` 生成的组里只有 `url-test` 与 `fallback` 会周期性测速，
+`select` 组不参与自动测速（只保留供面板手动测速用的 `url`）。
 
-| 指标 | 提升 |
-|------|------|
-| 单节点故障影响 | ↓ 92% |
-| 带宽利用率 | ↑ 1300% |
-| 容错速度 | ⚡ 即时 |
-| 故障恢复 | ⚡ 自动 |
+以 16 个节点、10 个活跃地区为例，一轮探测约 29 次拨号，周期 300 秒；
+地区组越少、节点越少，拨号量越低。`-自动选择` 组默认 `hidden`，
+不影响面板观感。
 
 ---
 
@@ -302,6 +316,13 @@ cd scripts
 ---
 
 ## 📝 更新日志
+
+### 2026-10
+- ✅ 修复节点治理的 5 处缺陷（场景组默认出口、`dialer-proxy` 断链、
+  地区节点误过滤、注入代理重名、地区识别缺口与跨区重复）
+- ✅ 健康检查参数复核：`tolerance` 150、https 测速 URL、`empty-fallback: REJECT`
+- ✅ `unified-delay` 补齐（https 测速握手不再计入延迟）
+- ✅ 新增 `scripts/test_clash_js.mjs` 回归测试
 
 ### v4 (2026-06-02)
 - ✅ 场景化服务分组
@@ -323,7 +344,6 @@ cd scripts
 
 ## 📞 支持
 
-- 📖 查看 [文档](./docs/README.md)
 - 🐛 提交 [Issue](https://github.com/cgoder/clash_rules/issues)
 - 💬 讨论交流
 

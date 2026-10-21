@@ -3,28 +3,35 @@
 ## Project Scope
 
 This repository maintains Clash Meta / Mihomo configuration files, custom rule
-lists, and small helper scripts for validating subscription node coverage.
+lists, and small helper scripts.
 
-Important files:
+At a glance:
 
-- `clashmi.yml`: primary full configuration.
-- `clashmi_LB.yml`: load-balance focused configuration.
-- `clashmi_optimized.yml`: alternate optimized configuration.
-- `override.yml`: simplified standalone main configuration based on
-  `clashmi.yml`; it must not contain embedded node sources.
+- `clash.js`: the primary configuration, consumed by clients that support JS
+  overrides. Loads a subscription profile, normalizes and filters nodes, then
+  generates policy groups and rules. This is the source of truth for routing
+  logic.
+- `clashmi.yml`: the same routing logic expressed as static YAML, for clients
+  that cannot run the JS override. **It must stay logically identical to
+  `clash.js`** — same group names, same rule order, same providers, same health
+  check parameters. It is generated from `clash.js` constants; do not hand-edit
+  its routing sections.
+- `scripts/gen_clashmi.mjs`: regenerates `clashmi.yml` from `clash.js`.
+- `scripts/check_config_sync.mjs`: verifies the two stay in sync. **Run this
+  after changing either file.**
+- `clashmi_lite.js`, `clashmi_flclash.js`, `mihomoScript_clashmi_fused.js`:
+  alternative override scripts derived from `clashmi.yml` and third-party
+  bases. They are older than `clash.js` and are not kept in lockstep with it.
+  Check before assuming a fix in `clash.js` applies here.
 - `rules/my_direct.list`: custom direct rules.
-- `rules/my_proxy.list`: custom proxy rules.
-- `scripts/validate_subscription.sh`: helper for checking node grouping.
+- `rules/my_proxy.list`: custom proxy rules (also carries the Apple
+  authentication domains required by SideStore / LiveContainer).
+- `scripts/test_clash_js.mjs`: regression tests for `clash.js`.
+- `icons/`: icon assets referenced by the configurations.
 
 ## Command Conventions
 
-- Always prefix shell commands with `rtk`.
-- For PowerShell cmdlets, use:
-
-```powershell
-rtk powershell -NoProfile -Command "<command>"
-```
-
+- Run shell commands directly (no wrapper prefix).
 - Prefer `rg` or `rg --files` for searching when available.
 - Keep command output concise and focused on the files being changed.
 
@@ -35,18 +42,19 @@ rtk powershell -NoProfile -Command "<command>"
   other private proxy data.
 - Do not add subscription placeholders such as `your-subscription-url` or
   similar template secrets.
-- Do not add `proxy-providers` to `override.yml`; that file depends on clients
-  or external subscription conversion to merge nodes into the profile.
-- Keep `override.yml` usable as a simplified standalone main config, not as a
-  patch fragment.
-- In `override.yml`, regional and automatic groups should select from merged
-  nodes with `include-all: true` plus filters instead of provider references.
 - Preserve the DNS anti-deadlock pattern: domestic plain DNS is used for startup
   and proxy node resolution, while overseas or sensitive service DNS can be
   routed through proxy-aware policy.
 - Preserve custom rule priority: local ad/private handling first, then custom
   proxy/direct rules, service groups, overseas fallback, domestic direct rules,
   and final `MATCH`.
+- Never put a rule after `MATCH`; anything below it is unreachable.
+- `clash.js` and `clashmi.yml` must keep the same routing semantics: group
+  names, group types, `default-selected`, rule order, rule-provider names and
+  URLs, and health-check parameters. When you change routing logic in one,
+  change it in the other and re-run `scripts/check_config_sync.mjs`.
+- `clashmi.yml` is generated. Edit `scripts/gen_clashmi.mjs` (or `clash.js`)
+  and regenerate, rather than editing the YAML routing sections by hand.
 
 ## Editing Guidelines
 
@@ -58,29 +66,39 @@ rtk powershell -NoProfile -Command "<command>"
 - Keep rule-provider names stable unless every reference is updated together.
 - Keep rule list files plain text, one rule per line.
 - Avoid broad formatting churn in YAML files; it makes config review harder.
+- In `clash.js`, policy group `default-selected` must always name a real member
+  of that group. mihomo silently falls back to the first member when it does
+  not, which changes routing without any error.
+- In `clash.js`, a node name must not collide with `DIRECT`, `REJECT`, `PASS`,
+  `COMPATIBLE`, `GLOBAL`, the injected `DIRECT | 仅IPv4` proxy, or any policy
+  group name. mihomo fails the whole profile with a duplicate-name error.
 
 ## Validation Checklist
 
 Before finishing changes, run the checks that apply:
 
-```powershell
-rtk git diff --check
-rtk powershell -NoProfile -Command "git status --short"
+```bash
+git diff --check
+git status --short
 ```
 
-For `override.yml`, also confirm:
+For changes to `clash.js` or `clashmi.yml`, run both checks:
 
-- No `proxy-providers` section exists.
-- No real or placeholder subscription URL was introduced.
-- All policy groups referenced by rules are defined.
-- All `RULE-SET` providers referenced by rules are defined.
-- `Auto`, `HK`, `Asia`, `NorthAmerica`, and `Europe` keep `include-all: true`.
+```bash
+node scripts/test_clash_js.mjs      # clash.js 行为回归
+node scripts/check_config_sync.mjs  # 两份配置逻辑一致性
+```
 
-If a Mihomo or Clash binary is available, validate the edited profile with the
-available binary, for example:
+Add `MIHOMO=1` to also validate generated profiles with the kernel:
 
-```powershell
-rtk mihomo -t -f override.yml
+```bash
+MIHOMO=1 node scripts/test_clash_js.mjs
+```
+
+If a Mihomo or Clash binary is available, validate any edited profile directly:
+
+```bash
+mihomo -t -f clashmi.yml
 ```
 
 If the binary is not available, state that only static validation was performed.
