@@ -257,6 +257,18 @@ cd scripts
 | `GLOBAL` | 加 `default-selected: 默认代理` | select 缺省取成员首个，原首位是 hidden 的「国内直连」，切全局模式会变成全局直连 |
 | `unified-delay` | 客户端未声明时补 `true` | https 测速的 TLS 握手计入延迟（URLTest 的计时起点在 DialContext 之前），实测 2231ms → 308ms；unified-delay 用同连接第二条请求计时剥离握手，兼得 https 防劫持与 http 低开销 |
 
+### 节点治理与配置自洽（clash.js P0 修复）
+
+均附带可复现用例，见 `temp/scripts/test_p0.mjs`（`MIHOMO=1` 时额外跑 `mihomo -t`）：
+
+| 缺陷 | 现象 | 修复 |
+|---|---|---|
+| `分流组添加所有节点` 的默认出口失效 | 开启后场景组成员变成裸节点名，`default-selected`（组名）不在成员内，内核静默回落 `proxies[0]` —— Microsoft/Apple 从「国内直连」变成走首个境外节点 | 场景组始终保留组引用（`[...standardSvcList, ...allProxyNames]` 去重合并），并在生成前断言 `default-selected` 是真实成员 |
+| 节点改名断掉 `dialer-proxy` | 节点与策略组撞名被改名后，引用它的中转节点让内核直接 `dialer-proxy [...] not found`，**整份配置加载失败** | 记录 `旧名→新名` 映射，定点迭代级联回写 `dialer-proxy`；仍悬空的引用删除并告警 |
+| 内容过滤误杀地区节点 | 过滤条件用「是否属于 10 大地区」代替「是否带地区标识」，`🇹🇷 土耳其 官网`、`🇧🇷 巴西 优惠` 被当垃圾丢掉，**「其他节点」组永远建不出来** | 新增 `hasAnyRegionMarker()`：国旗 / 国家码 / 中文地名任一命中即视为有效地区节点 |
+| 注入代理重名 | 订阅含 `DIRECT \| 仅IPv4` 时内核报 `duplicate name`，配置加载失败 | 注入名并入 `RESERVED_GROUP_NAMES`，订阅同名节点自动改名 |
+| 地区识别缺口与误判 | `KR01`/`SIN`/`ICN`/`LAX`/`NRT` 认不出；`FRA`（法兰克福）被算成法国；`🇺🇸 香港 01` 同时进香港组和美国组，各自重复测速 | 国家码改为显式列举（`KR\|KOR`、`FR` 不含 `FRA`），补齐常见机场三字码；`classifyNode` 改为**单一归属**（国旗 > 无歧义国家码 > 定义顺序） |
+
 ### 节点来源更新
 - `override.yml` 不保存节点来源
 - 节点更新由客户端或订阅转换流程负责

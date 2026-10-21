@@ -134,17 +134,23 @@ const INVALID_PROXY_RE = /剩余流量|距离下次重置|套餐到期|去除.*�
 const EXCLUDE_KEYWORD_RE = /群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|电报|无法|说明|使用|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|禁止|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|⚠️|@|t\.me\/\+|\bexpire\b|\bhttps?:\/\/|\.com|\btraffic\b/iu;
 
 // 10 大地区识别正则（环视写法，兼容前后数字、汉字或字母紧贴）
+// ⚠️ 国家码不要用 `X?` 这种「可选尾字母」写法：
+//    - `KOR?` 实际表示「K + O + 可选 R」，永远匹配不到韩国的 IATA/ISO 码 `KR`；
+//    - `FRA?` 会同时吃掉法兰克福机场码 `FRA`，让德国节点被误判为法国。
+//    因此一律显式列出 `KR|KOR`、`FR`（法国不含 FRA）、`DE|DEU|GER`。
+// 另补齐订阅里高频出现的机场三字码，避免 `LAX01`/`NRT01`/`ICN01` 这类节点掉进「其他节点」。
 const REGION_DEFINITIONS = [
-  { name: "香港", code: "HK", flag: "🇭🇰", icon: ICON.HK, re: /(香港|🇭🇰|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\s*kong)/i },
-  { name: "日本", code: "JP", flag: "🇯🇵", icon: ICON.JP, re: /(日本|东京|大阪|京都|🇯🇵|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)/i },
-  { name: "台湾", code: "TW", flag: "🇹🇼", icon: ICON.TW, re: /(台湾|台灣|台北|高雄|🇹🇼|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)/i },
-  { name: "新加坡", code: "SG", flag: "🇸🇬", icon: ICON.SG, re: /(新加坡|狮城|🇸🇬|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)/i },
-  { name: "美国", code: "US", flag: "🇺🇸", icon: ICON.US, re: /(美国|美國|纽约|洛杉矶|旧金山|芝加哥|西雅图|硅谷|波士顿|华盛顿|🇺🇸|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\s*states)/i },
-  { name: "韩国", code: "KR", flag: "🇰🇷", icon: ICON.KR, re: /(韩国|韓國|首尔|仁川|🇰🇷|(?<![A-Za-z])KOR?(?![A-Za-z])|korea)/i },
-  { name: "英国", code: "UK", flag: "🇬🇧", icon: ICON.UK, re: /(英国|英國|伦敦|曼彻斯特|🇬🇧|(?<![A-Za-z])(?:UK|GBR?)(?![A-Za-z])|britain|united\s*kingdom)/i },
-  { name: "德国", code: "DE", flag: "🇩🇪", icon: ICON.DE, re: /(德国|德國|法兰克福|柏林|🇩🇪|(?<![A-Za-z])DEU?(?![A-Za-z])|germany|deutschland)/i },
-  { name: "法国", code: "FR", flag: "🇫🇷", icon: ICON.FR, re: /(法国|法國|巴黎|🇫🇷|(?<![A-Za-z])FRA?(?![A-Za-z])|france)/i },
-  { name: "澳大利亚", code: "AU", flag: "🇦🇺", icon: ICON.AU, re: /(澳大利亚|澳大利亞|澳洲|悉尼|墨尔本|🇦🇺|(?<![A-Za-z])AUS?(?![A-Za-z])|australia)/i },
+  { name: "香港", code: "HK", flag: "🇭🇰", icon: ICON.HK, re: /(香港|🇭🇰|(?<![A-Za-z])(?:HK|HKG)(?![A-Za-z])|hong\s*kong)/i },
+  { name: "日本", code: "JP", flag: "🇯🇵", icon: ICON.JP, re: /(日本|东京|大阪|京都|🇯🇵|(?<![A-Za-z])(?:JP|JPN|NRT|HND|KIX|NGO)(?![A-Za-z])|japan)/i },
+  { name: "台湾", code: "TW", flag: "🇹🇼", icon: ICON.TW, re: /(台湾|台灣|台北|高雄|🇹🇼|(?<![A-Za-z])(?:TW|TWN|TPE|KHH)(?![A-Za-z])|taiwan)/i },
+  { name: "新加坡", code: "SG", flag: "🇸🇬", icon: ICON.SG, re: /(新加坡|狮城|🇸🇬|(?<![A-Za-z])(?:SG|SGP|SIN)(?![A-Za-z])|singapore)/i },
+  { name: "美国", code: "US", flag: "🇺🇸", icon: ICON.US, re: /(美国|美國|纽约|洛杉矶|旧金山|芝加哥|西雅图|硅谷|波士顿|华盛顿|🇺🇸|(?<![A-Za-z])(?:US|USA|LAX|SJC|SFO|SEA|JFK|ORD|IAD|ATL|DFW)(?![A-Za-z])|america|united\s*states)/i },
+  { name: "韩国", code: "KR", flag: "🇰🇷", icon: ICON.KR, re: /(韩国|韓國|首尔|仁川|🇰🇷|(?<![A-Za-z])(?:KR|KOR|ICN|GMP)(?![A-Za-z])|korea|seoul)/i },
+  { name: "英国", code: "UK", flag: "🇬🇧", icon: ICON.UK, re: /(英国|英國|伦敦|曼彻斯特|🇬🇧|(?<![A-Za-z])(?:UK|GB|GBR|LHR|LGW|MAN)(?![A-Za-z])|britain|united\s*kingdom)/i },
+  { name: "德国", code: "DE", flag: "🇩🇪", icon: ICON.DE, re: /(德国|德國|法兰克福|柏林|慕尼黑|🇩🇪|(?<![A-Za-z])(?:DE|DEU|GER|FRA|MUC|BER)(?![A-Za-z])|germany|deutschland)/i },
+  // 法国不含 FRA：订阅里的 FRA-01 基本都是法兰克福，留在德国正则里
+  { name: "法国", code: "FR", flag: "🇫🇷", icon: ICON.FR, re: /(法国|法國|巴黎|🇫🇷|(?<![A-Za-z])FR(?![A-Za-z])|france)/i },
+  { name: "澳大利亚", code: "AU", flag: "🇦🇺", icon: ICON.AU, re: /(澳大利亚|澳大利亞|澳洲|悉尼|墨尔本|🇦🇺|(?<![A-Za-z])(?:AU|AUS|SYD|MEL|BNE)(?![A-Za-z])|australia)/i },
 ];
 
 // Emoji 国旗匹配正则
@@ -152,7 +158,8 @@ const FLAG_RE = /[\u{1F1E6}-\u{1F1FF}]{2}/u;
 
 // 地区分类缓存：提升大批量节点正则匹配性能
 const regionMatchCache = new Map();
-function classifyNode(name) {
+// 全部命中（一个节点可能同时命中多个地区：`🇺🇸 香港 01`、`FRA 法兰克福`）
+function classifyNodeAll(name) {
   const cached = regionMatchCache.get(name);
   if (cached) return cached;
   const matched = [];
@@ -163,6 +170,64 @@ function classifyNode(name) {
   return matched;
 }
 
+// 单一归属判定：一个节点只能进一个地区组。
+// 此前 `classifyNode` 返回全部命中，多命中节点会被同时塞进多个地区组
+// （`🇺🇸 香港 01` → 香港组 + 美国组，`FRA 法兰克福` → 德国组 + 法国组），
+// 每个组各自拨号测速，且用户在同一节点上看到两个互相矛盾的地区入口。
+// 优先级：名称首位的国旗 > 无歧义的国家码（ISO/IATA）> 定义顺序。
+// 与「是否带地区标识」解耦：识别不出的国家（土耳其/巴西）仍算有标识，
+// 只是不会进入 10 大地区组，而是落到「其他节点」。
+function classifyNode(name) {
+  const all = classifyNodeAll(name);
+  if (all.length === 0) return [];
+
+  // 1) 国旗优先：取名称里第一个国旗，它能命中哪个地区就以哪个为准
+  const flags = [...String(name).matchAll(new RegExp(FLAG_RE.source, "gu"))].map(m => m[0]);
+  for (const flag of flags) {
+    const hit = REGION_DEFINITIONS.find(r => r.flag === flag && all.includes(r.name));
+    if (hit) return [hit.name];
+  }
+
+  // 2) 国家码优先（ASCII 字母码几乎不会误判，中文里的城市别名容易重叠）
+  const asciiHit = name.match(/(?<![A-Za-z])[A-Za-z]{2,3}(?![A-Za-z])/g) || [];
+  for (const token of asciiHit) {
+    for (const reg of REGION_DEFINITIONS) {
+      if (!all.includes(reg.name)) continue;
+      if (!reg.re.test(token)) continue;
+      // 该 token 只能被这一个地区命中时，视为无歧义的强信号
+      const owners = REGION_DEFINITIONS.filter(r => r.re.test(token)).map(r => r.name);
+      if (owners.length === 1) return [reg.name];
+    }
+  }
+
+  // 3) 兜底：按定义顺序取第一个命中（中文城市名遵循 REGION_DEFINITIONS 的先后）
+  return [all[0]];
+}
+
+// 「是否带地区标识」：国旗 / 国家码 / 中文地名都算，不再局限于 10 大地区。
+// 这决定了 土耳其/巴西/印度 这类节点不会被营销词误杀（它们进不了 10 大地区组，
+// 但应进「其他节点」组）。
+// ⚠️ 不能只判断国旗和 ASCII 码：订阅里大量节点是纯中文名（`香港 01`、`土耳其 伊斯坦布尔`），
+// 漏判会让「过滤非地区节点」把它们当成营销节点丢掉。
+const CN_REGION_HINTS = [
+  "香港", "台湾", "台灣", "澳门", "澳門", "日本", "东京", "大阪", "韩国", "韓國", "首尔",
+  "新加坡", "狮城", "美国", "美國", "加拿大", "英国", "英國", "伦敦", "法国", "法國", "巴黎",
+  "德国", "德國", "法兰克福", "荷兰", "荷蘭", "俄罗斯", "俄羅斯", "意大利", "西班牙", "瑞士",
+  "瑞典", "挪威", "芬兰", "芬蘭", "波兰", "波蘭", "土耳其", "巴西", "阿根廷", "墨西哥", "智利",
+  "印度", "印尼", "印度尼西亚", "越南", "泰国", "泰國", "马来西亚", "馬來西亞", "菲律宾",
+  "菲律賓", "澳大利亚", "澳洲", "新西兰", "紐西蘭", "迪拜", "阿联酋", "以色列", "南非", "埃及",
+  "乌克兰", "烏克蘭", "爱尔兰", "奥地利", "比利时", "丹麦", "捷克", "匈牙利", "罗马尼亚",
+];
+function hasAnyRegionMarker(name) {
+  const s = String(name);
+  if (FLAG_RE.test(s)) return true;
+  // 独立成词的 2~3 位 ASCII 国家码/机场码：TR、BR、IN、`TR01`、`HK-01`
+  // ⚠️ 不能匹配「数字+字母」的量词写法：`剩余流量 100GB` 里的 GB 是单位不是英国
+  if (/(?<![A-Za-z0-9])[A-Z]{2,3}(?![A-Za-z])/.test(s) && !/\d[A-Z]{2,3}(?![A-Za-z])/.test(s)) return true;
+  if (/(?<![A-Za-z0-9])[A-Z]{2,3}(?=[-\d])/.test(s)) return true;
+  return CN_REGION_HINTS.some(hint => s.includes(hint));
+}
+
 // 节点名称归一化：补齐地区国旗、清洗连续多余空格
 function normalizeProxyName(proxy) {
   const name = proxy.name;
@@ -170,9 +235,17 @@ function normalizeProxyName(proxy) {
   const cleanName = (existingFlag ? name.replace(existingFlag, "") : name).replace(/\s+/g, " ").trim();
   const matchedRegions = classifyNode(name);
   const targetFlag = existingFlag || REGION_DEFINITIONS.find(r => matchedRegions.includes(r.name))?.flag;
-  const normalized = targetFlag ? `${targetFlag} ${cleanName}` : cleanName;
+  // cleanName 可能为空（节点名只有国旗，如 `🇭🇰`）：此时不要拼出 `"🇭🇰 "` 这种带尾空格的畸形名
+  const normalized = !cleanName ? (targetFlag || "") : (targetFlag ? `${targetFlag} ${cleanName}` : cleanName);
   return normalized === name ? proxy : { ...proxy, name: normalized };
 }
+
+// 直连节点仅使用 IPv4 网络栈
+// ⚠️ 定义位置必须在 RESERVED_GROUP_NAMES 之前：该名字会被并入保留名集合，
+// 否则订阅里出现同名节点时内核直接报 duplicate name（1.19.29 实测）。
+const DIRECT_PROXIES = [
+  { name: "DIRECT | 仅IPv4", type: "direct", "ip-version": "ipv4" },
+];
 
 // 保留策略组名称清单（防 Loop detected 自环）
 const RESERVED_GROUP_NAMES = new Set([
@@ -182,6 +255,8 @@ const RESERVED_GROUP_NAMES = new Set([
   ...REGION_DEFINITIONS.map(r => `${r.name}-自动选择`),
   "AI", "Google", "YouTube", "OneDrive", "GitHub", "Microsoft", "Apple",
   "DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE",
+  // 脚本注入的直连代理名同样要保留，否则与订阅节点撞名 → duplicate name 加载失败
+  ...DIRECT_PROXIES.map(p => p.name),
 ]);
 
 // mihomo 内置保留名：这些名字在内核里已存在，节点同名会直接 `proxy XXX is the duplicate name`
@@ -189,8 +264,12 @@ const RESERVED_GROUP_NAMES = new Set([
 const BUILTIN_RESERVED_NAMES = new Set(["DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"]);
 
 // 节点重命名防自环：节点名称不得与策略组同名，否则 Mihomo 将节点当作组引用引发自环崩溃
+// 幂等：已经带 `节点` 后缀的名字不再重复追加（避免二次执行变成 `...节点节点`）
+const RENAME_SUFFIX = "节点";
 function renameIfCollidesWithGroup(name) {
-  return (RESERVED_GROUP_NAMES.has(name) || BUILTIN_RESERVED_NAMES.has(name)) ? `${name}节点` : name;
+  if (!RESERVED_GROUP_NAMES.has(name) && !BUILTIN_RESERVED_NAMES.has(name)) return name;
+  if (name.endsWith(RENAME_SUFFIX)) return name;
+  return `${name}${RENAME_SUFFIX}`;
 }
 
 // 策略组通用基础配置
@@ -245,11 +324,6 @@ const FALLBACK_BASE = {
   ...GROUP_BASE_OPTION,
   hidden: true,
 };
-
-// 直连节点仅使用 IPv4 网络栈
-const DIRECT_PROXIES = [
-  { name: "DIRECT | 仅IPv4", type: "direct", "ip-version": "ipv4" },
-];
 
 // MetaCubeX MRS 规则集辅助生成器
 const M = (file, behavior = "domain") => ({
@@ -535,9 +609,15 @@ function buildProxyGroups(allProxyNames) {
   }
 
   // 6. 7 大指定场景组（数据驱动挂载）
+  // P0-1：`分流组添加所有节点` 时成员是「裸节点名」，而 default-selected 是组名，
+  // 两者一旦不匹配，mihomo 会静默回落到 proxies[0]（selector.go selectedProxy），
+  // Microsoft/Apple 会从「国内直连」变成走第一个境外节点，AI 也不再优先美国。
+  // 因此组引用与节点始终并存：组引用负责语义默认值，裸节点负责用户直选。
   const usName = activeRegionNames.includes("美国") ? "美国" : null;
   const standardSvcList = ["默认代理", "手动选择", "国内直连", ...(usName ? [usName] : []), FALLBACK_GROUP_NAME];
-  const serviceProxies = addAllNodes ? allProxyNames : standardSvcList;
+  const serviceProxies = addAllNodes
+    ? [...new Set([...standardSvcList, ...allProxyNames])]
+    : standardSvcList;
 
   const services = [];
   const serviceRules = [];
@@ -546,7 +626,11 @@ function buildProxyGroups(allProxyNames) {
   for (const svc of SERVICE_CONFIGS) {
     if (!ruleOptionsEnable[svc.sw]) continue;
     const g = svc.group;
-    const def = g.def === "us" ? usName : (g.def === "default" ? "默认代理" : g.def);
+    let def = g.def === "us" ? usName : (g.def === "default" ? "默认代理" : g.def);
+    // usName 缺失（订阅里没有美国节点）时，AI/Google 回落到默认代理而不是随便取首个成员
+    if (g.def === "us" && !def) def = "默认代理";
+    // 兜底断言：default-selected 必须是真实成员，否则等于没生效
+    if (def && !serviceProxies.includes(def)) def = serviceProxies[0];
     services.push({
       name: g.name,
       type: "select",
@@ -827,29 +911,69 @@ function filterAndNormalizeProxies(proxies) {
   regionMatchCache.clear();
   const validProxies = [];
   const seenNames = new Set();
+  // P0-2：记录「旧名 → 新名」，改名后要同步回写 dialer-proxy 引用，
+  // 否则订阅里 A 节点用 B 节点中转时，B 一旦被归一化/改名，内核直接
+  // `proxy [A] dialer-proxy [旧名] not found` 整份配置加载失败（1.19.29 实测）。
+  const renameMap = new Map();
+  // P0-4：脚本自身会注入 DIRECT_PROXIES，同名订阅节点必须让路，
+  // 否则内核报 `proxy DIRECT | 仅IPv4 is the duplicate name`。
+  for (const p of DIRECT_PROXIES) seenNames.add(p.name);
 
   for (const p of (proxies || [])) {
     if (!p || typeof p !== "object" || !p.name) continue;
     const normalized = normalizeProxyName(p);
-    let name = renameIfCollidesWithGroup(normalized.name);
+    const name = renameIfCollidesWithGroup(normalized.name);
 
-    // 硬噪音清洗
+    // 硬噪音清洗（剩余流量/到期等，带地区也必丢）
     if (INVALID_PROXY_RE.test(name)) continue;
 
-    // 软噪音过滤（仅当无地区匹配时过滤）
-    const isRegional = classifyNode(name).length > 0;
-    if (ruleOptionsEnable["过滤非地区节点"] && !isRegional && EXCLUDE_KEYWORD_RE.test(name)) {
+    // 软噪音过滤：仅「完全没有任何地区标识」时才按营销词过滤。
+    // P0-3：原来用 classifyNode().length > 0 判断，而它只认 10 大地区，
+    // 导致 `🇹🇷 土耳其 官网`、`🇧🇷 巴西 优惠` 这类带国旗的有效节点被当成垃圾丢光，
+    // 「其他节点」组也因此永远建不出来。改为只认国旗/国家码的地区标识。
+    if (ruleOptionsEnable["过滤非地区节点"] && !hasAnyRegionMarker(name) && EXCLUDE_KEYWORD_RE.test(name)) {
       continue;
     }
 
-    if (!seenNames.has(name)) {
-      seenNames.add(name);
-      validProxies.push(name === p.name ? p : { ...p, name });
+    // 去重：同名节点不再静默丢弃，改为追加序号保留（订阅里常见 `香港 01` 重复两条），
+    // 静默丢弃会让用户以为节点没生效且无从排查。
+    let finalName = name;
+    if (seenNames.has(finalName)) {
+      let i = 2;
+      while (seenNames.has(`${name} #${i}`)) i++;
+      finalName = `${name} #${i}`;
     }
+    seenNames.add(finalName);
+    if (finalName !== p.name) renameMap.set(p.name, finalName);
+    validProxies.push(finalName === p.name ? p : { ...p, name: finalName });
   }
 
   if (validProxies.length === 0) {
     throw new Error("clash.js: 配置文件中未找到任何可用代理节点，请检查订阅源");
+  }
+
+  // P0-2：级联改写 dialer-proxy。一次遍历不一定够（A→B→C 里 B 也可能被改名），
+  // 采用「直到不再变化」的定点迭代；同时把指向内置 DIRECT/REJECT 的引用保留原样。
+  const resolvable = new Set([...validProxies.map(p => p.name), ...BUILTIN_RESERVED_NAMES]);
+  for (let i = 0; i < 5; i++) {
+    let changed = false;
+    for (const p of validProxies) {
+      const dp = p["dialer-proxy"];
+      if (!dp || typeof dp !== "string" || resolvable.has(dp)) continue;
+      if (renameMap.has(dp)) {
+        p["dialer-proxy"] = renameMap.get(dp);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  // 仍然指向不存在节点的引用：删掉该字段，避免内核直接判定配置失败
+  for (const p of validProxies) {
+    const dp = p["dialer-proxy"];
+    if (dp && typeof dp === "string" && !resolvable.has(dp)) {
+      console.log(`⚠️ ${p.name} 的 dialer-proxy 指向不存在的节点「${dp}」，已移除该字段`);
+      delete p["dialer-proxy"];
+    }
   }
 
   return validProxies;
