@@ -304,6 +304,10 @@ const GROUP_BASE_OPTION = {
 const SELECT_BASE_OPTION = {
   url: GROUP_BASE_OPTION.url,
   timeout: GROUP_BASE_OPTION.timeout,
+  // 与静态 YAML（clashmi.yml）保持同一套兜底语义：
+  // select 组虽然不自动测速，但一旦成员被 include-all/filter 过滤为空，
+  // 仍会走 empty-fallback，必须与地区 url-test 组同口径，避免静默直连。
+  "empty-fallback": GROUP_BASE_OPTION["empty-fallback"],
 };
 
 // 地区 url-test 基础参数：纯本地区节点测速，宁断不叛逃
@@ -323,6 +327,9 @@ const FALLBACK_BASE = {
   type: "fallback",
   ...GROUP_BASE_OPTION,
   hidden: true,
+  // 与 clashmi.yml 的 include-all 对齐：排除 direct 类型代理，
+  // 否则 DIRECT | 仅IPv4 会参与拨号且可能被选中（direct 恒 alive）
+  "exclude-type": "DIRECT",
 };
 
 // MetaCubeX MRS 规则集辅助生成器
@@ -546,22 +553,25 @@ function buildProxyGroups(allProxyNames) {
       ...SELECT_BASE_OPTION,
       proxies: selectProxies,
       icon: reg.icon,
+      "exclude-type": "DIRECT",
       ...(hideManual ? { hidden: true } : {}),
     });
     activeRegionNames.push(reg.name);
   }
 
   // 3. 其他节点组（捕获 10 大区之外的有效小众节点）
-  if (otherNodes.length > 0) {
-    groups.push({
-      name: "其他节点",
-      type: "select",
-      ...SELECT_BASE_OPTION,
-      proxies: otherNodes,
-      icon: ICON.Other,
-    });
-    activeRegionNames.push("其他节点");
-  }
+  // 恒定生成（即使为空）：clashmi.yml 是静态 YAML，无法预判订阅里是否有非地区节点，
+  // 若此处按需生成、那边恒定生成，两份配置的组名集合就会漂移。
+  // 空组由 SELECT_BASE_OPTION 的 empty-fallback: REJECT 兜住，不会静默直连。
+  groups.push({
+    name: "其他节点",
+    type: "select",
+    ...SELECT_BASE_OPTION,
+    proxies: otherNodes,
+    icon: ICON.Other,
+    "exclude-type": "DIRECT",
+  });
+  activeRegionNames.push("其他节点");
 
   // 4. 核心系统聚合组
   const manualProxies = ruleOptionsEnable["手动选择"] ? [...activeRegionNames] : [];
@@ -1002,15 +1012,28 @@ function main(config) {
     // 2. 构建策略组与规则
     let { groups: proxyGroups, serviceRules, serviceProviders } = buildProxyGroups(allProxyNames);
 
-    // 3. 空组自愈防御（避免 proxies 为空导致内核报错）
+    // 3. 空组治理
+    // 不再删除空组：clashmi.yml 是静态 YAML，组名集合固定，若这里按需删除，
+    // 两份配置的组结构就会漂移。空组成员由各组的 empty-fallback（REJECT）兜住，
+    // 内核不会报错，也不会静默直连。
+    // 唯一需要处理的是「引用了空组」的组：把空组成员名剔掉，避免用户选到不可用出口。
     const emptyGroups = new Set(proxyGroups.filter(g => !g.proxies || g.proxies.length === 0).map(g => g.name));
     if (emptyGroups.size > 0) {
-      log(`⚠️ 防御清理空组: ${[...emptyGroups].join("、")}`);
-      proxyGroups = proxyGroups.filter(g => !emptyGroups.has(g.name));
+      log(`ℹ️ 空组（已用不会命中的占位成员兜底）: ${[...emptyGroups].join("、")}`);
       for (const g of proxyGroups) {
-        if (Array.isArray(g.proxies)) {
-          g.proxies = g.proxies.filter(p => !emptyGroups.has(p));
-          if (g.proxies.length === 0) g.proxies = ["DIRECT"];
+        if (!Array.isArray(g.proxies)) continue;
+        const kept = g.proxies.filter(p => !emptyGroups.has(p));
+        g.proxies = kept;
+      }
+      // 内核要求 proxies/use 至少有一项非空，否则 errMissProxy 整份配置加载失败。
+      // 而空组又不能补 DIRECT（等于绕过 empty-fallback 静默直连）；
+      // 这里补一个「永远不可用」的 REJECT 占位：组本身仍由 empty-fallback 决定去向，
+      // 只有当用户手动切到这个空组时才会命中 REJECT（语义上等同于「无出口」）。
+      for (const name of emptyGroups) {
+        const g = proxyGroups.find(x => x.name === name);
+        if (g && (!g.proxies || g.proxies.length === 0)) {
+          g.proxies = ["REJECT"];
+          g["empty-fallback"] = "REJECT";
         }
       }
     }
