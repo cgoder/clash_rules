@@ -448,13 +448,17 @@ proxy-groups:
 
   # ---- 7 大指定场景组 ----
   - name: AI
-    type: select
-    proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
-    url: 'https://www.gstatic.com/generate_204'
+    type: fallback
+    proxies: [美国-自动选择, 美国, 兜底自动选择]
+    interval: 300
     timeout: 5000
-    empty-fallback: 'REJECT'
+    url: 'https://www.gstatic.com/generate_204'
+    lazy: true
+    max-failed-times: 3
+    empty-fallback: REJECT
+    exclude-type: DIRECT
+    hidden: false
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/ChatGPT.png'
-    default-selected: 美国
 
   - name: YouTube
     type: select
@@ -462,8 +466,8 @@ proxy-groups:
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
-    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/YouTube.png'
     default-selected: 默认代理
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/YouTube.png'
 
   - name: Google
     type: select
@@ -471,8 +475,8 @@ proxy-groups:
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
-    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Google.png'
     default-selected: 美国
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Google.png'
 
   - name: OneDrive
     type: select
@@ -480,8 +484,8 @@ proxy-groups:
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
-    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/OneDrive.png'
     default-selected: 默认代理
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/OneDrive.png'
 
   - name: GitHub
     type: select
@@ -489,8 +493,8 @@ proxy-groups:
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
-    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/GitHub.png'
     default-selected: 默认代理
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/GitHub.png'
 
   - name: Microsoft
     type: select
@@ -498,8 +502,8 @@ proxy-groups:
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
-    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Microsoft.png'
     default-selected: 国内直连
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Microsoft.png'
 
   - name: Apple
     type: select
@@ -507,8 +511,8 @@ proxy-groups:
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
-    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Apple.png'
     default-selected: 国内直连
+    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Apple.png'
 
   # ---- 兜底 ----
   - name: 漏网之鱼
@@ -546,6 +550,12 @@ rules:
   - DOMAIN-SUFFIX,push-apple.com.akadns.net,Apple
   - RULE-SET,my_proxy,默认代理
   - RULE-SET,my_direct,国内直连
+  - DOMAIN-SUFFIX,challenges.cloudflare.com,默认代理
+  - DOMAIN-SUFFIX,workers.dev,默认代理
+  - DOMAIN-SUFFIX,pages.dev,默认代理
+  - DOMAIN-SUFFIX,cdnjs.cloudflare.com,默认代理
+  - DOMAIN-SUFFIX,static.cloudflareinsights.com,默认代理
+  - DOMAIN-SUFFIX,cloudflarestream.com,默认代理
   - RULE-SET,games_cn,国内直连
   - RULE-SET,epicgames,国内直连
   - RULE-SET,nvidia_cn,国内直连
@@ -554,9 +564,7 @@ rules:
   - DOMAIN,fsend.cn,国内直连
   - DOMAIN,international-gfe.download.nvidia.com,国内直连
   - DOMAIN-SUFFIX,hdslb.com,国内直连
-  - RULE-SET,openai_domain,AI
-  - RULE-SET,anthropic_domain,AI
-  - RULE-SET,google-gemini_domain,AI
+  - RULE-SET,ai_domain,AI
   - RULE-SET,youtube_domain,YouTube
   - RULE-SET,google_domain,Google
   - RULE-SET,google_ip,Google,no-resolve
@@ -685,24 +693,12 @@ rule-providers:
     behavior: domain
     format: mrs
     url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs'
-  openai_domain:
+  ai_domain:
     type: http
     interval: 86400
     behavior: domain
     format: mrs
-    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs'
-  anthropic_domain:
-    type: http
-    interval: 86400
-    behavior: domain
-    format: mrs
-    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs'
-  google-gemini_domain:
-    type: http
-    interval: 86400
-    behavior: domain
-    format: mrs
-    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-gemini.mrs'
+    url: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs'
   youtube_domain:
     type: http
     interval: 86400

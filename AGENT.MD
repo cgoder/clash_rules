@@ -58,6 +58,16 @@ At a glance:
 - Scenario groups are split by intent: proxy-type groups (AI, Google, YouTube,
   OneDrive, GitHub) must not contain a direct exit; direct-type groups
   (Microsoft, Apple) keep `国内直连` as their default. Do not merge the two.
+- The `AI` group is a `fallback` group, not `url-test`. Its default egress is
+  the first member (`美国-自动选择`), so member order is the failover order and
+  it must not carry `default-selected`. AI services are sensitive to both
+  connection resets and egress IP churn; do not switch it back to `url-test`.
+- AI routing uses the MetaCubeX aggregate `category-ai-chat-!cn` ruleset rather
+  than per-vendor rulesets, so new AI services are picked up automatically.
+- Cloudflare key subdomains (`challenges.cloudflare.com`, `workers.dev`,
+  `pages.dev`, `cdnjs`, `static.cloudflareinsights.com`) are routed via
+  `默认代理` and must stay ahead of `cn_domain`; their DNS often resolves to
+  unreachable prefixes from mainland networks.
 - `rules/my_proxy.list` and `rules/my_direct.list` use `behavior: classical`,
   where mihomo only honours domain rules. Never add `IP-CIDR` / `GEOIP` entries
   there; they are silently ignored.

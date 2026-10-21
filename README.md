@@ -71,7 +71,11 @@ cd clash_rules
 - **其他节点组**：捕获 10 大地区之外的有效节点（土耳其、巴西等）
 
 ### 🤖 AI 服务独立分组
-- ChatGPT / Claude / Gemini 合并为「AI」组，默认优先美国
+- OpenAI / Claude / Gemini / Copilot / Cursor / Perplexity / Groq / Mistral /
+  HuggingFace / Grok 等统一归入「AI」组
+- AI 组用 **fallback** 而非 url-test：只在当前出口不可用时才切换，不追延迟最低。
+  Gemini 的流式响应断连即整段失败，且对出口 IP 跳变敏感，故稳定优先
+- 成员顺序即故障转移顺序：`美国-自动选择` → `美国` → `兜底自动选择`
 
 ### 📺 场景化服务分组
 - **YouTube**：独立分组（默认走「默认代理」）——上游 `geosite/google` 分类 `include:youtube`，
@@ -79,6 +83,9 @@ cd clash_rules
 - **Google / OneDrive**：独立分组，默认走「默认代理」
 - **GitHub**：独立分组（默认走代理，可单独指定出口；与 Microsoft 解耦，不再被其规则集截走）
 - **Microsoft / Apple**：默认「国内直连」，国内段不过代理
+- **Cloudflare**：`challenges.cloudflare.com`（Turnstile 验证）、`workers.dev`、
+  `pages.dev`、`cdnjs` 等关键子域显式走代理。CF 的国内解析常落到不可达前缀，
+  实测直连全部失败；规则位于 `cn_domain` 之前，避免被国内兜底截走
 
 > 场景组按「默认是否直连」分两类，成员列表也不同：
 > - **代理型**（AI / Google / YouTube / OneDrive / GitHub）：成员只有代理类出口，

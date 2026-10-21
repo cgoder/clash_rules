@@ -269,14 +269,24 @@ for (const g of probe['proxy-groups']) {
 // 成员列表直接从 clash.js 的产出里取，避免两边各自维护一份而漂移
 for (const svc of A.SERVICE_CONFIGS) {
   const g = svc.group;
-  const def = svcDefault[g.name] || '默认代理';
-  const members = (probe['proxy-groups'].find(x => x.name === g.name) || {}).proxies || [];
+  // 组的类型、成员、默认值全部以 clash.js 实际产出为准，生成器只负责序列化。
+  const real = probe['proxy-groups'].find(x => x.name === g.name) || {};
+  const members = real.proxies || [];
   P(`  - name: ${g.name}`);
-  P('    type: select');
+  P(`    type: ${real.type || 'select'}`);
   P(`    proxies: [${members.join(', ')}]`);
-  emitSelectBase();
+  if (real.type === 'fallback') {
+    // fallback 组：默认出口由成员顺序决定，不写 default-selected
+    for (const k of ['interval', 'timeout', 'url', 'lazy', 'max-failed-times', 'empty-fallback', 'exclude-type', 'hidden']) {
+      const v = real[k];
+      if (v === undefined) continue;
+      P(`    ${k}: ${typeof v === 'string' && k === 'url' ? q(v) : v}`);
+    }
+  } else {
+    emitSelectBase();
+    if (real['default-selected']) P(`    default-selected: ${real['default-selected']}`);
+  }
   P(`    icon: '${g.icon}'`);
-  P(`    default-selected: ${def}`);
   P('');
 }
 P('  # ---- 兜底 ----');

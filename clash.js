@@ -359,16 +359,20 @@ const MIG = (file) => ({
 const SERVICE_CONFIGS = [
   {
     sw: "AI",
-    group: { name: "AI", icon: ICON.AI, def: "us" },
+    // AI 组是本配置里唯一要求「严谨」的业务，特殊处理：
+    // 1. type: fallback —— 只在当前出口不可用时才切换，不追延迟最低。
+    //    url-test 会为「更快 60ms」把长对话切走，而 Gemini 的流式响应
+    //    （SSE）断连即整段失败，且对出口 IP 跳变敏感，故稳定优先于延迟。
+    // 2. 默认成员直指「美国-自动选择」，避免 select 跳一层后再落到默认首个成员。
+    // 3. 规则用 MetaCubeX 官方 AI 聚合分类 category-ai-chat-!cn（204 条域名），
+    //    覆盖 OpenAI/Claude/Gemini 之外还有 Copilot、Cursor、Perplexity、
+    //    Groq、Mistral、HuggingFace、Grok 等，避免它们漏到默认代理走港区 IP。
+    group: { name: "AI", icon: ICON.AI, def: "us", type: "fallback" },
     rules: [
-      "RULE-SET,openai_domain,AI",
-      "RULE-SET,anthropic_domain,AI",
-      "RULE-SET,google-gemini_domain,AI",
+      "RULE-SET,ai_domain,AI",
     ],
     providers: {
-      openai_domain: M("openai"),
-      anthropic_domain: M("anthropic"),
-      "google-gemini_domain": M("google-gemini"),
+      ai_domain: M("category-ai-chat-!cn"),
     },
   },
   {
@@ -506,7 +510,7 @@ const BASE_RULE_PROVIDERS = {
 };
 
 // 构建策略组
-function buildProxyGroups(allProxyNames) {
+function buildProxyGroups(allProxyNames, log = () => {}) {
   const genAuto = ruleOptionsEnable["生成地区自动选择组"];
   const hideManual = ruleOptionsEnable["隐藏地区手动选择组"];
   const addAllNodes = ruleOptionsEnable["分流组添加所有节点"];
@@ -615,23 +619,38 @@ function buildProxyGroups(allProxyNames) {
   const serviceRules = [];
   const serviceProviders = {};
 
+  // 美国区内自动测速组名：AI 这类要求"稳定"的组直接指向它，
+  // 省掉「AI → 美国(select) → 美国-自动选择」中间那层可能被误点改掉的 select。
+  const usAutoName = usName ? `${usName}-自动选择` : null;
+
   for (const svc of SERVICE_CONFIGS) {
     if (!ruleOptionsEnable[svc.sw]) continue;
     const g = svc.group;
+    const isFallback = g.type === "fallback";
     let def = g.def === "us" ? usName : (g.def === "default" ? "默认代理" : g.def);
     // usName 缺失（订阅里没有美国节点）时，AI/Google 回落到默认代理而不是随便取首个成员
-    if (g.def === "us" && !def) def = "默认代理";
+    if (g.def === "us" && !def) {
+      def = "默认代理";
+      log(`⚠️ 订阅中没有美国节点：「${g.name}」组已降级到「默认代理」。AI 类服务对出口地区敏感，请检查订阅。`);
+    }
     // 默认走「国内直连」的组才有直连成员
-    const proxies = g.def === "国内直连" ? directSvcList : proxySvcList;
+    const baseProxies = g.def === "国内直连" ? directSvcList : proxySvcList;
+    // fallback 组的成员顺序即故障转移顺序：把最可靠的放最前
+    let proxies = isFallback
+      ? [usAutoName || usName || FALLBACK_GROUP_NAME, usName, FALLBACK_GROUP_NAME].filter(Boolean)
+      : [...baseProxies];
+    proxies = [...new Set(proxies)];
+    if (addAllNodes) proxies = [...new Set([...proxies, ...allProxyNames])];
     // 兜底断言：default-selected 必须是真实成员
     if (def && !proxies.includes(def)) def = proxies[0];
     services.push({
       name: g.name,
-      type: "select",
-      ...SELECT_BASE_OPTION,
-      proxies: addAllNodes ? [...new Set([...proxies, ...allProxyNames])] : proxies,
+      ...(isFallback
+        // fallback：沿用统一基线，但默认出口由成员顺序决定，不用 default-selected
+        ? { ...FALLBACK_BASE, hidden: false, "empty-fallback": "REJECT" }
+        : { type: "select", ...SELECT_BASE_OPTION, ...(def ? { "default-selected": def } : {}) }),
+      proxies,
       icon: g.icon,
-      ...(def ? { "default-selected": def } : {}),
     });
     serviceRules.push(...svc.rules);
     Object.assign(serviceProviders, svc.providers);
@@ -706,6 +725,23 @@ function buildRules(serviceRules) {
     "RULE-SET,my_direct,国内直连",
   ];
 
+  // 4b. Cloudflare 关键子域
+  // 上游 MetaCubeX 没有 cloudflare 分类，而 CF 的国内解析常落到不可达前缀
+  // （实测国内环境 challenges/cdnjs/www/workers.dev/pages.dev 全部直连失败），
+  // 必须显式走代理。这里只列关键子域而非整段 cloudflare：
+  //   - challenges.cloudflare.com：Turnstile 人机验证，挂了表现为「网页点不动」
+  //   - workers.dev / pages.dev：开发者自建服务
+  //   - cdnjs / static.cloudflareinsights：前端资源与统计
+  // 不拦 api./www.cloudflare.com 等管理后台之外的泛域名，避免误伤国内 CDN 加速资源。
+  const rulesCloudflare = [
+    "DOMAIN-SUFFIX,challenges.cloudflare.com,默认代理",
+    "DOMAIN-SUFFIX,workers.dev,默认代理",
+    "DOMAIN-SUFFIX,pages.dev,默认代理",
+    "DOMAIN-SUFFIX,cdnjs.cloudflare.com,默认代理",
+    "DOMAIN-SUFFIX,static.cloudflareinsights.com,默认代理",
+    "DOMAIN-SUFFIX,cloudflarestream.com,默认代理",
+  ];
+
   // 5. 国内直连加速快路径
   const rulesCnFast = [
     "RULE-SET,games_cn,国内直连",
@@ -738,6 +774,7 @@ function buildRules(serviceRules) {
     ...rulesAppleAuth,
     ...rulesApplePush,
     ...rulesMy,
+    ...rulesCloudflare,
     ...rulesCnFast,
     ...serviceRules, // 7 大场景组规则
     ...rulesCnTail,
@@ -1004,7 +1041,7 @@ function main(config) {
     log(`✨ 有效节点治理完成: ${allProxyNames.length}/${(config.proxies || []).length}`);
 
     // 2. 构建策略组与规则
-    let { groups: proxyGroups, serviceRules, serviceProviders } = buildProxyGroups(allProxyNames);
+    let { groups: proxyGroups, serviceRules, serviceProviders } = buildProxyGroups(allProxyNames, log);
 
     // 3. 空组治理
     // 不再删除空组：clashmi.yml 是静态 YAML，组名集合固定，若这里按需删除，

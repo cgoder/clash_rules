@@ -85,12 +85,16 @@ check('P0-1', '分流组添加所有节点：场景组 default-selected 落在�
   const { out } = run([mk('🇭🇰 香港 01'), mk('🇯🇵 日本 01'), mk('🇺🇸 美国 01')], {}, {}, { 分流组添加所有节点: true });
   const bad = out['proxy-groups'].filter(g => g['default-selected'] && !g.proxies.includes(g['default-selected']));
   assert(bad.length === 0, `default-selected 不在成员内: ${bad.map(g => `${g.name}→${g['default-selected']}`).join(', ')}`);
-  // 语义也要对：Microsoft / Apple 仍应默认直连，AI 仍应默认美国
+  // 语义也要对：Microsoft / Apple 仍应默认直连；AI 是 fallback 组，
+  // 其默认出口由成员顺序决定（首个成员），而非 default-selected。
   const pick = n => out['proxy-groups'].find(g => g.name === n)?.['default-selected'];
   assert(pick('Microsoft') === '国内直连', `Microsoft 默认应为「国内直连」，实际 ${pick('Microsoft')}`);
   assert(pick('Apple') === '国内直连', `Apple 默认应为「国内直连」，实际 ${pick('Apple')}`);
-  assert(pick('AI') === '美国', `AI 默认应为「美国」，实际 ${pick('AI')}`);
-  return 'Microsoft/Apple→国内直连，AI→美国，全部落位';
+  const ai = out['proxy-groups'].find(g => g.name === 'AI');
+  assert(ai.type === 'fallback', `AI 组应为 fallback，实际 ${ai.type}`);
+  assert(ai.proxies[0] === '美国-自动选择', `AI 首选成员应为「美国-自动选择」，实际 ${ai.proxies[0]}`);
+  assert(!ai['default-selected'], 'AI 作为 fallback 组不应设置 default-selected（易与成员顺序不一致）');
+  return 'Microsoft/Apple→国内直连，AI fallback 首选美国-自动选择，全部落位';
 });
 
 // ============================================================
@@ -278,6 +282,84 @@ check('P1-5', 'my_proxy / my_direct 不含 IP 类规则（classical 下会静默
     assert(ipRules.length === 0, `${f} 含 IP 类规则（classical 行为下被忽略）: ${ipRules.join(' | ')}`);
   }
   return '两个 list 均为纯域名规则';
+});
+
+// ============================================================
+// AI 严谨性（诉求：稳定优先、默认美国、覆盖主流服务）
+// ============================================================
+check('AI-1', 'AI 组为 fallback，首选美国-自动选择，不追最低延迟', () => {
+  const { out } = run([mk('🇭🇰 香港 01'), mk('🇺🇸 美国 01'), mk('🇺🇸 美国 02')]);
+  const ai = out['proxy-groups'].find(g => g.name === 'AI');
+  assert(ai, 'AI 组不存在');
+  assert(ai.type === 'fallback', `AI 应为 fallback（只在失败时切换），实际 ${ai.type}`);
+  assert(ai.proxies[0] === '美国-自动选择', `首选应为区间测速组，实际 ${ai.proxies[0]}`);
+  assert(ai['empty-fallback'] === 'REJECT', 'AI 组缺 empty-fallback: REJECT');
+  assert(ai['exclude-type'] === 'DIRECT', 'AI 组需排除 DIRECT 类型');
+  return `fallback: ${ai.proxies.join(' → ')}`;
+});
+
+check('AI-2', 'AI 规则覆盖官方聚合分类，而非仅三家', () => {
+  const { out } = run([mk('🇺🇸 美国 01')]);
+  const aiRules = out.rules.filter(r => String(r).endsWith(',AI'));
+  assert(aiRules.length > 0, '没有指向 AI 组的规则');
+  const providers = out['rule-providers'];
+  const used = aiRules.map(r => String(r).split(',')[1]);
+  const missing = used.filter(n => !providers[n]);
+  assert(missing.length === 0, `AI 规则引用了未定义规则集: ${missing.join(', ')}`);
+  // 必须用官方 AI 分类，覆盖 Copilot / Cursor / Perplexity 等
+  assert(used.some(n => n === 'ai_domain'), `AI 应引用 ai_domain，实际 ${used.join(', ')}`);
+  const url = providers.ai_domain.url;
+  assert(url.includes('category-ai-chat'), `ai_domain 应指向官方 AI 分类，实际 ${url}`);
+  return `${used.join(', ')} → ${url.split('/').pop()}`;
+});
+
+check('AI-3', '无美国节点时 AI 降级到默认代理且不崩溃', () => {
+  const { out } = run([mk('🇭🇰 香港 01')]);
+  const ai = out['proxy-groups'].find(g => g.name === 'AI');
+  assert(ai, 'AI 组不存在');
+  assert(!ai.proxies.includes('美国-自动选择'), '没有美国节点却引用了美国-自动选择');
+  assert(ai.proxies.includes('兜底自动选择'), 'AI 降级后应保留兜底出口');
+  return `降级后成员: ${ai.proxies.join(', ')}`;
+});
+
+// ============================================================
+// 非 AI 高频服务（诉求：国内有入口走直连，否则走默认代理）
+// ============================================================
+check('SVC-1', 'Cloudflare 关键子域显式走代理，且早于国内直连兜底', () => {
+  const { out } = run([mk('🇭🇰 香港 01')]);
+  const cf = ['challenges.cloudflare.com', 'workers.dev', 'pages.dev', 'cdnjs.cloudflare.com'];
+  for (const d of cf) {
+    const idx = out.rules.findIndex(r => String(r).startsWith(`DOMAIN-SUFFIX,${d},`));
+    assert(idx >= 0, `缺少 Cloudflare 规则: ${d}`);
+    const target = String(out.rules[idx]).split(',')[2];
+    assert(target === '默认代理', `${d} 应走默认代理，实际 ${target}`);
+    // 必须早于 cn_domain / cn_ip 兜底，否则会被判为国内直连
+    const cnIdx = out.rules.findIndex(r => String(r).startsWith('RULE-SET,cn_domain,'));
+    assert(idx < cnIdx, `${d} 规则(${idx}) 必须在 cn_domain(${cnIdx}) 之前`);
+  }
+  return `${cf.length} 条关键子域 → 默认代理`;
+});
+
+check('SVC-2', 'Microsoft / Apple 保留国内直连快路径', () => {
+  const { out } = run([mk('🇭🇰 香港 01')]);
+  for (const n of ['microsoft_cn', 'apple_cn']) {
+    const r = out.rules.find(x => String(x).startsWith(`RULE-SET,${n},`));
+    assert(r, `缺少 ${n} 国内快路径规则`);
+    assert(String(r).split(',')[2] === '国内直连', `${n} 应走国内直连`);
+  }
+  return 'microsoft_cn / apple_cn → 国内直连';
+});
+
+check('SVC-3', 'GitHub / YouTube 走代理组，不被国内兜底截走', () => {
+  const { out } = run([mk('🇭🇰 香港 01')]);
+  const cnIdx = out.rules.findIndex(r => String(r).startsWith('RULE-SET,cn_domain,'));
+  for (const [p, target] of [['github_domain', 'GitHub'], ['youtube_domain', 'YouTube']]) {
+    const idx = out.rules.findIndex(r => String(r).startsWith(`RULE-SET,${p},`));
+    assert(idx >= 0, `缺少 ${p} 规则`);
+    assert(idx < cnIdx, `${p} 必须早于 cn_domain`);
+    assert(String(out.rules[idx]).split(',')[2] === target, `${p} 应指向 ${target}`);
+  }
+  return 'github/youtube 规则位于 cn_domain 之前';
 });
 
 // ============================================================
