@@ -128,6 +128,81 @@ for (const r of yml['rules']) {
   if (target && !allTargets.has(target)) fail('rule-target', `clashmi.yml 规则目标不存在: ${s}`, target);
 }
 
+// 12. TUN / DNS 键名合法性
+// mihomo 对未知键**静默忽略**，写错键名不会报错、也不会生效。
+// 历史上 tun.route-exclude-cidr 就是如此：看似排除了内网，实际从未生效，
+// 直到有人开启 OVERRIDE_TUN 才会暴露成「内网/续签突然不可用」。
+// 这里对已知的易错键名做白名单校验（依据 mihomo 1.19.29 实测）。
+const KNOWN_TUN_KEYS = new Set([
+  'enable', 'stack', 'device', 'mtu', 'gso', 'gso-max-size',
+  'auto-route', 'auto-redirect', 'auto-detect-interface', 'strict-route',
+  'route-address', 'route-address-set', 'route-exclude-address', 'route-exclude-address-set',
+  'endpoint-independent-nat', 'loopback-address', 'dns-hijack',
+  'inet4-address', 'inet6-address', 'udp-timeout', 'interface-name',
+  'routing-mark', 'include-interface', 'exclude-interface',
+  'include-uid', 'exclude-uid', 'include-android-user', 'exclude-package',
+  'include-package', 'file-descriptor', 'file-descriptor-protected',
+]);
+const TUN_TYPOS = { 'route-exclude-cidr': 'route-exclude-address', 'exclude-cidr': 'exclude-address' };
+
+function checkTunKeys(label, tun) {
+  if (!tun || typeof tun !== 'object') return;
+  for (const k of Object.keys(tun)) {
+    if (!KNOWN_TUN_KEYS.has(k)) {
+      const hint = TUN_TYPOS[k] ? `（应为 ${TUN_TYPOS[k]}）` : '（内核会静默忽略）';
+      fail('tun-keys', `${label}: 未知的 tun 键 "${k}"${hint}`, k);
+    }
+  }
+  // loopback-address 必须不被 route-exclude-address 覆盖，否则 SideStore 续签失效
+  const loopbacks = tun['loopback-address'] || [];
+  const excludes = tun['route-exclude-address'] || [];
+  if (loopbacks.length && excludes.length) {
+    const toNet = s => {
+      const [net, bits] = String(s).split('/');
+      if (!bits) return null;
+      const oct = net.split('.').map(Number);
+      if (oct.length !== 4 || oct.some(n => Number.isNaN(n))) return null;
+      const ip = ((oct[0] << 24) >>> 0) + (oct[1] << 16) + (oct[2] << 8) + oct[3];
+      return { base: ip, mask: bits === '0' ? 0 : (0xffffffff << (32 - Number(bits))) >>> 0 };
+    };
+    for (const lb of loopbacks) {
+      const [ipStr] = String(lb).split('/');
+      const oct = ipStr.split('.').map(Number);
+      if (oct.length !== 4) continue;
+      // 只比较 IPv4 段，IPv6 段（fc00::/7 等）天然不覆盖 10.7.0.1
+      const ip = ((oct[0] << 24) >>> 0) + (oct[1] << 16) + (oct[2] << 8) + oct[3];
+      for (const ex of excludes) {
+        if (!String(ex).includes('.')) continue;
+        const n = toNet(ex);
+        if (n && ((ip & n.mask) >>> 0) === n.base) {
+          fail('tun-keys', `${label}: loopback-address ${ipStr} 被 route-exclude-address ${ex} 覆盖，续签会失效`, ex);
+        }
+      }
+    }
+  }
+  results.push({ id: 'tun-keys', title: `${label}: tun 键名与 loopback 排除范围有效`, ok: true, a: 'ok', b: null });
+}
+
+// clash.js 仅在 OVERRIDE_TUN=true 时注入 tun，这里直接调用其内部构造逻辑
+try {
+  const tunSb = { console: { log() {} } };
+  vm.createContext(tunSb);
+  new vm.Script(SRC + '\n;__tun = buildTunConfig();', { filename: 'clash.js' }).runInContext(tunSb);
+  checkTunKeys('clash.js', tunSb.__tun);
+} catch (e) {
+  fail('tun-keys', 'clash.js: buildTunConfig() 不可用', String(e.message));
+}
+checkTunKeys('clashmi.yml', yml.tun);
+
+// 13. DNS 键名：default-nameserver 必须为 IP（官方文档要求）
+for (const [label, dns] of [['clash.js', null], ['clashmi.yml', yml.dns]]) {
+  if (!dns) continue;
+  const dn = dns['default-nameserver'];
+  if (Array.isArray(dn) && dn.includes('system')) {
+    fail('dns-keys', `${label}: default-nameserver 含 system（官方文档要求必须为 IP）`, dn);
+  }
+}
+
 // ---------- 输出 ----------
 let bad = 0;
 for (const r of results) {

@@ -79,7 +79,12 @@ cd clash_rules
 - **Google / OneDrive**：独立分组，默认走「默认代理」
 - **GitHub**：独立分组（默认走代理，可单独指定出口；与 Microsoft 解耦，不再被其规则集截走）
 - **Microsoft / Apple**：默认「国内直连」，国内段不过代理
-- **Apple Push（APNs）**：独立 `select` 组，默认 `DIRECT`，可手动切到代理回退
+
+> 场景组按「默认是否直连」分两类，成员列表也不同：
+> - **代理型**（AI / Google / YouTube / OneDrive / GitHub）：成员只有代理类出口，
+>   **不含「国内直连」**。此前一律附带直连成员，等于给境外业务开了个一键裸连按钮，误选即撞墙。
+> - **直连型**（Microsoft / Apple）：保留「国内直连」作为默认，同时给出代理回退。
+- **Apple Push（APNs）**：推送域名显式归入「Apple」组，不再单列专线组（见下方说明）
 
 > YouTube 与 GitHub 属于同一类陷阱：geosite 分类之间存在 `include` 包含关系
 > （`google ⊃ youtube`、`microsoft ⊃ github`），规则顺序颠倒会让流量走错组。
@@ -195,11 +200,17 @@ iPhone 上免电脑续签/安装（SideStore、LiveContainer、LiveContainer+Sid
 `SideStore could not determine this device's UDID (#1006)`，先升级到 LiveContainer/SideStore
 nightly（LiveContainer 3.8.0 + SideStore 0.6.4 存在 loopback 续签回归，见 LiveContainer issue #1478）。
 
-⚠️ 已知遗留（未修，慎改）：`tun.route-exclude-cidr` 并非 mihomo 关键字（正确名为
-`route-exclude-address`；已用 mihomo 1.19.29 实测：写错名的非法值会被静默忽略，正确名的非法值会报错）。
-因此列表里的 `10.0.0.0/8` 实际从未生效——这也解释了为何 `loopback-address` 一直可用。
-**若只把键名改对，`10.7.0.1` 会被排除出 TUN，续签会失效**；要真正排除内网，必须同时把
-`10.7.0.0/24`（或 `10.7.0.1/32`）从排除段里挖出。
+✅ 已修复（2026-10）：`tun.route-exclude-cidr` 并非 mihomo 关键字，正确名为
+`route-exclude-address`。mihomo 对未知键**静默忽略**——实测 1.19.29 中把非法 CIDR 写进
+`route-exclude-cidr` 能正常加载，同样内容写进 `route-exclude-address` 才会报 `ParsePrefix`。
+因此该配置曾长期"看起来排除了内网、实际从未生效"，`clash.js` 的 `buildTunConfig()` 现已改用
+正确键名。
+
+⚠️ 改对键名后必须同步调整排除范围：`loopback-address` 是 `10.7.0.1`，所以
+**`10.0.0.0/8` 与 `10.7.0.0/24` 都不能放进排除列表**，否则续签会失效。
+当前取值（`192.168/16`、`172.16/12`、`100.64/10`、`169.254/16`、`fc00::/7`、`fe80::/10`）
+已避开该冲突，并由 `scripts/check_config_sync.mjs` 的 `tun-keys` 校验守护：
+它同时检查键名合法性，以及 loopback 是否被排除网段覆盖。
 
 ---
 
@@ -269,7 +280,7 @@ node scripts/gen_clashmi.mjs > clashmi.yml
 | 测速 URL | `http://` → `https://` | 明文 80 端口 204 易被透明缓存/DPI 干扰；`unified-delay` 二次请求失败时内核也会就 http 测速地址告警 |
 | `empty-fallback` | `DIRECT` → `REJECT` | 境外组回退直连 = 流量裸奔撞 GFW（该字段仅在成员被过滤为空时生效） |
 | select 组 | 去掉 `interval` | select 组带 interval 会让内核为它注册 HealthCheck，每个成员被重复拨号（实测 3 组 24 次/8s vs 6 次） |
-| `Apple Push` | `fallback` → `select` + 默认 `DIRECT` | mihomo 的 fallback 永远返回首个 alive 成员，而 `DIRECT` 恒 alive，原 `["DIRECT","APNs-Fallback"]` 等价于永久直连 |
+| `Apple Push` | `fallback` → `select` → **已删除** | fallback 版因 `DIRECT` 恒 alive 而等价于永久直连；改 select 后默认仍是 DIRECT，等于多了个隐藏状态却无实际保障。现由「Apple」组统一承担 |
 | `GLOBAL` | 加 `default-selected: 默认代理` | select 缺省取成员首个，原首位是 hidden 的「国内直连」，切全局模式会变成全局直连 |
 | `unified-delay` | 客户端未声明时补 `true` | https 测速的 TLS 握手计入延迟（URLTest 的计时起点在 DialContext 之前），实测 2231ms → 308ms；unified-delay 用同连接第二条请求计时剥离握手，兼得 https 防劫持与 http 低开销 |
 
@@ -284,6 +295,19 @@ node scripts/gen_clashmi.mjs > clashmi.yml
 | 内容过滤误杀地区节点 | 过滤条件用「是否属于 10 大地区」代替「是否带地区标识」，`🇹🇷 土耳其 官网`、`🇧🇷 巴西 优惠` 被当垃圾丢掉，**「其他节点」组永远建不出来** | 新增 `hasAnyRegionMarker()`：国旗 / 国家码 / 中文地名任一命中即视为有效地区节点 |
 | 注入代理重名 | 订阅含 `DIRECT \| 仅IPv4` 时内核报 `duplicate name`，配置加载失败 | 注入名并入 `RESERVED_GROUP_NAMES`，订阅同名节点自动改名 |
 | 地区识别缺口与误判 | `KR01`/`SIN`/`ICN`/`LAX`/`NRT` 认不出；`FRA`（法兰克福）被算成法国；`🇺🇸 香港 01` 同时进香港组和美国组，各自重复测速 | 国家码改为显式列举（`KR\|KOR`、`FR` 不含 `FRA`），补齐常见机场三字码；`classifyNode` 改为**单一归属**（国旗 > 无歧义国家码 > 定义顺序） |
+
+### 架构合理性修订（对照 mihomo 官方文档 v1.19.32）
+
+| 问题 | 影响 | 处理 |
+|---|---|---|
+| 境外场景组混入「国内直连」 | AI/Google/YouTube/OneDrive/GitHub 各有一个一键裸连出口，误选即直连撞墙 | 代理型与直连型场景组成员分离，境外组不再含直连出口 |
+| Apple Push 专线组 | fallback 版等价于永久直连；改 select 后默认仍 DIRECT，保障是名义上的 | 整组删除，推送域名显式归入「Apple」组 |
+| `手动选择` 缺兜底 | 只含地区组，地区组集体失效时无出口 | 补 `兜底自动选择`，与「默认代理」对齐 |
+| `default-nameserver` 含 `system` | 官方文档要求「必须为 IP」，`system` 属未承诺的扩展行为 | 改为纯 IP（阿里 / 腾讯） |
+| `cn_ip` 在 fake-ip 下近乎空转 | 规则带 `no-resolve`，面对 fake-ip 地址不匹配真实网段 | 由 `cn_domain` 承担国内判定；`cn_ip` 作为非 fake-ip 场景的补充 |
+
+`my_proxy.list` / `my_direct.list` 为 `classical` 行为，**只有域名类规则会生效**，
+IP 类规则会被静默忽略。回归测试已加入断言，防止后续误加 `IP-CIDR`。
 
 ### 节点来源更新
 - 仓库不保存任何订阅链接或节点凭据

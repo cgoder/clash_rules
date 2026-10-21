@@ -55,6 +55,22 @@ At a glance:
   change it in the other and re-run `scripts/check_config_sync.mjs`.
 - `clashmi.yml` is generated. Edit `scripts/gen_clashmi.mjs` (or `clash.js`)
   and regenerate, rather than editing the YAML routing sections by hand.
+- Scenario groups are split by intent: proxy-type groups (AI, Google, YouTube,
+  OneDrive, GitHub) must not contain a direct exit; direct-type groups
+  (Microsoft, Apple) keep `国内直连` as their default. Do not merge the two.
+- `rules/my_proxy.list` and `rules/my_direct.list` use `behavior: classical`,
+  where mihomo only honours domain rules. Never add `IP-CIDR` / `GEOIP` entries
+  there; they are silently ignored.
+- `dns.default-nameserver` must contain plain IPs per the official docs. Do not
+  re-add `system`. `proxy-server-nameserver` may keep `system` as last resort.
+- mihomo **silently ignores unknown keys**. A typo such as `route-exclude-cidr`
+  (correct: `route-exclude-address`) loads without error but has no effect.
+  Never assume a TUN/DNS key works because the profile loads; verify it.
+  `scripts/check_config_sync.mjs` whitelists TUN keys and flags unknown ones.
+- `tun.loopback-address` is `10.7.0.1` for SideStore / LiveContainer re-signing.
+  Never add `10.0.0.0/8`, `10.7.0.0/24` or `10.7.0.1/32` to
+  `route-exclude-address`; doing so removes the loopback from TUN and breaks
+  re-signing. The sync check validates this too.
 
 ## Editing Guidelines
 

@@ -141,7 +141,7 @@ proxy-groups:
   # ---- 顶层全局入口（clash.js 会显式定义 GLOBAL 并指定默认出口）----
   - name: GLOBAL
     type: select
-    proxies: [默认代理, 国内直连, 手动选择, 香港-自动选择, 香港, 日本-自动选择, 日本, 美国-自动选择, 美国, 其他节点, Apple Push, AI, YouTube, Google, OneDrive, GitHub, Microsoft, Apple, 漏网之鱼, 兜底自动选择]
+    proxies: [默认代理, 国内直连, 手动选择, 香港-自动选择, 香港, 日本-自动选择, 日本, 美国-自动选择, 美国, 其他节点, AI, YouTube, Google, OneDrive, GitHub, Microsoft, Apple, 漏网之鱼, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -446,20 +446,10 @@ proxy-groups:
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/OT.png'
 
-  # ---- Apple Push（APNs）专线：select + 默认 DIRECT ----
-  - name: Apple Push
-    type: select
-    proxies: [DIRECT, 默认代理, 兜底自动选择]
-    url: 'https://captive.apple.com/hotspot-detect.html'
-    timeout: 5000
-    empty-fallback: REJECT
-    icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Apple.png'
-    default-selected: DIRECT
-
   # ---- 7 大指定场景组 ----
   - name: AI
     type: select
-    proxies: [默认代理, 手动选择, 国内直连, 美国, 兜底自动选择]
+    proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -468,7 +458,7 @@ proxy-groups:
 
   - name: YouTube
     type: select
-    proxies: [默认代理, 手动选择, 国内直连, 美国, 兜底自动选择]
+    proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -477,7 +467,7 @@ proxy-groups:
 
   - name: Google
     type: select
-    proxies: [默认代理, 手动选择, 国内直连, 美国, 兜底自动选择]
+    proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -486,7 +476,7 @@ proxy-groups:
 
   - name: OneDrive
     type: select
-    proxies: [默认代理, 手动选择, 国内直连, 美国, 兜底自动选择]
+    proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -495,7 +485,7 @@ proxy-groups:
 
   - name: GitHub
     type: select
-    proxies: [默认代理, 手动选择, 国内直连, 美国, 兜底自动选择]
+    proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -504,7 +494,7 @@ proxy-groups:
 
   - name: Microsoft
     type: select
-    proxies: [默认代理, 手动选择, 国内直连, 美国, 兜底自动选择]
+    proxies: [国内直连, 默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -513,7 +503,7 @@ proxy-groups:
 
   - name: Apple
     type: select
-    proxies: [默认代理, 手动选择, 国内直连, 美国, 兜底自动选择]
+    proxies: [国内直连, 默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
     timeout: 5000
     empty-fallback: 'REJECT'
@@ -552,14 +542,8 @@ rules:
   - DOMAIN,gsa.apple.com,默认代理
   - DOMAIN,developerservices2.apple.com,默认代理
   - DOMAIN,gspe1-ssl.ls.apple.com,默认代理
-  - DOMAIN-SUFFIX,push.apple.com,Apple Push
-  - DOMAIN-SUFFIX,push-apple.com.akadns.net,Apple Push
-  - DOMAIN-KEYWORD,apple.com.edgekey.net,Apple Push
-  - IP-CIDR,17.249.0.0/16,Apple Push,no-resolve
-  - IP-CIDR,17.252.0.0/16,Apple Push,no-resolve
-  - IP-CIDR,17.57.144.0/22,Apple Push,no-resolve
-  - IP-CIDR,17.188.128.0/18,Apple Push,no-resolve
-  - IP-CIDR,17.188.20.0/23,Apple Push,no-resolve
+  - DOMAIN-SUFFIX,push.apple.com,Apple
+  - DOMAIN-SUFFIX,push-apple.com.akadns.net,Apple
   - RULE-SET,my_proxy,默认代理
   - RULE-SET,my_direct,国内直连
   - RULE-SET,games_cn,国内直连

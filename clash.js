@@ -20,7 +20,7 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 //      无节点不残留空组；纯本地区 url-test 测速，防跨国“低延迟叛逃”。
 //    - 7 大核心业务场景组：AI、Google、YouTube、OneDrive、GitHub、Microsoft、Apple。
 //    - 严格规避上游规则包含陷阱：YouTube 必须在 Google 之前、GitHub 必须在 Microsoft 之前。
-//    - 官方级 Apple Push（APNs）故障转移专线：直连优先 + APNs-Fallback，消息永不失联。
+//    - Apple 推送域名显式归入 Apple 组，不再单列专线组（收益有限，见 buildRules 注释）。
 //    - clashmi 经典增强规则集：my_proxy（含 SideStore 续签保护）、my_direct 及大厂加速。
 //    - 全链路国内加速：所有规则集（MRS）与图标统一通过 v4.gh-proxy.org 镜像加速。
 //
@@ -34,8 +34,8 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 // 4. select 组改用 SELECT_BASE_OPTION（不再带 interval）：select 组一旦声明 interval，
 //    内核会为它注册 CompatibleProvider + HealthCheck 定时器，每个成员被重复拨号。
 //    实测（3 组 × 2 节点 × 3s）：带 interval = 24 次/8s，不带 = 仅 url-test 组的 6 次。
-// 5. Apple Push 由 fallback 改 select + 默认 DIRECT：mihomo 的 fallback 永远返回首个 alive 成员，
-//    而 DIRECT 恒为 alive，原 ["DIRECT","APNs-Fallback"] 等价于「永久直连」，回退分支从未生效。
+// 5. Apple Push 专线组已移除：fallback 版因 DIRECT 恒 alive 而等价于永久直连；改为 select 后
+//    默认仍是 DIRECT，等于多了一个隐藏状态却无实际保障。现由 Apple 组统一承担。
 // 6. GLOBAL 增加 default-selected=默认代理：select 缺省取成员列表首个，
 //    原顺序首位是 hidden 的「国内直连」，切到全局模式会变成全局直连裸奔。
 // 7. 新增 OPTIONS.OVERRIDE_PROXY_DNS：只补齐 dns.proxy-server-nameserver，
@@ -84,7 +84,6 @@ const ruleOptionsEnable = {
   屏蔽国外QUIC: false,      // 拦截国外 QUIC 流量（UDP 443 非国内 REJECT）
   AdBlock: false,           // 广告拦截规则集
   // === 专线保障 ===
-  ApplePush专线保障: true,  // 官方最佳实践：APNs 独立故障转移，直连优先 + 代理回退
   // === 7 大指定核心场景组（组 + 规则 + 规则集联动） ===
   AI: true,                 // ChatGPT / Claude / Gemini，默认优先美国
   Google: true,             // 谷歌生态，默认优先美国
@@ -105,7 +104,6 @@ const ICON = {
   China: `${ICON_BASE}/China.png`,
   Other: `${ICON_BASE}/OT.png`,
   MATCH: `${ICON_BASE}/MATCH.png`,
-  ApplePush: `${ICON_QURE_BASE}/Apple.png`,
   // 地区图标
   HK: `${ICON_BASE}/HK.png`,
   JP: `${ICON_BASE}/JP.png`,
@@ -250,7 +248,6 @@ const DIRECT_PROXIES = [
 // 保留策略组名称清单（防 Loop detected 自环）
 const RESERVED_GROUP_NAMES = new Set([
   "GLOBAL", "默认代理", "手动选择", "国内直连", "漏网之鱼", "兜底自动选择", "其他节点",
-  "Apple Push",
   ...REGION_DEFINITIONS.map(r => r.name),
   ...REGION_DEFINITIONS.map(r => `${r.name}-自动选择`),
   "AI", "Google", "YouTube", "OneDrive", "GitHub", "Microsoft", "Apple",
@@ -586,7 +583,9 @@ function buildProxyGroups(allProxyNames) {
     name: "手动选择",
     type: "select",
     ...SELECT_BASE_OPTION,
-    proxies: manualProxies.length ? manualProxies : ["国内直连"],
+    // 与「默认代理」对齐：地区组全部失效时仍要有出口。
+    // 此前只有地区组，地区组集体失败时该组无可用成员。
+    proxies: manualProxies.length ? [...manualProxies, FALLBACK_GROUP_NAME] : ["国内直连"],
     icon: ICON.Manual,
   });
   groups.unshift({
@@ -598,36 +597,19 @@ function buildProxyGroups(allProxyNames) {
     hidden: true,
   });
 
-  // 5. Apple Push（APNs）专用链路
-  // 修正历史设计：原实现是「fallback + 顺序故障转移」，但 mihomo 的 fallback 永远返回
-  // 成员列表里第一个 alive 的成员（adapter/outboundgroup/fallback.go findAliveProxy），
-  // 而 DIRECT 在 mihomo 里恒为 alive（adapter/outboundgroup/groupbase.go onDialFailed
-  // 对 Direct/Reject/Compatible 直接 return，不会置 false）。
-  // 因此 ["DIRECT", "APNs-Fallback"] 的顺序实际等价于「永久 DIRECT」，代理回退分支从未生效。
-  // 改用 select + 默认 DIRECT：语义诚实，用户也能在面板上手动切到代理回退。
-  if (ruleOptionsEnable["ApplePush专线保障"]) {
-    groups.push({
-      name: "Apple Push",
-      type: "select",
-      ...SELECT_BASE_OPTION,
-      // captive.apple.com 走 Apple 自己的 anycast，测的是「这条路对 Apple 是否可用」
-      url: "https://captive.apple.com/hotspot-detect.html",
-      icon: ICON.ApplePush,
-      proxies: ["DIRECT", "默认代理", FALLBACK_GROUP_NAME],
-      "default-selected": "DIRECT",
-    });
-  }
-
   // 6. 7 大指定场景组（数据驱动挂载）
   // P0-1：`分流组添加所有节点` 时成员是「裸节点名」，而 default-selected 是组名，
   // 两者一旦不匹配，mihomo 会静默回落到 proxies[0]（selector.go selectedProxy），
   // Microsoft/Apple 会从「国内直连」变成走第一个境外节点，AI 也不再优先美国。
   // 因此组引用与节点始终并存：组引用负责语义默认值，裸节点负责用户直选。
   const usName = activeRegionNames.includes("美国") ? "美国" : null;
-  const standardSvcList = ["默认代理", "手动选择", "国内直连", ...(usName ? [usName] : []), FALLBACK_GROUP_NAME];
-  const serviceProxies = addAllNodes
-    ? [...new Set([...standardSvcList, ...allProxyNames])]
-    : standardSvcList;
+  // 场景组成员按「该业务默认是否直连」分两类：
+  //   代理型（AI / Google / YouTube / OneDrive / GitHub）：只给代理类出口。
+  //     此前一律附带「国内直连」，等于给境外业务开了一个一键裸连按钮，
+  //     误选即让 OpenAI / Google 流量直连撞墙。直连需求由 Microsoft / Apple 组承担。
+  //   直连型（Microsoft / Apple）：保留「国内直连」作为默认，同时给出代理回退。
+  const proxySvcList = ["默认代理", "手动选择", ...(usName ? [usName] : []), FALLBACK_GROUP_NAME];
+  const directSvcList = ["国内直连", "默认代理", "手动选择", ...(usName ? [usName] : []), FALLBACK_GROUP_NAME];
 
   const services = [];
   const serviceRules = [];
@@ -639,13 +621,15 @@ function buildProxyGroups(allProxyNames) {
     let def = g.def === "us" ? usName : (g.def === "default" ? "默认代理" : g.def);
     // usName 缺失（订阅里没有美国节点）时，AI/Google 回落到默认代理而不是随便取首个成员
     if (g.def === "us" && !def) def = "默认代理";
-    // 兜底断言：default-selected 必须是真实成员，否则等于没生效
-    if (def && !serviceProxies.includes(def)) def = serviceProxies[0];
+    // 默认走「国内直连」的组才有直连成员
+    const proxies = g.def === "国内直连" ? directSvcList : proxySvcList;
+    // 兜底断言：default-selected 必须是真实成员
+    if (def && !proxies.includes(def)) def = proxies[0];
     services.push({
       name: g.name,
       type: "select",
       ...SELECT_BASE_OPTION,
-      proxies: serviceProxies,
+      proxies: addAllNodes ? [...new Set([...proxies, ...allProxyNames])] : proxies,
       icon: g.icon,
       ...(def ? { "default-selected": def } : {}),
     });
@@ -697,17 +681,15 @@ function buildRules(serviceRules) {
     "RULE-SET,ntp_domain,国内直连",
   ];
 
-  // 2. 对齐官方最佳实践：Apple Push（APNs）专线独立链路
-  const targetApns = ruleOptionsEnable["ApplePush专线保障"] ? "Apple Push" : "国内直连";
+  // 2. APNs（Apple 推送）不再单列专线组
+  // 历史上曾用 fallback / select + 默认 DIRECT 为 APNs 建独立组，但盘点后发现收益有限：
+  //   - APNs 走 DIRECT 时，绝大多数国内网络下本就通畅；
+  //   - 需要走代理时，直接切 Apple 组即可覆盖（apple_domain 已包含推送域名）；
+  //   - 单独一组反而多了一个隐藏状态：用户以为"专线在保障"，实际默认仍是直连。
+  // 这里只显式兜住推送域名，确保它们一定进入 Apple 组而不是掉进 MATCH。
   const rulesApplePush = [
-    `DOMAIN-SUFFIX,push.apple.com,${targetApns}`,
-    `DOMAIN-SUFFIX,push-apple.com.akadns.net,${targetApns}`,
-    `DOMAIN-KEYWORD,apple.com.edgekey.net,${targetApns}`,
-    `IP-CIDR,17.249.0.0/16,${targetApns},no-resolve`,
-    `IP-CIDR,17.252.0.0/16,${targetApns},no-resolve`,
-    `IP-CIDR,17.57.144.0/22,${targetApns},no-resolve`,
-    `IP-CIDR,17.188.128.0/18,${targetApns},no-resolve`,
-    `IP-CIDR,17.188.20.0/23,${targetApns},no-resolve`,
+    "DOMAIN-SUFFIX,push.apple.com,Apple",
+    "DOMAIN-SUFFIX,push-apple.com.akadns.net,Apple",
   ];
 
   // 3. Apple 登录/续签认证端点必须显式代理，不能只依赖远程 my_proxy 规则集
@@ -787,7 +769,7 @@ function buildProxyServerDnsPatch(clientDns) {
     ],
     "default-nameserver": Array.isArray(base["default-nameserver"]) && base["default-nameserver"].length
       ? base["default-nameserver"]
-      : ["223.5.5.5", "119.29.29.29", "system"],
+      : ["223.5.5.5", "119.29.29.29", "119.28.28.28"],
   };
 }
 
@@ -830,6 +812,9 @@ function buildDnsAndHosts() {
         "+.xboxlive.com",
         "+.speedtest.net",
       ],
+      // 官方文档：default-nameserver「必须为 IP, 可为加密 DNS」。
+      // system 只是客户端实现的扩展行为，不作为契约依赖；
+      // 纯 IP 的阿里/腾讯 DNS 足以解析 nameserver 里的域名。
       "default-nameserver": chinaDNS,
       "proxy-server-nameserver": [
         ...chinaDoh,
@@ -870,12 +855,21 @@ function buildTunConfig() {
     "auto-redirect": true,
     "auto-detect-interface": true,
     "endpoint-independent-nat": true,
-    "route-exclude-cidr": [
+    // ⚠️ 键名必须是 route-exclude-address。
+    // 历史上这里写成 route-exclude-cidr，而 mihomo 对该未知键静默忽略
+    // （实测 1.19.29：非法 CIDR 写进 route-exclude-cidr 也能加载成功，
+    //  同样内容写进 route-exclude-address 则会报 ParsePrefix 错误），
+    // 即这些排除网段从未生效过。
+    "route-exclude-address": [
       "192.168.0.0/16",
-      "10.0.0.0/8",
       "172.16.0.0/12",
       "100.64.0.0/10",
       "169.254.0.0/16",
+      // 10.0.0.0/8 必须排除在列表外：loopback-address 用的是 10.7.0.1，
+      // 一旦整段被排除，SideStore/LiveContainer 续签会失效。
+      // 同理不要加 10.7.0.0/24 或 10.7.0.1/32。
+      "fc00::/7",
+      "fe80::/10",
     ],
     "loopback-address": ["10.7.0.1"],
     "dns-hijack": ["any:53", "tcp://any:53"],

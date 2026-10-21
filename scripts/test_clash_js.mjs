@@ -202,6 +202,85 @@ check('P0-5c', '单节点只归属一个地区组，不跨区重复测速', () =
 });
 
 // ============================================================
+// P1 架构合理性（对照 mihomo 官方文档 v1.19.32 与社区通行做法）
+// ============================================================
+check('P1-1', '境外场景组不含「国内直连」出口', () => {
+  const { out } = run([mk('🇭🇰 香港 01'), mk('🇺🇸 美国 01')]);
+  const overseas = ['AI', 'Google', 'YouTube', 'OneDrive', 'GitHub'];
+  const bad = overseas.filter(n => {
+    const g = out['proxy-groups'].find(x => x.name === n);
+    return g && g.proxies.includes('国内直连');
+  });
+  assert(bad.length === 0, `以下境外组仍提供直连出口: ${bad.join(', ')}`);
+  // 必须仍保留兜底自动选择，保证组内始终有出口
+  for (const n of overseas) {
+    const g = out['proxy-groups'].find(x => x.name === n);
+    if (g) assert(g.proxies.includes('兜底自动选择'), `${n} 缺少兜底自动选择`);
+  }
+  return `已移除: ${overseas.join(', ')}；每组仍保留兜底自动选择`;
+});
+
+check('P1-1b', 'Microsoft/Apple 仍默认国内直连（直连需求由这两个组承担）', () => {
+  const { out } = run([mk('🇭🇰 香港 01')]);
+  for (const n of ['Microsoft', 'Apple']) {
+    const g = out['proxy-groups'].find(x => x.name === n);
+    assert(g['default-selected'] === '国内直连', `${n} 默认出口应为国内直连，实际 ${g['default-selected']}`);
+  }
+  return 'Microsoft/Apple → 国内直连';
+});
+
+check('P1-2', 'APNs 专线组与规则已移除', () => {
+  const { out } = run([mk('🇭🇰 香港 01')]);
+  assert(!out['proxy-groups'].some(g => g.name === 'Apple Push'), 'Apple Push 组仍然存在');
+  const apnsRules = out.rules.filter(r => String(r).includes('Apple Push'));
+  assert(apnsRules.length === 0, `仍有指向 Apple Push 组的规则: ${apnsRules.join(' | ')}`);
+  // APNs 专用 IP 段不应再单列
+  const apnsCidr = out.rules.filter(r => /^IP-CIDR,17\.(249|252|57|188)\./.test(String(r)));
+  assert(apnsCidr.length === 0, `APNs 专用 IP 规则仍存在: ${apnsCidr.join(' | ')}`);
+  // push.apple.com 必须仍被某条规则接住，不能掉进 MATCH 裸奔
+  const pushRule = out.rules.find(r => String(r).startsWith('DOMAIN-SUFFIX,push.apple.com,'));
+  assert(pushRule, 'push.apple.com 没有对应规则，会掉进 MATCH');
+  return `APNs 组/规则已移除，push.apple.com → ${String(pushRule).split(',')[2]}`;
+});
+
+check('P1-3', '手动选择组包含兜底自动选择', () => {
+  const { out } = run([mk('🇭🇰 香港 01')]);
+  const g = out['proxy-groups'].find(x => x.name === '手动选择');
+  assert(g.proxies.includes('兜底自动选择'), `手动选择缺少兜底自动选择: ${g.proxies.join(', ')}`);
+  return `手动选择: ${g.proxies.join(', ')}`;
+});
+
+check('P1-4', 'default-nameserver 不含 system（文档要求必须为 IP）', () => {
+  // 分支 A：OVERRIDE_DNS = true，走 buildDnsAndHosts
+  const outA = run([mk('🇭🇰 香港 01')], {}, { OVERRIDE_DNS: true }).out;
+  const dnA = outA.dns?.['default-nameserver'] || [];
+  assert(dnA.length > 0, 'OVERRIDE_DNS=true 时未生成 default-nameserver');
+  assert(!dnA.includes('system'), `OVERRIDE_DNS 分支 default-nameserver 仍含 system: ${JSON.stringify(dnA)}`);
+
+  // 分支 B：默认路径（OVERRIDE_PROXY_DNS），走 buildProxyServerDnsPatch
+  const outB = run([mk('🇭🇰 香港 01')], { dns: { enable: true, nameserver: ['https://doh.pub/dns-query'] } }).out;
+  const dnB = outB.dns?.['default-nameserver'] || [];
+  assert(dnB.length > 0, '默认路径未补齐 default-nameserver');
+  assert(!dnB.includes('system'), `默认路径 default-nameserver 仍含 system: ${JSON.stringify(dnB)}`);
+  // proxy-server-nameserver 保留 system 作为节点解析的最终兜底
+  const psn = outB.dns?.['proxy-server-nameserver'] || [];
+  assert(psn.includes('system'), `proxy-server-nameserver 应保留 system 兜底: ${JSON.stringify(psn)}`);
+  return `A=${JSON.stringify(dnA)} B=${JSON.stringify(dnB)}`;
+});
+
+check('P1-5', 'my_proxy / my_direct 不含 IP 类规则（classical 下会静默失效）', () => {
+  const fs2 = fs;
+  for (const f of ['rules/my_proxy.list', 'rules/my_direct.list']) {
+    const lines = fs2.readFileSync(path.join(repo, f), 'utf8')
+      .split('\n').map(l => l.trim())
+      .filter(l => l && !l.startsWith('#'));
+    const ipRules = lines.filter(l => /^(IP-CIDR6?|GEOIP|IP-ASN|IP-SUFFIX),/i.test(l));
+    assert(ipRules.length === 0, `${f} 含 IP 类规则（classical 行为下被忽略）: ${ipRules.join(' | ')}`);
+  }
+  return '两个 list 均为纯域名规则';
+});
+
+// ============================================================
 // 内核级校验（MIHOMO=1 时执行）
 // ============================================================
 if (process.env.MIHOMO) {

@@ -261,28 +261,19 @@ P('    exclude-type: DIRECT');
 emitSelectBase();
 P('    icon: \'' + A.ICON.Other + '\'');
 P('');
-P('  # ---- Apple Push（APNs）专线：select + 默认 DIRECT ----');
-P('  - name: Apple Push');
-P('    type: select');
-P('    proxies: [DIRECT, 默认代理, 兜底自动选择]');
-P('    url: \'https://captive.apple.com/hotspot-detect.html\'');
-P(`    timeout: ${S.timeout}`);
-P(`    empty-fallback: ${S['empty-fallback']}`);
-P('    icon: \'' + A.ICON.ApplePush + '\'');
-P('    default-selected: DIRECT');
-P('');
 P('  # ---- 7 大指定场景组 ----');
 const svcDefault = {};
 for (const g of probe['proxy-groups']) {
   if (g['default-selected']) svcDefault[g.name] = g['default-selected'];
 }
-const standardSvc = ['默认代理', '手动选择', '国内直连', '美国', '兜底自动选择'];
+// 成员列表直接从 clash.js 的产出里取，避免两边各自维护一份而漂移
 for (const svc of A.SERVICE_CONFIGS) {
   const g = svc.group;
   const def = svcDefault[g.name] || '默认代理';
+  const members = (probe['proxy-groups'].find(x => x.name === g.name) || {}).proxies || [];
   P(`  - name: ${g.name}`);
   P('    type: select');
-  P(`    proxies: [${standardSvc.join(', ')}]`);
+  P(`    proxies: [${members.join(', ')}]`);
   emitSelectBase();
   P(`    icon: '${g.icon}'`);
   P(`    default-selected: ${def}`);
