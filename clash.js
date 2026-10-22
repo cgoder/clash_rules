@@ -281,7 +281,10 @@ function renameIfCollidesWithGroup(name) {
 //   填 DIRECT 会让「本应走代理的境外流量」在组内无节点时静默直连撞 GFW，因此一律 REJECT。
 const GROUP_BASE_OPTION = {
   interval: 300,
-  timeout: 5000,
+  // 实测（2026-10-22）：美国 A–E 入口 TLS 握手本身需 900–1500ms，抖动尖峰 2152ms，
+  // 且校园网对国际 443 存在选择性 SYN 丢弃（icmp 通 / tcp 不通）。
+  // 5000ms 下「半数节点握手已超时、其余节点待测」会把整轮拖成 all proxies timeout。
+  timeout: 8000,
   url: "https://www.gstatic.com/generate_204",
   // 不设 expected-status（内核缺省 "*" = 任意状态码都算通）。
   // 若设为 "204" 可以识别「机场劫持测速地址」，但也会把返回 200 的劫持型机场全部判死，
@@ -792,18 +795,34 @@ function buildRules(serviceRules) {
 function buildProxyServerDnsPatch(clientDns) {
   const base = { ...(clientDns || {}) };
   if (base.enable !== true) return null; // DNS 未启用时该字段无效，交由 OVERRIDE_DNS 处理
-  const hasOwn = Array.isArray(base["proxy-server-nameserver"]) && base["proxy-server-nameserver"].length > 0;
-  if (hasOwn) return null; // 客户端/订阅已自带，不干预
-  // 去重：避免 base 里已存在同名字段时出现重复键（对象展开会被后者覆盖，语义等价但日志更清晰）
+
+  // 订阅/客户端已自带解析器时，不再整块替换，而是【追加兜底】。
+  // 背景（2026-10-22 实测）：FlClash 订阅自带
+  //   https://poseidoh.com/jp6ru042k7/dns-query   → 191.101.132.175  TCP 0/6 直连不通
+  //   https://lingerdoh.com/b4n68sr46ae1/dns-query → 14.137.229.148  TCP 6/6 通
+  // 节点域名 TTL=1，缓存每秒过期、每秒重新解析。
+  // 一旦上面的死 DoH 被 mihomo 选中，节点域名解析失败 → Dial 超时 → 整组假超时。
+  // 原来这里直接 return null 放弃修补，等于把死解析器留在配置里，
+  // 这正是「美国组全部超时」的诱因之一。
+  const FALLBACK_RESOLVERS = [
+    "https://223.5.5.5/dns-query#DIRECT",
+    "https://doh.pub/dns-query#DIRECT",
+    "223.5.5.5",
+    "119.29.29.29",
+    "system",
+  ];
+  const own = (Array.isArray(base["proxy-server-nameserver"]) ? base["proxy-server-nameserver"] : [])
+    .filter(r => typeof r === "string" && r.trim() !== "");
+  // 保留订阅原有顺序（用户显式配置优先），仅补上不存在的兜底项。
+  const merged = [...own];
+  for (const r of FALLBACK_RESOLVERS) {
+    if (!merged.some(e => e === r || e.startsWith(r.split("#")[0]))) merged.push(r);
+  }
+
   return {
     ...base,
-    "proxy-server-nameserver": [
-      "https://223.5.5.5/dns-query#DIRECT",
-      "https://doh.pub/dns-query#DIRECT",
-      "223.5.5.5",
-      "119.29.29.29",
-      "system",
-    ],
+    "proxy-server-nameserver": merged,
+    // 官方文档：default-nameserver「必须为 IP, 可为加密 DNS」。订阅没给时才补。
     "default-nameserver": Array.isArray(base["default-nameserver"]) && base["default-nameserver"].length
       ? base["default-nameserver"]
       : ["223.5.5.5", "119.29.29.29", "119.28.28.28"],

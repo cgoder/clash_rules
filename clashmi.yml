@@ -143,7 +143,7 @@ proxy-groups:
     type: select
     proxies: [默认代理, 国内直连, 手动选择, 香港-自动选择, 香港, 日本-自动选择, 日本, 美国-自动选择, 美国, 其他节点, AI, YouTube, Google, OneDrive, GitHub, Microsoft, Apple, 漏网之鱼, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Rocket.png'
     default-selected: 默认代理
@@ -153,7 +153,7 @@ proxy-groups:
     type: select
     proxies: ['DIRECT | 仅IPv4']
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     hidden: true
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/China.png'
@@ -162,7 +162,7 @@ proxy-groups:
     type: select
     proxies: [香港, 日本, 台湾, 新加坡, 美国, 韩国, 英国, 德国, 法国, 澳大利亚, 其他节点]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Rocket.png'
 
@@ -170,7 +170,7 @@ proxy-groups:
     type: select
     proxies: [香港, 日本, 台湾, 新加坡, 美国, 韩国, 英国, 德国, 法国, 澳大利亚, 其他节点, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Rocket.png'
 
@@ -179,7 +179,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -197,7 +197,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇯🇵|🇹🇼|🇸🇬|🇺🇸|🇰🇷|🇬🇧|🇩🇪|🇫🇷|🇦🇺))(?=.*(香港|🇭🇰|(?<![A-Za-z])(?:HK|HKG)(?![A-Za-z])|hong\s*kong)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/HK.png'
 
@@ -205,7 +205,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -223,7 +223,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇹🇼|🇸🇬|🇺🇸|🇰🇷|🇬🇧|🇩🇪|🇫🇷|🇦🇺))(?=.*(日本|东京|大阪|京都|🇯🇵|(?<![A-Za-z])(?:JP|JPN|NRT|HND|KIX|NGO)(?![A-Za-z])|japan)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/JP.png'
 
@@ -231,7 +231,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -249,7 +249,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇸🇬|🇺🇸|🇰🇷|🇬🇧|🇩🇪|🇫🇷|🇦🇺))(?=.*(台湾|台灣|台北|高雄|🇹🇼|(?<![A-Za-z])(?:TW|TWN|TPE|KHH)(?![A-Za-z])|taiwan)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/TW.png'
 
@@ -257,7 +257,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -275,7 +275,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇹🇼|🇺🇸|🇰🇷|🇬🇧|🇩🇪|🇫🇷|🇦🇺))(?=.*(新加坡|狮城|🇸🇬|(?<![A-Za-z])(?:SG|SGP|SIN)(?![A-Za-z])|singapore)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/SG.png'
 
@@ -283,7 +283,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -301,7 +301,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇹🇼|🇸🇬|🇰🇷|🇬🇧|🇩🇪|🇫🇷|🇦🇺))(?=.*(美国|美國|纽约|洛杉矶|旧金山|芝加哥|西雅图|硅谷|波士顿|华盛顿|🇺🇸|(?<![A-Za-z])(?:US|USA|LAX|SJC|SFO|SEA|JFK|ORD|IAD|ATL|DFW)(?![A-Za-z])|america|united\s*states)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/US.png'
 
@@ -309,7 +309,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -327,7 +327,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇹🇼|🇸🇬|🇺🇸|🇬🇧|🇩🇪|🇫🇷|🇦🇺))(?=.*(韩国|韓國|首尔|仁川|🇰🇷|(?<![A-Za-z])(?:KR|KOR|ICN|GMP)(?![A-Za-z])|korea|seoul)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png'
 
@@ -335,7 +335,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -353,7 +353,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇹🇼|🇸🇬|🇺🇸|🇰🇷|🇩🇪|🇫🇷|🇦🇺))(?=.*(英国|英國|伦敦|曼彻斯特|🇬🇧|(?<![A-Za-z])(?:UK|GB|GBR|LHR|LGW|MAN)(?![A-Za-z])|britain|united\s*kingdom)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_Kingdom.png'
 
@@ -361,7 +361,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -379,7 +379,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇹🇼|🇸🇬|🇺🇸|🇰🇷|🇬🇧|🇫🇷|🇦🇺))(?=.*(德国|德國|法兰克福|柏林|慕尼黑|🇩🇪|(?<![A-Za-z])(?:DE|DEU|GER|FRA|MUC|BER)(?![A-Za-z])|germany|deutschland)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Germany.png'
 
@@ -387,7 +387,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -405,7 +405,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇹🇼|🇸🇬|🇺🇸|🇰🇷|🇬🇧|🇩🇪|🇦🇺))(?=.*(法国|法國|巴黎|🇫🇷|(?<![A-Za-z])FR(?![A-Za-z])|france)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/France.png'
 
@@ -413,7 +413,7 @@ proxy-groups:
     type: url-test
     tolerance: 150
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -431,7 +431,7 @@ proxy-groups:
     filter: '^(?i)(?!(?:🇭🇰|🇯🇵|🇹🇼|🇸🇬|🇺🇸|🇰🇷|🇬🇧|🇩🇪|🇫🇷))(?=.*(澳大利亚|澳大利亞|澳洲|悉尼|墨尔本|🇦🇺|(?<![A-Za-z])(?:AU|AUS|SYD|MEL|BNE)(?![A-Za-z])|australia)).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Australia.png'
 
@@ -442,7 +442,7 @@ proxy-groups:
     filter: '^(?i)(?!.*(?:(香港|🇭🇰|(?<![A-Za-z])(?:HK|HKG)(?![A-Za-z])|hong\s*kong)|(日本|东京|大阪|京都|🇯🇵|(?<![A-Za-z])(?:JP|JPN|NRT|HND|KIX|NGO)(?![A-Za-z])|japan)|(台湾|台灣|台北|高雄|🇹🇼|(?<![A-Za-z])(?:TW|TWN|TPE|KHH)(?![A-Za-z])|taiwan)|(新加坡|狮城|🇸🇬|(?<![A-Za-z])(?:SG|SGP|SIN)(?![A-Za-z])|singapore)|(美国|美國|纽约|洛杉矶|旧金山|芝加哥|西雅图|硅谷|波士顿|华盛顿|🇺🇸|(?<![A-Za-z])(?:US|USA|LAX|SJC|SFO|SEA|JFK|ORD|IAD|ATL|DFW)(?![A-Za-z])|america|united\s*states)|(韩国|韓國|首尔|仁川|🇰🇷|(?<![A-Za-z])(?:KR|KOR|ICN|GMP)(?![A-Za-z])|korea|seoul)|(英国|英國|伦敦|曼彻斯特|🇬🇧|(?<![A-Za-z])(?:UK|GB|GBR|LHR|LGW|MAN)(?![A-Za-z])|britain|united\s*kingdom)|(德国|德國|法兰克福|柏林|慕尼黑|🇩🇪|(?<![A-Za-z])(?:DE|DEU|GER|FRA|MUC|BER)(?![A-Za-z])|germany|deutschland)|(法国|法國|巴黎|🇫🇷|(?<![A-Za-z])FR(?![A-Za-z])|france)|(澳大利亚|澳大利亞|澳洲|悉尼|墨尔本|🇦🇺|(?<![A-Za-z])(?:AU|AUS|SYD|MEL|BNE)(?![A-Za-z])|australia))).*$'
     exclude-type: DIRECT
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/OT.png'
 
@@ -451,7 +451,7 @@ proxy-groups:
     type: fallback
     proxies: [美国-自动选择, 美国, 兜底自动选择]
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
@@ -464,7 +464,7 @@ proxy-groups:
     type: select
     proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     default-selected: 默认代理
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/YouTube.png'
@@ -473,7 +473,7 @@ proxy-groups:
     type: select
     proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     default-selected: 美国
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Google.png'
@@ -482,7 +482,7 @@ proxy-groups:
     type: select
     proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     default-selected: 默认代理
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/OneDrive.png'
@@ -491,7 +491,7 @@ proxy-groups:
     type: select
     proxies: [默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     default-selected: 默认代理
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/GitHub.png'
@@ -500,7 +500,7 @@ proxy-groups:
     type: select
     proxies: [国内直连, 默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     default-selected: 国内直连
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Microsoft.png'
@@ -509,7 +509,7 @@ proxy-groups:
     type: select
     proxies: [国内直连, 默认代理, 手动选择, 美国, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     default-selected: 国内直连
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/Apple.png'
@@ -519,7 +519,7 @@ proxy-groups:
     type: select
     proxies: [默认代理, 手动选择, 国内直连, 兜底自动选择]
     url: 'https://www.gstatic.com/generate_204'
-    timeout: 5000
+    timeout: 8000
     empty-fallback: 'REJECT'
     icon: 'https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/icons/MATCH.png'
     default-selected: 默认代理
@@ -527,7 +527,7 @@ proxy-groups:
   - name: 兜底自动选择
     type: fallback
     interval: 300
-    timeout: 5000
+    timeout: 8000
     url: 'https://www.gstatic.com/generate_204'
     lazy: true
     max-failed-times: 3
