@@ -10,6 +10,7 @@ clash_rules/
 ├── clashmi.yml                    # 同一套逻辑的静态 YAML 版（由 clash.js 派生）
 ├── clashmi_lite.js                # 简版覆写脚本
 ├── clashmi_flclash.js             # FlClash/BettBox 覆写脚本
+├── flclash.js                     # FlClash 覆写脚本（第三方脚本修订版，独立血统）
 ├── mihomoScript_clashmi_fused.js  # 融合版覆写脚本
 ├── scripts/
 │   ├── gen_clashmi.mjs            # 由 clash.js 生成 clashmi.yml
@@ -28,6 +29,10 @@ clash_rules/
 
 > 三份 `clashmi_*.js` / `mihomoScript_*.js` 脚本由 `clashmi.yml` 与第三方底座派生，
 > 更新不如 `clash.js` 频繁，也不保证与它同步。改动前请先确认目标脚本的实际内容。
+
+> `flclash.js` 是另一条来源：一份第三方生成脚本的修订版，组名（如「节点选择」「AI专线」）
+> 与规则自成一套，与 `clash.js` 无派生关系，也不受 `check_config_sync.mjs` 约束。
+> 它不带 `tun.loopback-address`，若需 SideStore 续签请自行补充或改用 `clash.js`。
 
 ---
 
@@ -145,6 +150,7 @@ cd clash_rules
 | **clashmi.yml** | 同一套逻辑的静态 YAML，由 `scripts/gen_clashmi.mjs` 派生 | 不支持 JS 的客户端 |
 | clashmi_lite.js | 简版覆写脚本 | 轻量场景 |
 | clashmi_flclash.js | FlClash / BettBox 覆写脚本 | 对应客户端 |
+| flclash.js | 基于第三方生成脚本修订的 FlClash 覆写 | 需要该套组名与规则时 |
 | mihomoScript_clashmi_fused.js | 融合版覆写脚本 | 需要与第三方底座合并时 |
 
 `clash.js` 的开关集中在文件顶部的 `OPTIONS` 与 `ruleOptionsEnable`：

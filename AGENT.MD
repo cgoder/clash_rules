@@ -23,6 +23,11 @@ At a glance:
   alternative override scripts derived from `clashmi.yml` and third-party
   bases. They are older than `clash.js` and are not kept in lockstep with it.
   Check before assuming a fix in `clash.js` applies here.
+- `flclash.js`: a revised third-party generator script with its own naming
+  scheme (节点选择 / AI专线 / 电信亚太优选) and rule set. It is unrelated to
+  `clash.js`, is not checked by `scripts/check_config_sync.mjs`, and does not
+  carry `tun.loopback-address`. Validate it with `mihomo -t` against both an
+  empty-proxy and a single-US-node sample after any edit.
 - `rules/my_direct.list`: custom direct rules.
 - `rules/my_proxy.list`: custom proxy rules (also carries the Apple
   authentication domains required by SideStore / LiveContainer).
