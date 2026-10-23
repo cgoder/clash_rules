@@ -11,10 +11,13 @@ clash_rules/
 ├── clashmi_lite.js                # 简版覆写脚本
 ├── clashmi_flclash.js             # FlClash/BettBox 覆写脚本
 ├── flclash.js                     # FlClash 覆写脚本（第三方脚本修订版，独立血统）
+├── ss.conf                        # Shadowrocket 配置（由 flclash.js 移植）
 ├── mihomoScript_clashmi_fused.js  # 融合版覆写脚本
 ├── scripts/
 │   ├── gen_clashmi.mjs            # 由 clash.js 生成 clashmi.yml
 │   ├── check_config_sync.mjs      # 校验两份配置逻辑一致
+│   ├── check_flclash.mjs          # flclash.js 专项校验
+│   ├── check_ss_conf.mjs         # ss.conf 静态校验
 │   └── test_clash_js.mjs          # clash.js 行为回归测试
 ├── rules/                         # 自定义规则
 │   ├── my_direct.list
@@ -34,6 +37,10 @@ clash_rules/
 > 与规则自成一套，与 `clash.js` 无派生关系，也不受 `check_config_sync.mjs` 约束。
 > 它自带 SideStore 续签所需的 `tun.loopback-address` 与显式认证域名规则，
 > 由 `scripts/check_flclash.mjs` 单独校验。
+
+> `ss.conf` 是 `flclash.js` 到 Shadowrocket `.conf` 格式的移植版，共享同一套
+> 组名与规则顺序，但受平台能力限制少了几项（无 loopback、无进程规则、无
+> 「手动选择」组）。差异清单写在文件头，由 `scripts/check_ss_conf.mjs` 校验。
 
 ---
 
@@ -266,6 +273,31 @@ MIHOMO=1 node scripts/check_flclash.mjs   # 额外跑 mihomo -t
 | `empty-fallback` | 动态成员的组必须 `empty-fallback: REJECT` |
 | `no-compatible` | 组内不得出现 `COMPATIBLE` |
 | `rule-target` | 规则引用的规则集与目标组均存在 |
+
+### ss.conf（Shadowrocket）校验
+
+```bash
+node scripts/check_ss_conf.mjs            # 离线
+node scripts/check_ss_conf.mjs --remote   # 额外抓取 14 个远程规则集验证内容
+```
+
+Shadowrocket 没有官方 `.conf` 语法规范，也没有 CLI 可以 `-t` 验证，所以本
+脚本只能抓住两类在编译期就能确定的静默失败：
+
+| 检查 | 内容 |
+|---|---|
+| `group-type` / `group-ref` | 策略组类型合法、组间引用存在 |
+| `rule-type` / `rule-target` | 规则类型合法、策略目标存在（否则该条不生效） |
+| `final` | 最后一条必须是 `FINAL` 或 `MATCH` |
+| `ruleset-kind` | `RULE-SET` 未指向纯域名表 |
+| `loopback` | `10.7.0.1` 未被精确排除 |
+| `block-quic` | 取值在 `all-proxy` / `all` / `always-allow` 内 |
+| `order` | Apple 认证、GitHub、YouTube 均排在正确的规则之前 |
+| `remote` | （`--remote`）逐个抓取规则集，核对首行是否含规则类型 |
+
+最容易错的是 `RULE-SET` 与 `DOMAIN-SET` 混用：blackmatrix7 同时提供
+`Xxx.list`（含规则类型）与 `Xxx_Domain.list`（纯域名表），加载错不会报错，
+只会静默丢弃整份规则集。
 
 ### clash.js 回归测试
 

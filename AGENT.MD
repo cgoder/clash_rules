@@ -84,6 +84,11 @@ At a glance:
   (correct: `route-exclude-address`) loads without error but has no effect.
   Never assume a TUN/DNS key works because the profile loads; verify it.
   `scripts/check_config_sync.mjs` whitelists TUN keys and flags unknown ones.
+- `ss.conf`: Shadowrocket config produced by porting `flclash.js` to the
+  `.conf` format. Shared group names and rule order, minus what the platform
+  cannot do (no loopback reflection, no PROCESS-NAME rules, no include-all
+  group). Validate with `scripts/check_ss_conf.mjs`; add `--remote` to verify
+  the 14 rule-set URLs actually contain rule types.
 - `tun.loopback-address` is `10.7.0.1` for SideStore / LiveContainer re-signing.
   Never add `10.0.0.0/8`, `10.7.0.0/24` or `10.7.0.1/32` to
   `route-exclude-address`; doing so removes the loopback from TUN and breaks
