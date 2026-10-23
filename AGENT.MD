@@ -24,7 +24,7 @@ At a glance:
   bases. They are older than `clash.js` and are not kept in lockstep with it.
   Check before assuming a fix in `clash.js` applies here.
 - `flclash.js`: a revised third-party generator script with its own naming
-  scheme (节点选择 / AI专线 / 电信亚太优选) and rule set. It is unrelated to
+  scheme (节点选择 / AI专线 / 亚太智能优选) and rule set. It is unrelated to
   `clash.js`, is not checked by `scripts/check_config_sync.mjs`, and does not
   carry `tun.loopback-address`. Validate it with `mihomo -t` against both an
   empty-proxy and a single-US-node sample after any edit.

@@ -7,8 +7,8 @@
 // 与 clash.js 无派生关系：这是独立的第三方脚本修订版，组名与规则自成一系。
 // 改动本文件后需重新跑 mihomo -t 校验，并复查空节点、仅美国节点两种样本。
 function main(config) {
-  var GROUP_ORDER = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "电信亚太优选", "故障自动转移", "手动选择"];
-  var FIXED_GROUP_NAMES = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "电信亚太优选", "故障自动转移", "手动选择", "香港节点", "台湾节点", "新加坡节点", "日本节点", "韩国节点", "美国节点"];
+  var GROUP_ORDER = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择"];
+  var FIXED_GROUP_NAMES = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择", "香港节点", "台湾节点", "新加坡节点", "日本节点", "韩国节点", "美国节点"];
   var BUILTIN = ["DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"];
 
   // 倍率标记只删 >=2 的整数倍率与带小数的倍率，保留 1x 这类正常标价。
@@ -157,7 +157,7 @@ function main(config) {
   }
 
   var apacGroup = withEmptyFallback({
-    name: "电信亚太优选", type: "url-test", url: URL_TEST.url, interval: 300, tolerance: 30, "expected-status": 204
+    name: "亚太智能优选", type: "url-test", url: URL_TEST.url, interval: 300, tolerance: 30, "expected-status": 204
   });
   if (hasProviders) {
     apacGroup["include-all"] = true;
@@ -208,14 +208,14 @@ function main(config) {
 
   // 6. 入口组的成员只引用真实存在的组，默认落在第一个真实可用的选项上。
   var fastOptions = [];
-  if (apacMembers.length > 0 || hasProviders) fastOptions.push("电信亚太优选");
+  if (apacMembers.length > 0 || hasProviders) fastOptions.push("亚太智能优选");
   if (apacMembers.length > 0 || hasProviders) fastOptions.push("故障自动转移");
   var allRegionNames = regionGroupNames(null);
   var proxyOptions = fastOptions.concat(allRegionNames);
   var devChoices = proxyOptions.concat(["节点选择", "DIRECT"]);
   var mediaChoices = [];
   var mediaPreference = ["香港节点", "台湾节点", "新加坡节点", "日本节点", "美国节点"];
-  if (fastOptions.length) mediaChoices.push("电信亚太优选");
+  if (fastOptions.length) mediaChoices.push("亚太智能优选");
   for (i2 = 0; i2 < mediaPreference.length; i2++) {
     if (allRegionNames.indexOf(mediaPreference[i2]) >= 0) mediaChoices.push(mediaPreference[i2]);
   }
