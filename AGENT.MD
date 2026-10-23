@@ -25,8 +25,10 @@ At a glance:
   Check before assuming a fix in `clash.js` applies here.
 - `flclash.js`: a revised third-party generator script with its own naming
   scheme (节点选择 / AI专线 / 亚太智能优选) and rule set. It is unrelated to
-  `clash.js`, is not checked by `scripts/check_config_sync.mjs`, and does not
-  carry `tun.loopback-address`. Validate it with `mihomo -t` against both an
+  `clash.js` and is not checked by `scripts/check_config_sync.mjs`. It carries
+  its own SideStore baseline (`tun.loopback-address: 10.7.0.1` plus the three
+  Apple auth domains as explicit rules ahead of `apple-cn`), verified by
+  `scripts/check_flclash.mjs`. Validate with `mihomo -t` against both an
   empty-proxy and a single-US-node sample after any edit.
 - `rules/my_direct.list`: custom direct rules.
 - `rules/my_proxy.list`: custom proxy rules (also carries the Apple
@@ -85,7 +87,12 @@ At a glance:
 - `tun.loopback-address` is `10.7.0.1` for SideStore / LiveContainer re-signing.
   Never add `10.0.0.0/8`, `10.7.0.0/24` or `10.7.0.1/32` to
   `route-exclude-address`; doing so removes the loopback from TUN and breaks
-  re-signing. The sync check validates this too.
+  re-signing. Both `scripts/check_config_sync.mjs` and
+  `scripts/check_flclash.mjs` validate this.
+- Apple auth domains (`gsa.apple.com`, `developerservices2.apple.com`,
+  `gspe1-ssl.ls.apple.com`) need explicit proxy rules ahead of `apple-cn`.
+  Relying on `geolocation-!cn` to pick them up works today only because the
+  upstream ruleset happens to contain them; it is not a guarantee.
 
 ## Editing Guidelines
 

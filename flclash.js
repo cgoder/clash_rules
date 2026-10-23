@@ -301,6 +301,14 @@ function main(config) {
     "DOMAIN-SUFFIX,myqnapcloud.cn,DIRECT",
     "RULE-SET,private-domain,DIRECT",
     "RULE-SET,private-ip,DIRECT,no-resolve",
+    // SideStore / LiveContainer 续签认证端点必须显式走代理。
+    // 不写这三条时它们依赖 geolocation-not-cn 间接命中代理，但
+    // apple-cn 排在该规则集之前：上游一旦把域名并入 apple-cn，就会被判
+    // 国内直连而续签失败（报 “could not determine this device's UDID”）。
+    // 实测当前 geolocation-not-cn 命中，属运气而非保证，故改为显式规则。
+    "DOMAIN,gsa.apple.com,节点选择",
+    "DOMAIN,developerservices2.apple.com,节点选择",
+    "DOMAIN,gspe1-ssl.ls.apple.com,节点选择",
     "AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,youtube)),REJECT",
     "AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,google)),REJECT",
     "RULE-SET,ads-domain,REJECT",
@@ -343,8 +351,20 @@ function main(config) {
     stack: "mixed",
     "auto-route": true,
     "auto-detect-interface": true,
+    // SideStore / LiveContainer 免电脑续签：把 10.7.0.1 当回环地址，
+    // 让 App 连本机 10.7.0.1 的 lockdown 通道在设备内部自环，替代 LocalDevVPN。
+    // 该键只声明地址，真正的反射由 sing-tun 各栈自行处理（system / mixed /
+    // gvisor / mipstack 均有判定），所以 stack 不必改成 gvisor。
+    "loopback-address": ["10.7.0.1"],
+    // 严格路由会强制劫持本地/内网流量，易导致自环失败。
+    "strict-route": false,
     "dns-hijack": ["any:53", "tcp://any:53"],
-    "route-exclude-address": ["192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12", "100.64.0.0/10"]
+    // 10.0.0.0/8 与 10.7.0.0/24 必须排除在列表外：loopback 用的是 10.7.0.1，
+    // 一旦整段被排除，续签会失效。100.64.0.0/10 仍保留（运营商级 NAT）。
+    "route-exclude-address": [
+      "192.168.0.0/16", "172.16.0.0/12", "100.64.0.0/10",
+      "169.254.0.0/16", "fc00::/7", "fe80::/10"
+    ]
   };
 
   config["sniffer"] = {

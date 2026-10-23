@@ -32,7 +32,8 @@ clash_rules/
 
 > `flclash.js` 是另一条来源：一份第三方生成脚本的修订版，组名（如「节点选择」「AI专线」）
 > 与规则自成一套，与 `clash.js` 无派生关系，也不受 `check_config_sync.mjs` 约束。
-> 它不带 `tun.loopback-address`，若需 SideStore 续签请自行补充或改用 `clash.js`。
+> 它自带 SideStore 续签所需的 `tun.loopback-address` 与显式认证域名规则，
+> 由 `scripts/check_flclash.mjs` 单独校验。
 
 ---
 
@@ -197,16 +198,26 @@ iPhone 上免电脑续签/安装（SideStore、LiveContainer、LiveContainer+Sid
 上游参考实现：[tom-snow/Sidestore-ClashMi](https://github.com/tom-snow/Sidestore-ClashMi)（其
 `profile_overwrite_min.yaml` 全文就三行：`tun.loopback-address: [10.7.0.1]`）。
 
-以下各项在 `clashmi.yml`、`clashmi_lite.js`、`clashmi_flclash.js`、`mihomoScript_clashmi_fused.js`
-四份配置中必须同时存在，任何新生成器都不得省略：
+以下各项在 `clashmi.yml`、`clashmi_lite.js`、`clashmi_flclash.js`、`mihomoScript_clashmi_fused.js`、
+`flclash.js` 五份配置中必须同时存在，任何新生成器都不得省略：
 
 | 项 | 值 | 作用 |
 |---|---|---|
 | `tun.loopback-address` | `10.7.0.1` | SideStore 连本机 10.7.0.1 时被 TUN 环回，minimuxer 才能取到 UDID |
-| `tun.stack` | `gvisor` | 对齐上游可用配置 |
+| `tun.stack` | `gvisor` | 对齐上游可用配置（`flclash.js` 用 `mixed`，loopback 在各栈均有实现，见下） |
 | `tun.strict-route` | `false` | 对齐上游；开启严格路由会强制劫持本地/内网流量，易导致自环失败 |
 | `rules/my_proxy.list` | `gsa.apple.com`、`developerservices2.apple.com`、`gspe1-ssl.ls.apple.com` | Apple ID 认证/安装服务域名必须走代理（国内直连不通） |
 | 规则优先级 | private → **my_proxy** → my_direct → 国内直连快路径（`apple_cn` 等）→ 业务组 | 若 `apple_cn` 先命中，续签域名会被判为国内直连而失败 |
+
+`flclash.js` 没有 `my_proxy` 规则集，改为三条显式 `DOMAIN` 规则，排在 `private-ip` 之后、
+其余所有分流规则之前（实测位置 10–12，`apple-cn` 在 36）。不写显式规则时这三个域名会经
+`geolocation-not-cn` 间接命中代理，属于依赖远程规则集内容；一旦上游把它们归入 `apple-cn`，
+就会变成国内直连并导致续签失败。
+
+关于 `tun.stack`：`loopback-address` 只是声明地址，地址反射由 sing-tun 的各栈自行实现——
+`system`（`stack_system.go:432`）、`mixed`（继承 `system` 的 `processIPv4TCP`）、
+`gvisor`（`stack_gvisor_tcp.go:48`）、`mipstack`（`stack_mipstack.go:271`）均有判定分支，
+所以 `flclash.js` 保持 `mixed` 不影响续签。取 `gvisor` 只是对齐上游配置，不是功能前提。
 
 手机端配合项：SideStore → Settings → VPN Configuration → **Device IP 填 `10.7.0.1`**；
 改完覆写配置后需**断开 VPN 再重连**。若报
@@ -223,11 +234,38 @@ nightly（LiveContainer 3.8.0 + SideStore 0.6.4 存在 loopback 续签回归，�
 **`10.0.0.0/8` 与 `10.7.0.0/24` 都不能放进排除列表**，否则续签会失效。
 当前取值（`192.168/16`、`172.16/12`、`100.64/10`、`169.254/16`、`fc00::/7`、`fe80::/10`）
 已避开该冲突，并由 `scripts/check_config_sync.mjs` 的 `tun-keys` 校验守护：
-它同时检查键名合法性，以及 loopback 是否被排除网段覆盖。
+它同时检查键名合法性，以及 loopback 是否被排除网段覆盖。`flclash.js` 由
+`scripts/check_flclash.mjs` 做同一组检查（另有认证域名与空组回退）。
+
+> Android 上的 FlClash 不读 `loopback-address`：`core/tun/tun.go` 从 VPN 参数重建
+> `LC.Tun` 时只填 `Enable`／`Stack`／`DNSHijack`／`Inet4Address`／`MTU` 等字段，
+> `RouteAddress` 来自 App 的 `vpnRouteAddress`。因此本条对 SideStore 续签的作用
+> 限于 iOS 侧客户端（如 ClashMi）直接消费脚本 tun 段的场景，
+> Android 端需自行确认 VPN 路由设置。
 
 ---
 
 ## 🛠️ 工具脚本
+
+### flclash.js 回归测试
+
+```bash
+node scripts/check_flclash.mjs
+MIHOMO=1 node scripts/check_flclash.mjs   # 额外跑 mihomo -t
+```
+
+`flclash.js` 与 `clash.js` 血统不同、组名不同，不能套用 `check_config_sync.mjs`。
+本脚本校验它自己的硬约束：
+
+| 检查 | 内容 |
+|---|---|
+| `loopback` | `tun.loopback-address` 含 `10.7.0.1` |
+| `loopback-exclude` | 该地址未被 `route-exclude-address` 覆盖 |
+| `tun-keys` | tun 键名合法（内核会静默忽略未知键） |
+| `apple-auth` | 三个续签域名有显式规则、不走 DIRECT，且在 `apple-cn` 之前 |
+| `empty-fallback` | 动态成员的组必须 `empty-fallback: REJECT` |
+| `no-compatible` | 组内不得出现 `COMPATIBLE` |
+| `rule-target` | 规则引用的规则集与目标组均存在 |
 
 ### clash.js 回归测试
 
