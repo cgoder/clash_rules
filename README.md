@@ -15,9 +15,9 @@ clash_rules/
 ├── mihomoScript_clashmi_fused.js  # 融合版覆写脚本
 ├── scripts/
 │   ├── gen_clashmi.mjs            # 由 clash.js 生成 clashmi.yml
-│   ├── check_config_sync.mjs      # 校验两份配置逻辑一致
+│   ├── check_config_sync.mjs      # 校验 clash.js / clashmi.yml 逻辑一致
 │   ├── check_flclash.mjs          # flclash.js 专项校验
-│   ├── check_ss_conf.mjs         # ss.conf 静态校验
+│   ├── check_ss_conf.mjs          # ss.conf 静态校验
 │   └── test_clash_js.mjs          # clash.js 行为回归测试
 ├── rules/                         # 自定义规则
 │   ├── my_direct.list
@@ -37,10 +37,17 @@ clash_rules/
 > 与规则自成一套，与 `clash.js` 无派生关系，也不受 `check_config_sync.mjs` 约束。
 > 它自带 SideStore 续签所需的 `tun.loopback-address` 与显式认证域名规则，
 > 由 `scripts/check_flclash.mjs` 单独校验。
+>
+> 它的 AI 专线是**两层复用**结构，不是每个需求各造一套组：
+> `AI专线`（select）= `AI自动选择`（跨地区 url-test 池）+ 已有国家地区组
+> （`台湾节点` / `新加坡节点` / `日本节点` / `韩国节点` / `美国节点`）。
+> 地区组是**与用途无关的可复用分组**，同时被 `节点选择` / `研发加速` / `流媒体服务` 引用；
+> 为 AI 再派生一套 `AI-美国` 之类的专用地区组属于重复，已明确不再采用。
 
 > `ss.conf` 是 `flclash.js` 到 Shadowrocket `.conf` 格式的移植版，共享同一套
-> 组名与规则顺序，但受平台能力限制少了几项（无 loopback、无进程规则、无
-> 「手动选择」组）。差异清单写在文件头，由 `scripts/check_ss_conf.mjs` 校验。
+> 组名、规则顺序与 AI 专线成员结构，但受平台能力限制少了几项（无 loopback、
+> 无进程规则、无「手动选择」组、无 `empty-fallback`）。差异清单写在文件头，
+> 由 `scripts/check_ss_conf.mjs` 校验。
 
 ---
 
@@ -53,21 +60,30 @@ cd clash_rules
 ```
 
 ### 2. 选择配置文件
-两份配置**路由逻辑完全相同**，按客户端能力二选一：
 
-- **clash.js**：推荐。以覆写脚本方式加载，自动完成节点归一化、过滤与策略组生成，
-  内置开关可裁剪地区组与场景组。适用于支持 JS 覆写的客户端。
+按客户端能力三选一：
+
+- **clash.js**（主）：推荐。以覆写脚本方式加载，自动完成节点归一化、过滤与策略组生成，
+  内置开关可裁剪地区组与场景组。组名：`默认代理` / `AI` / `YouTube` / `美国-自动选择` 系。
 - **clashmi.yml**：同一套逻辑的静态 YAML 版，适合不支持 JS 覆写的客户端直接导入。
   节点同样由客户端注入，文件内不含订阅链接。
+- **flclash.js**（旁系）：另一条血统，组名与规则自成一套（`节点选择` / `AI专线` /
+  `亚太智能优选`）。自带 SideStore 续签所需的 `tun.loopback-address`。
+- **ss.conf**：`flclash.js` 的 Shadowrocket 版，仅用于 iOS Shadowrocket。
+  不提供 loopback 反射，因此**无法做 SideStore 续签**。
+
+> `clash.js` 与 `flclash.js` 是两套互不相干的配置，组名不同、AI 层设计不同，
+> 不要混用策略名，也不要假设一个文件的修改适用于另一个。
 
 ### 3. 提供节点来源
 仓库不保存订阅链接、token 或节点凭据。节点由客户端或订阅转换流程提供，
 `clash.js` 从传入配置的 `proxies` 中读取并治理。
 
 ### 4. 导入配置
-- **Clash Verge Rev**：导入配置文件
-- **FlClash / BettBox**：以覆写脚本方式引用 `clash.js`
+- **Clash Verge Rev**：导入配置文件（用 `clash.js` 或 `clashmi.yml`）
+- **FlClash / BettBox**：以覆写脚本方式引用 `clash.js`，或用 `flclash.js`
 - **Clash Meta**：使用配置文件路径
+- **Shadowrocket（iOS）**：导入 `ss.conf`
 
 ### 5. 重启应用
 重载配置，开始使用
@@ -89,6 +105,47 @@ cd clash_rules
 - AI 组用 **fallback** 而非 url-test：只在当前出口不可用时才切换，不追延迟最低。
   Gemini 的流式响应断连即整段失败，且对出口 IP 跳变敏感，故稳定优先
 - 成员顺序即故障转移顺序：`美国-自动选择` → `美国` → `兜底自动选择`
+
+#### `flclash.js` / `ss.conf` 的 AI 专线（与 `clash.js` 不同的一套）
+
+这两份配置是另一条血统，AI 层用的是**「自动池 + 地区组复用」两层结构**：
+
+```
+AI专线 (select)
+├─ AI自动选择   url-test  TW·SG·JP·KR·US 单池，跨区自动容错
+├─ 台湾节点     url-test  复用已有地区组
+├─ 新加坡节点   url-test  复用已有地区组
+├─ 日本节点     url-test  复用已有地区组
+├─ 韩国节点     url-test  复用已有地区组
+└─ 美国节点     url-test  复用已有地区组
+```
+
+**成员只含分组，不含裸节点。** AI 候选池的入选条件就是「恰好命中一个地区标签」，
+所以每个 AI 节点必然属于上述地区组之一（实测未被地区组覆盖的 AI 节点集合为空）。
+早前版本会把 `aiMembers` 逐个追加为成员，导致同一节点在面板上出现两次，已移除；
+需要直选任意节点用「手动选择」。
+
+**地区组是复用的分组结构，不为 AI 派生副本。** 这些地区组同时被 `节点选择` /
+`研发加速` / `流媒体服务` 引用。为 AI 单独建 `AI-美国` 这类专用组会把 6 个地区组
+扩到 11 个，两份正则还会各自漂移，已明确不采用。
+
+**口径差异（有意保留）：** 禁区排除（香港/港/澳门/俄/中国/大陆 + HK/MO/RU/CN）只写在
+`AI自动选择` 里，地区组不携带。所以「香港中转 美国 01」会进 `美国节点` 但不进
+`AI自动选择`。在 `AI专线` 里手动切到 `美国节点` 时，自动选到的也可能是这类中转节点，
+真实出口不是美国。两类组回答的是不同问题：地区组回答「该国相关所有节点」，
+AI 池回答「出口国可从名称判定的节点」。
+
+两级手动控制：
+1. **AI专线 内选地区组** → 锁地区，地区组内 url-test 自动挑该地区最快节点
+2. **地区组内固定单节点** → 面板点图钉，属**软固定**：节点死亡时自动回落到同组存活节点，
+   恢复后弹回固定节点
+
+> ⚠️ **软固定会被组级测速清空。** mihomo 对非 Selector 组执行组级测速时走
+> `ForceSet("")` 并清 cachefile（`hub/route/groups.go`），因此在 FlClash 里对该 url-test
+> 组点一次「测速」就会解除你的固定。固定后请避免对该组测速。
+>
+> 这也意味着 `AI专线`（select）内固定节点的语义与地区组内固定不同：前者把流量钉死在
+> 死节点上直至手动更换，后者会自动降级并在恢复后回弹。AI 长连接建议用后者。
 
 ### 📺 场景化服务分组
 - **YouTube**：独立分组（默认走「默认代理」）——上游 `geosite/google` 分类 `include:youtube`，
@@ -146,20 +203,44 @@ cd clash_rules
 地域入口优先级：`GLOBAL`（全局模式）→「默认代理」→ 地区组 → 具体节点。
 `国内直连`、`兜底自动选择`、各 `-自动选择` 组默认隐藏，避免面板过载。
 
+### flclash.js / ss.conf 的入口
+
+这套配置的组名不同，出口语义也不同（地区组同时充当业务组与 AI 的手动入口）：
+
+| 场景 | 建议设置 | 说明 |
+|---|---|---|
+| 一般浏览 | 「节点选择」→「亚太智能优选」或「故障自动转移」 | 前者追延迟，后者按地区序降级 |
+| AI 服务 | 「AI专线」→「AI自动选择」（默认） | 跨地区单池，US 全挂会自动落到其他地区 |
+| AI 锁地区 | 「AI专线」→「美国节点」/「日本节点」等 | 锁死在该地区内，组内再自动挑最快 |
+| AI 锁单节点 | 进入对应地区组 → 点节点图钉 | 软固定；⚠️ 避免对该组测速，会清空固定 |
+| 研发 / 流媒体 | 「研发加速」/「流媒体服务」 | 两者都引用同一批地区组 |
+
+> 在地区组内固定节点会同时影响所有引用方（`节点选择` / `研发加速` / `流媒体服务` /
+> `AI专线`）。若只想为 AI 单独固定一个节点而不影响其他业务，当前结构做不到，
+> 需要接受这种全局性，或不在地区组内固定。
+
 ---
 
 ## ⚙️ 配置说明
 
 ### 配置文件对比
 
-| 配置文件 | 特点 | 适用场景 |
-|---------|------|---------|
-| **clash.js** | JS 覆写，动态生成组与规则，逻辑的事实来源 | ✅ 生产环境推荐 |
-| **clashmi.yml** | 同一套逻辑的静态 YAML，由 `scripts/gen_clashmi.mjs` 派生 | 不支持 JS 的客户端 |
-| clashmi_lite.js | 简版覆写脚本 | 轻量场景 |
-| clashmi_flclash.js | FlClash / BettBox 覆写脚本 | 对应客户端 |
-| flclash.js | 基于第三方生成脚本修订的 FlClash 覆写 | 需要该套组名与规则时 |
-| mihomoScript_clashmi_fused.js | 融合版覆写脚本 | 需要与第三方底座合并时 |
+| 配置文件 | 策略组 | 规则 | 特点 | 适用场景 |
+|---|---|---|---|---|
+| **clash.js** | 26 | 40 | JS 覆写，动态生成组与规则，逻辑的事实来源 | ✅ 生产环境推荐 |
+| **clashmi.yml** | 34 | 40 | 同一套逻辑的静态 YAML，由 `scripts/gen_clashmi.mjs` 派生 | 不支持 JS 的客户端 |
+| clashmi_lite.js | — | — | 简版覆写脚本 | 轻量场景 |
+| clashmi_flclash.js | — | — | FlClash / BettBox 覆写脚本 | 对应客户端 |
+| flclash.js | 14 | 42 | 基于第三方生成脚本修订的 FlClash 覆写 | 需要该套组名与规则时 |
+| ss.conf | 13 | 37 | Shadowrocket `.conf`，由 `flclash.js` 移植 | iOS Shadowrocket |
+| mihomoScript_clashmi_fused.js | — | — | 融合版覆写脚本 | 需要与第三方底座合并时 |
+
+> 策略组数按完整节点集（6 地区）测得；节点少的场景会按需跳过空组，
+> 例如 `flclash.js` 无节点时只剩 5 组。
+>
+> `clashmi.yml`（34）比 `clash.js` 运行时（26）多，是因为静态版预先写入了
+> 所有地区组，而 JS 版会跳过没有节点的地区。两者的组名集合与顺序仍由
+> `scripts/check_config_sync.mjs` 强制对齐。
 
 `clash.js` 的开关集中在文件顶部的 `OPTIONS` 与 `ruleOptionsEnable`：
 前者控制是否接管 TUN / DNS / 规则等底层参数，后者对应客户端面板上可勾选的
@@ -278,7 +359,7 @@ MIHOMO=1 node scripts/check_flclash.mjs   # 额外跑 mihomo -t
 
 ```bash
 node scripts/check_ss_conf.mjs            # 离线
-node scripts/check_ss_conf.mjs --remote   # 额外抓取 14 个远程规则集验证内容
+node scripts/check_ss_conf.mjs --remote   # 额外抓取 12 个远程规则集验证内容
 ```
 
 Shadowrocket 没有官方 `.conf` 语法规范，也没有 CLI 可以 `-t` 验证，所以本
@@ -294,7 +375,6 @@ Shadowrocket 没有官方 `.conf` 语法规范，也没有 CLI 可以 `-t` 验�
 | `block-quic` | 取值在 `all-proxy` / `all` / `always-allow` 内 |
 | `order` | Apple 认证、GitHub、YouTube 均排在正确的规则之前 |
 | `remote` | （`--remote`）逐个抓取规则集，核对首行是否含规则类型 |
-
 最容易错的是 `RULE-SET` 与 `DOMAIN-SET` 混用：blackmatrix7 同时提供
 `Xxx.list`（含规则类型）与 `Xxx_Domain.list`（纯域名表），加载错不会报错，
 只会静默丢弃整份规则集。
@@ -401,12 +481,34 @@ IP 类规则会被静默忽略。回归测试已加入断言，防止后续误�
 
 ## 📊 运行开销
 
-`clash.js` 生成的组里只有 `url-test` 与 `fallback` 会周期性测速，
-`select` 组不参与自动测速（只保留供面板手动测速用的 `url`）。
+只有 `url-test` 与 `fallback` 组会周期性测速，`select` 组不参与自动测速
+（只保留供面板手动测速用的 `url`）。
+
+### clash.js
 
 以 16 个节点、10 个活跃地区为例，一轮探测约 29 次拨号，周期 300 秒；
 地区组越少、节点越少，拨号量越低。`-自动选择` 组默认 `hidden`，
 不影响面板观感。
+
+### flclash.js
+
+6 地区样本下，参与周期测速的有 9 个组、共 21 个成员探测/轮：
+
+| 组 | 类型 | interval | tolerance | 说明 |
+|---|---|---|---|---|
+| AI自动选择 | url-test | 300 | 100 | 跨地区单池 |
+| 亚太智能优选 | url-test | 300 | 30 | 亚太地区 |
+| 故障自动转移 | fallback | 180 | — | 按序降级 |
+| 香港/台湾/新加坡/日本/韩国节点 | url-test | 300 | 20 | 各地区组 |
+| 美国节点 | url-test | 300 | 50 | 跨洋延迟抖动更大 |
+
+`AI专线` / `节点选择` / `研发加速` / `流媒体服务` / `手动选择` 为 select 组，不测速。
+与 `clash.js` 的做法一致：select 组带 `interval` 会让内核为它注册 HealthCheck，
+每个成员被重复拨号。
+
+> AI 的 5 个地区组本身就已在 `AI自动选择` 的成员集内，两组会各自对同一批节点
+> 拨号（alive 状态在节点对象上共享，但探测请求不共享）。这是「可手动锁地区」
+> 的必要代价；`lazy` 未开启时即使没选也会按 interval 跑。
 
 ---
 
@@ -424,12 +526,23 @@ IP 类规则会被静默忽略。回归测试已加入断言，防止后续误�
 
 ## 📝 更新日志
 
+### 2026-10（下半月）
+- ✅ `flclash.js` / `ss.conf` 的 `AI专线` 改为两层复用结构：
+  `AI自动选择`（跨地区单池）+ 已有国家地区组（台/新/日/韩/美）
+- ✅ 修正 `AI专线` 成员重复：地区组已覆盖全部 AI 节点，移除逐个追加的裸节点
+  （此前同一节点在面板上出现两次）
+- ✅ 明确地区组为可复用的分组结构，不为单个业务派生 `AI-美国` 这类专用副本
+- ✅ 补录 `flclash.js` / `ss.conf` 的两级手动控制与软固定语义、组级测速清空固定的陷阱
+- ✅ 修正文档：`ss.conf` 远程规则集 12 个（原误写 14），补齐各配置的策略组/规则计数
+
 ### 2026-10
 - ✅ 修复节点治理的 5 处缺陷（场景组默认出口、`dialer-proxy` 断链、
   地区节点误过滤、注入代理重名、地区识别缺口与跨区重复）
 - ✅ 健康检查参数复核：`tolerance` 150、https 测速 URL、`empty-fallback: REJECT`
 - ✅ `unified-delay` 补齐（https 测速握手不再计入延迟）
 - ✅ 新增 `scripts/test_clash_js.mjs` 回归测试
+- ✅ `AI` 组改 `fallback` 稳定优先，规则集换 `category-ai-chat-!cn` 官方聚合分类，
+  补 Cloudflare 关键子域
 
 ### v4 (2026-06-02)
 - ✅ 场景化服务分组

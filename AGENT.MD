@@ -23,6 +23,8 @@ At a glance:
   alternative override scripts derived from `clashmi.yml` and third-party
   bases. They are older than `clash.js` and are not kept in lockstep with it.
   Check before assuming a fix in `clash.js` applies here.
+- `ss.conf`: Shadowrocket config, a port of `flclash.js` to the `.conf`
+  format. See Configuration Rules for its platform gaps and validation.
 - `flclash.js`: a revised third-party generator script with its own naming
   scheme (节点选择 / AI专线 / 亚太智能优选) and rule set. It is unrelated to
   `clash.js` and is not checked by `scripts/check_config_sync.mjs`. It carries
@@ -71,6 +73,41 @@ At a glance:
   connection resets and egress IP churn; do not switch it back to `url-test`.
 - AI routing uses the MetaCubeX aggregate `category-ai-chat-!cn` ruleset rather
   than per-vendor rulesets, so new AI services are picked up automatically.
+- Region groups are **reusable grouping structures, not per-consumer
+  components**. In `flclash.js` / `ss.conf` the same 台湾节点 / 新加坡节点 /
+  日本节点 / 韩国节点 / 美国节点 groups are referenced by `节点选择`,
+  `研发加速`, `流媒体服务` and `AI专线` alike. Do not create consumer-scoped
+  duplicates such as `AI-美国`; that doubles the group count and lets two
+  regexes drift apart.
+- `AI专线` in `flclash.js` / `ss.conf` is a two-layer structure: a flat
+  cross-region `AI自动选择` url-test plus the existing region groups. Its
+  member list must contain **groups only, never bare node names** — the AI
+  pool's entry condition is "matches exactly one region label", so every AI
+  node is already reachable through a region group (verified: the set of AI
+  nodes not covered by the region groups is empty). Appending bare names made
+  each node appear twice in the panel.
+- Manual pinning differs by group type, and this is load-bearing:
+  - `select` (e.g. `AI专线`): a pin sticks to the chosen member even after it
+    dies. Traffic black-holes until the user re-picks.
+  - `url-test` / `fallback` (region groups): a pin is *soft*. `URLTest.fast()`
+    honours it only while the node is alive and silently falls back to the
+    fastest alive member otherwise; the pin re-applies when the node recovers.
+    `Fallback` instead clears `selected` permanently once the pinned node dies.
+  Prefer region-group pinning for AI traffic (streaming needs auto-degrade),
+  and never describe it to users as an unconditional lock.
+- A group-level delay test **erases** a pin on any non-`Selector` group:
+  `hub/route/groups.go` calls `ForceSet("")` and
+  `cachefile.Cache().SetSelected(name, "")` for every `SelectAble` group whose
+  `Type()` is not `Selector`. Telling a user to "test the group" after pinning
+  a node in a region group silently undoes the pin.
+- The AI pool's banned-label exclusion (香港/港/澳门/俄/中国/大陆 + HK/MO/RU/CN)
+  lives in `AI自动选择` itself, not in the region groups. Generic region groups
+  deliberately do **not** carry it, so they admit transiting nodes such as
+  「香港中转 美国 01」 that the AI pool rejects. Keep that asymmetry: region
+  groups answer "all nodes in this country", the AI pool answers "nodes whose
+  exit country is knowable from the name". Do not "fix" the region groups to
+  match the AI pool, and do not route AI rules at them without understanding
+  that transit nodes can be selected inside them.
 - Cloudflare key subdomains (`challenges.cloudflare.com`, `workers.dev`,
   `pages.dev`, `cdnjs`, `static.cloudflareinsights.com`) are routed via
   `默认代理` and must stay ahead of `cn_domain`; their DNS often resolves to
@@ -85,10 +122,11 @@ At a glance:
   Never assume a TUN/DNS key works because the profile loads; verify it.
   `scripts/check_config_sync.mjs` whitelists TUN keys and flags unknown ones.
 - `ss.conf`: Shadowrocket config produced by porting `flclash.js` to the
-  `.conf` format. Shared group names and rule order, minus what the platform
-  cannot do (no loopback reflection, no PROCESS-NAME rules, no include-all
-  group). Validate with `scripts/check_ss_conf.mjs`; add `--remote` to verify
-  the 14 rule-set URLs actually contain rule types.
+  `.conf` format. Shared group names, rule order and the `AI专线` member
+  structure, minus what the platform cannot do (no loopback reflection, no
+  PROCESS-NAME rules, no include-all group, no `empty-fallback`). Validate
+  with `scripts/check_ss_conf.mjs`; add `--remote` to verify the 12 rule-set
+  URLs actually contain rule types.
 - `tun.loopback-address` is `10.7.0.1` for SideStore / LiveContainer re-signing.
   Never add `10.0.0.0/8`, `10.7.0.0/24` or `10.7.0.1/32` to
   `route-exclude-address`; doing so removes the loopback from TUN and breaks
@@ -115,6 +153,15 @@ At a glance:
 - In `clash.js`, a node name must not collide with `DIRECT`, `REJECT`, `PASS`,
   `COMPATIBLE`, `GLOBAL`, the injected `DIRECT | 仅IPv4` proxy, or any policy
   group name. mihomo fails the whole profile with a duplicate-name error.
+- In `flclash.js`, node names are deduplicated against `GROUP_ORDER` and
+  `FIXED_GROUP_NAMES`. If you add a generated group, add its name to
+  `FIXED_GROUP_NAMES` too, otherwise a subscription node with the same name
+  collides and mihomo rejects the whole profile.
+- When `flclash.js` and `ss.conf` both need a routing change, apply it to both
+  in the same commit. Their AI layers have drifted apart before; keep the group
+  names, member order and AI-layer semantics aligned unless the platform gap
+  makes it impossible, and record any deliberate divergence in `ss.conf`'s
+  file header.
 
 ## Validation Checklist
 
@@ -137,6 +184,18 @@ Add `MIHOMO=1` to also validate generated profiles with the kernel:
 ```bash
 MIHOMO=1 node scripts/test_clash_js.mjs
 ```
+
+For changes to `flclash.js` or `ss.conf`:
+
+```bash
+node scripts/check_flclash.mjs       # flclash.js 静态检查（9 项）
+MIHOMO=1 node scripts/check_flclash.mjs  # 额外跑 mihomo -t
+node scripts/check_ss_conf.mjs       # ss.conf 静态检查（9 项）
+node scripts/check_ss_conf.mjs --remote  # 额外验证 12 个远程规则集内容
+```
+
+`flclash.js` 的 `mihomo -t` 除探针样本外，还要额外验空配置与单美国节点
+两份样本（`check_flclash.mjs` 只覆盖探针）。
 
 If a Mihomo or Clash binary is available, validate any edited profile directly:
 
