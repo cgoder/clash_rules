@@ -195,9 +195,9 @@ function main(config) {
   // 地区组是复用的分组结构，不为 AI 再派生一套。AI专线 只是把它们当作手动
   // 锁地区的入口（组内再固定单节点由面板完成），所以这里直接引用地区组名。
   aiChoices = aiChoices.concat(regionGroupNames(["us", "jp", "tw", "sg", "kr"]));
-  if (!hasProviders) {
-    for (i2 = 0; i2 < aiMembers.length; i2++) aiChoices.push(aiMembers[i2]);
-  }
+  // 不再追加裸节点名：AI 池每个节点恰好带一个地区标签，已全部被上述地区组
+  // 覆盖，逐个列出属于重复（面板上也会变成同节点出现两次）。要直选任意
+  // 节点用「手动选择」；要在 AI 内固定单节点就在地区组里钉。
   aiSelect.proxies = aiChoices.length ? aiChoices : ["REJECT"];
 
   var manual = { name: "手动选择", type: "select", "empty-fallback": "REJECT" };
