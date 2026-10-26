@@ -1,14 +1,14 @@
 // flclash.js —— FlClash 覆写脚本
 //
 // 来源：基于 Gemini 生成的 gemini-code-1792722585390.js 修订而成。
-// 修订目标：空组不再静默直连、节点引用保持自洽、AI 候选池受约束、名称分类有边界。
+// 修订目标：空组不再静默直连、节点引用保持自洽、AI 候选池受约束（含 AI 地区子组同口径）、名称分类有边界。
 // 评价过程与证据见 temp/notes/gemini-flclash-review.md（临时工件，不入库）。
 //
 // 与 clash.js 无派生关系：这是独立的第三方脚本修订版，组名与规则自成一系。
 // 改动本文件后需重新跑 mihomo -t 校验，并复查空节点、仅美国节点两种样本。
 function main(config) {
   var GROUP_ORDER = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择"];
-  var FIXED_GROUP_NAMES = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择", "香港节点", "台湾节点", "新加坡节点", "日本节点", "韩国节点", "美国节点"];
+  var FIXED_GROUP_NAMES = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择", "香港节点", "台湾节点", "新加坡节点", "日本节点", "韩国节点", "美国节点", "AI-美国", "AI-日本", "AI-台湾", "AI-新加坡", "AI-韩国"];
   var BUILTIN = ["DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"];
 
   // 倍率标记只删 >=2 的整数倍率与带小数的倍率，保留 1x 这类正常标价。
@@ -189,10 +189,52 @@ function main(config) {
     aiAuto.proxies = aiMembers;
   }
 
+  // AI 专属地区组：把 AI 单池切成地区视图，供 AI专线 手动锁地区 / 在地区内固定单节点。
+  // 成员口径与 AI自动选择 完全一致（禁区排除；无 provider 时多标签在 JS 侧已剔除）。
+  // 刻意不复用 台湾节点/美国节点 等通用地区组：它们的 filter 不带禁区排除，
+  // 会重新引入「香港中转 美国」这类被 AI 池剔除的中转节点，且在这些组内
+  // 固定节点会泄漏到 研发加速/流媒体服务 等所有引用方。
+  var AI_REGIONS = [
+    { key: "us", name: "AI-美国" },
+    { key: "jp", name: "AI-日本" },
+    { key: "tw", name: "AI-台湾" },
+    { key: "sg", name: "AI-新加坡" },
+    { key: "kr", name: "AI-韩国" }
+  ];
+  var aiRegionGroups = [];
+  var aiRegionNames = [];
+  if (aiMembers.length > 0 || hasProviders) {
+    for (i2 = 0; i2 < AI_REGIONS.length; i2++) {
+      var ar = AI_REGIONS[i2];
+      var aiRegionMembers = [];
+      for (var m3 = 0; m3 < aiMembers.length; m3++) {
+        if (inRegion(aiMembers[m3], ar.key)) aiRegionMembers.push(aiMembers[m3]);
+      }
+      if (aiRegionMembers.length === 0 && !hasProviders) continue;
+      var aiRegion = withEmptyFallback({
+        name: ar.name, type: "url-test", url: URL_TEST.url, interval: 300,
+        // tolerance 对齐 AI自动选择（100）：通用地区组的 20/50 对 AI 长连接
+        // 过于敏感，会把低容忍乒乓带进 SSE 流。
+        tolerance: 100, "expected-status": 204
+      });
+      if (hasProviders) {
+        aiRegion["include-all"] = true;
+        aiRegion.filter = mihomo(ar.key);
+        aiRegion["exclude-filter"] = "(?i)" + NOISE + "|" + PAT.banned;
+      } else {
+        aiRegion.proxies = aiRegionMembers;
+      }
+      aiRegionGroups.push(aiRegion);
+      aiRegionNames.push(ar.name);
+    }
+  }
+
   var aiSelect = { name: "AI专线", type: "select", "empty-fallback": "REJECT" };
   var aiChoices = [];
   if (aiMembers.length > 0 || hasProviders) aiChoices.push("AI自动选择");
-  // 不再把地区组直接塞进 AI 候选：地区组会引入顶层过滤拒绝的节点，形成绕过。
+  // AI 地区子组只做手动杠杆，默认仍是 AI自动选择（跨区自动容错不变）。
+  // 通用地区组不进 AI 候选：其 filter 不带禁区排除，会重新引入顶层过滤拒绝的节点，形成绕过。
+  aiChoices = aiChoices.concat(aiRegionNames);
   if (!hasProviders) {
     for (i2 = 0; i2 < aiMembers.length; i2++) aiChoices.push(aiMembers[i2]);
   }
@@ -238,6 +280,7 @@ function main(config) {
   addGroup(devSelect);
   addGroup(mediaSelect);
   if (aiMembers.length > 0 || hasProviders) addGroup(aiAuto);
+  for (i2 = 0; i2 < aiRegionGroups.length; i2++) addGroup(aiRegionGroups[i2]);
   if (apacMembers.length > 0 || hasProviders) addGroup(apacGroup);
   if (apacMembers.length > 0 || hasProviders) addGroup(fallbackGroup);
   for (i2 = 0; i2 < regionGroups.length; i2++) addGroup(regionGroups[i2]);
