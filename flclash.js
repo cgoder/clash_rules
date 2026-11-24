@@ -333,7 +333,7 @@ function main(config) {
     "RULE-SET,netflix,流媒体服务",
     "RULE-SET,telegram-domain,节点选择",
     "RULE-SET,telegram-ip,节点选择,no-resolve",
-    "RULE-SET,google,节点选择",
+    "RULE-SET,google,AI专线",
     "RULE-SET,apple-cn,DIRECT",
     "RULE-SET,microsoft-cn,DIRECT",
     "RULE-SET,geolocation-not-cn,节点选择",
