@@ -283,6 +283,7 @@ function main(config) {
 
   // 8. 规则集与路由顺序保持原设计。
   var ghProxy = "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/";
+  var myRulesBase = "https://v4.gh-proxy.org/https://raw.githubusercontent.com/cgoder/clash_rules/main/rules/";
   function createMrsRule(urlPath, behaviorType) {
     return {
       type: "http",
@@ -294,9 +295,22 @@ function main(config) {
       proxy: "DIRECT"
     };
   }
+  function createPersonalRule(fileName) {
+    return {
+      type: "http",
+      behavior: "classical",
+      format: "text",
+      url: myRulesBase + fileName,
+      path: "./ruleset/" + fileName,
+      interval: 3600,
+      proxy: "DIRECT"
+    };
+  }
   config["rule-providers"] = {
     "private-domain": createMrsRule("geosite/private.mrs", "domain"),
     "private-ip": createMrsRule("geoip/private.mrs", "ipcidr"),
+    "my_proxy": createPersonalRule("my_proxy.list"),
+    "my_direct": createPersonalRule("my_direct.list"),
     "ads-domain": createMrsRule("geosite/category-ads-all.mrs", "domain"),
     "openai": createMrsRule("geosite/openai.mrs", "domain"),
     "anthropic": createMrsRule("geosite/anthropic.mrs", "domain"),
@@ -337,6 +351,8 @@ function main(config) {
     "DOMAIN,gsa.apple.com,节点选择",
     "DOMAIN,developerservices2.apple.com,节点选择",
     "DOMAIN,gspe1-ssl.ls.apple.com,节点选择",
+    "RULE-SET,my_proxy,节点选择",
+    "RULE-SET,my_direct,DIRECT",
     "AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,youtube)),REJECT",
     "AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,google)),REJECT",
     "RULE-SET,ads-domain,REJECT",
