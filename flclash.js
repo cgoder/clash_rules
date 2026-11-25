@@ -7,9 +7,12 @@
 // 与 clash.js 无派生关系：这是独立的第三方脚本修订版，组名与规则自成一系。
 // 改动本文件后需重新跑 mihomo -t 校验，并复查空节点、仅美国节点两种样本。
 function main(config) {
-  var GROUP_ORDER = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择"];
-  var FIXED_GROUP_NAMES = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择", "香港节点", "台湾节点", "新加坡节点", "日本节点", "韩国节点", "美国节点"];
+  var GROUP_ORDER = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择", "EasyTier"];
+  var FIXED_GROUP_NAMES = ["节点选择", "AI专线", "研发加速", "流媒体服务", "AI自动选择", "亚太智能优选", "故障自动转移", "手动选择", "香港节点", "台湾节点", "新加坡节点", "日本节点", "韩国节点", "美国节点", "EasyTier"];
   var BUILTIN = ["DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"];
+  var EASYTIER_PROXY_NAME = "EasyTier-tienchiu";
+  // Set this locally to the EasyTier network secret. Do not commit the real value.
+  var EASYTIER_NETWORK_SECRET = "REPLACE_WITH_EASYTIER_NETWORK_SECRET";
 
   // 倍率标记只删 >=2 的整数倍率与带小数的倍率，保留 1x 这类正常标价。
   var NOISE = "剩余|流量|到期|官网|重置|套餐|订阅|域名|地址|失联|距离|下次|通知|公告|客服|群组|频道|备用|网址|禁止|测速|说明|使用|教程|过滤|expire|traffic|website|reset|群|倍率" +
@@ -56,6 +59,8 @@ function main(config) {
   // 地区组与测速组是固定生成的组名，也必须与节点名互斥。
   for (i2 = 0; i2 < FIXED_GROUP_NAMES.length; i2++) reserved[FIXED_GROUP_NAMES[i2]] = true;
   for (i2 = 0; i2 < BUILTIN.length; i2++) reserved[BUILTIN[i2]] = true;
+  // Keep the native EasyTier outbound name free if a subscription node collides with it.
+  reserved[EASYTIER_PROXY_NAME] = true;
   var renamed = {};
   function uniqueName(base) {
     var candidate = base;
@@ -127,14 +132,14 @@ function main(config) {
   var groups = [];
   function addGroup(g) { groups.push(g); }
   function withEmptyFallback(g) { if (!g["empty-fallback"]) g["empty-fallback"] = "REJECT"; return g; }
-  var URL_TEST = { type: "url-test", url: "https://www.gstatic.com/generate_204", interval: 300, tolerance: 30, "expected-status": 204 };
+  var URL_TEST = { type: "url-test", url: "https://www.gstatic.com/generate_204", interval: 300, timeout: 5000, lazy: true, tolerance: 30, "expected-status": 204 };
 
   var regionGroups = [];
   for (i2 = 0; i2 < regions.length; i2++) {
     var r = regions[i2];
     var members = regionMembers[r.key];
     if (members.length === 0 && !hasProviders) continue;
-    var g = { name: r.name, type: "url-test", url: URL_TEST.url, interval: 300, tolerance: r.key === "us" ? 50 : 20, "expected-status": 204 };
+    var g = { name: r.name, type: "url-test", url: URL_TEST.url, interval: URL_TEST.interval, timeout: URL_TEST.timeout, lazy: URL_TEST.lazy, tolerance: r.key === "us" ? 50 : 20, "expected-status": 204 };
     if (hasProviders) {
       g["include-all"] = true;
       g.filter = mihomo(r.key);
@@ -157,7 +162,7 @@ function main(config) {
   }
 
   var apacGroup = withEmptyFallback({
-    name: "亚太智能优选", type: "url-test", url: URL_TEST.url, interval: 300, tolerance: 30, "expected-status": 204
+    name: "亚太智能优选", type: "url-test", url: URL_TEST.url, interval: URL_TEST.interval, timeout: URL_TEST.timeout, lazy: URL_TEST.lazy, tolerance: 30, "expected-status": 204
   });
   if (hasProviders) {
     apacGroup["include-all"] = true;
@@ -168,7 +173,7 @@ function main(config) {
   }
 
   var fallbackGroup = withEmptyFallback({
-    name: "故障自动转移", type: "fallback", url: URL_TEST.url, interval: 180, "expected-status": 204
+    name: "故障自动转移", type: "fallback", url: URL_TEST.url, interval: 180, timeout: URL_TEST.timeout, lazy: URL_TEST.lazy, "expected-status": 204
   });
   if (hasProviders) {
     fallbackGroup["include-all"] = true;
@@ -179,7 +184,7 @@ function main(config) {
   }
 
   var aiAuto = withEmptyFallback({
-    name: "AI自动选择", type: "url-test", url: URL_TEST.url, interval: 300, tolerance: 100, "expected-status": 204
+    name: "AI自动选择", type: "url-test", url: URL_TEST.url, interval: 600, timeout: URL_TEST.timeout, lazy: URL_TEST.lazy, tolerance: 100, "expected-status": 204
   });
   if (hasProviders) {
     aiAuto["include-all"] = true;
@@ -203,7 +208,7 @@ function main(config) {
   var manual = { name: "手动选择", type: "select", "empty-fallback": "REJECT" };
   if (hasProviders) {
     manual["include-all"] = true;
-    manual["exclude-filter"] = "(?i)" + NOISE;
+    manual["exclude-filter"] = "(?i)" + NOISE + "|^" + EASYTIER_PROXY_NAME + "$";
   } else {
     manual.proxies = names.length ? names : ["DIRECT"];
   }
@@ -244,7 +249,24 @@ function main(config) {
   if (apacMembers.length > 0 || hasProviders) addGroup(fallbackGroup);
   for (i2 = 0; i2 < regionGroups.length; i2++) addGroup(regionGroups[i2]);
   addGroup(manual);
+  addGroup({ name: "EasyTier", type: "select", proxies: [EASYTIER_PROXY_NAME] });
   config["proxy-groups"] = groups;
+
+  // 6a. Native EasyTier outbound. The overlay range is routed to this outbound below.
+  if (!Array.isArray(config["proxies"])) config["proxies"] = [];
+  config["proxies"].push({
+    name: EASYTIER_PROXY_NAME,
+    type: "easytier",
+    "instance-name": "flclash-tienchiu",
+    "network-name": "tienchiu",
+    "network-secret": EASYTIER_NETWORK_SECRET,
+    ipv4: "10.126.126.3/24",
+    dhcp: false,
+    peers: ["tcp://103.184.47.32:11010"],
+    "no-listener": true,
+    udp: true,
+    "ip-version": "ipv4"
+  });
 
   // 7. 以真实生成的组名为准，清空指向不存在对象的 dialer-proxy。
   var finalGroupNames = {};
@@ -268,7 +290,8 @@ function main(config) {
       format: "mrs",
       url: ghProxy + urlPath,
       path: "./ruleset/" + urlPath.split("/").join("_"),
-      interval: 86400
+      interval: 86400,
+      proxy: "DIRECT"
     };
   }
   config["rule-providers"] = {
@@ -278,6 +301,7 @@ function main(config) {
     "openai": createMrsRule("geosite/openai.mrs", "domain"),
     "anthropic": createMrsRule("geosite/anthropic.mrs", "domain"),
     "google-gemini": createMrsRule("geosite/google-gemini.mrs", "domain"),
+    "ai-not-cn": createMrsRule("geosite/category-ai-!cn.mrs", "domain"),
     "github": createMrsRule("geosite/github.mrs", "domain"),
     "docker": createMrsRule("geosite/docker.mrs", "domain"),
     "youtube": createMrsRule("geosite/youtube.mrs", "domain"),
@@ -301,6 +325,8 @@ function main(config) {
     "DOMAIN-SUFFIX,leoao-inc.com,DIRECT",
     "DOMAIN-SUFFIX,myqnapcloud.com,DIRECT",
     "DOMAIN-SUFFIX,myqnapcloud.cn,DIRECT",
+    // Route EasyTier overlay IPs before the generic private-IP DIRECT rule.
+    "IP-CIDR,10.126.126.0/24,EasyTier,no-resolve",
     "RULE-SET,private-domain,DIRECT",
     "RULE-SET,private-ip,DIRECT,no-resolve",
     // SideStore / LiveContainer 续签认证端点必须显式走代理。
@@ -317,10 +343,17 @@ function main(config) {
     "RULE-SET,openai,AI专线",
     "RULE-SET,anthropic,AI专线",
     "RULE-SET,google-gemini,AI专线",
+    "RULE-SET,ai-not-cn,AI专线",
     "DOMAIN-SUFFIX,claude.ai,AI专线",
     "DOMAIN-SUFFIX,cursor.sh,AI专线",
     "DOMAIN-SUFFIX,cursor.com,AI专线",
     "DOMAIN-SUFFIX,openrouter.ai,AI专线",
+    "DOMAIN-SUFFIX,perplexity.ai,AI专线",
+    "DOMAIN-SUFFIX,x.ai,AI专线",
+    "DOMAIN-SUFFIX,grok.com,AI专线",
+    "DOMAIN-SUFFIX,poe.com,AI专线",
+    "DOMAIN-SUFFIX,copilot.microsoft.com,AI专线",
+    "DOMAIN-SUFFIX,githubcopilot.com,AI专线",
     "RULE-SET,github,研发加速",
     "RULE-SET,docker,研发加速",
     "DOMAIN-SUFFIX,pypi.org,研发加速",
@@ -346,6 +379,7 @@ function main(config) {
   config["unified-delay"] = true;
   config["tcp-concurrent"] = true;
   config["find-process-mode"] = "strict";
+  if (!config["profile"]) config["profile"] = { "store-selected": true, "store-fake-ip": true };
   // global-client-fingerprint 已被内核移除，改为按协议在节点上设置 client-fingerprint。
 
   config["tun"] = {
@@ -371,10 +405,11 @@ function main(config) {
 
   config["sniffer"] = {
     enable: true,
+    "force-dns-mapping": true,
     "parse-pure-ip": true,
-    "override-destination": false,
+    "override-destination": true,
     sniff: {
-      HTTP: { ports: [80, 8080], "override-destination": true },
+      HTTP: { ports: [80, "8080-8880"], "override-destination": true },
       TLS: { ports: [443, 8443] },
       QUIC: { ports: [443, 8443] }
     },
@@ -383,7 +418,6 @@ function main(config) {
 
   var nsPolicy = {};
   nsPolicy["rule-set:private-domain"] = "system";
-  nsPolicy["rule-set:cn-domain"] = ["https://dns.alidns.com/dns-query", "https://doh.pub/dns-query"];
   nsPolicy["+.leoao-inc.com"] = "system";
   nsPolicy["+.lan"] = "system";
 
@@ -393,11 +427,17 @@ function main(config) {
     "prefer-h3": false,
     "enhanced-mode": "fake-ip",
     "fake-ip-range": "198.18.0.1/16",
-    "default-nameserver": ["223.5.5.5", "119.29.29.29", "114.114.114.114"],
+    "default-nameserver": ["223.5.5.5", "119.29.29.29"],
+    "proxy-server-nameserver": ["https://dns.alidns.com/dns-query", "https://doh.pub/dns-query"],
+    "direct-nameserver": ["https://dns.alidns.com/dns-query", "https://doh.pub/dns-query"],
+    "direct-nameserver-follow-policy": true,
     nameserver: ["https://dns.alidns.com/dns-query", "https://doh.pub/dns-query"],
     "fake-ip-filter": [
       "+.lan", "+.local", "+.msftconnecttest.com", "+.msftncsi.com",
-      "localhost.ptlogin2.qq.com", "+.stun.*.*", "+.stun.*.*.*",
+      "localhost.ptlogin2.qq.com", "localhost.sec.qq.com",
+      "+.stun.*.*", "+.stun.*.*.*",
+      "+.pool.ntp.org", "time.*.com", "ntp.*.com",
+      "+.xboxlive.com", "+.battlenet.com.cn",
       "rule-set:private-domain", "+.leoao-inc.com",
       "+.myqnapcloud.com", "+.myqnapcloud.cn"
     ],
