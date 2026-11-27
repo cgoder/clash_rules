@@ -323,7 +323,7 @@ function main(config) {
     "netflix": createMrsRule("geosite/netflix.mrs", "domain"),
     "telegram-domain": createMrsRule("geosite/telegram.mrs", "domain"),
     "telegram-ip": createMrsRule("geoip/telegram.mrs", "ipcidr"),
-    "apple-cn": createMrsRule("geosite/apple-cn.mrs", "domain"),
+    "apple-cn": createMrsRule("geosite/apple@cn.mrs", "domain"),
     "microsoft-cn": createMrsRule("geosite/microsoft@cn.mrs", "domain"),
     "geolocation-not-cn": createMrsRule("geosite/geolocation-!cn.mrs", "domain"),
     "cn-domain": createMrsRule("geosite/cn.mrs", "domain"),
@@ -384,6 +384,8 @@ function main(config) {
     "RULE-SET,telegram-ip,节点选择,no-resolve",
     "RULE-SET,google,AI专线",
     "RULE-SET,apple-cn,DIRECT",
+    // apple@cn 不含 apps.apple.com（原 apple-cn 包含），显式保留直连避免 App Store 链接回退代理。
+    "DOMAIN,apps.apple.com,DIRECT",
     "RULE-SET,microsoft-cn,DIRECT",
     "RULE-SET,geolocation-not-cn,节点选择",
     "RULE-SET,cn-domain,DIRECT",
